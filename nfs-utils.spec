@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 0.3.1
-Release: 8
+Release: 11
 Source0: ftp://nfs.sourceforge.net/pub/nfs/nfs-utils-%{version}.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source10: nfs.init
@@ -26,8 +26,8 @@ Provides: knfsd-clients
 Provides: knfsd
 License: GPL
 Buildroot: %{_tmppath}/%{name}-root
-Requires: kernel >= 2.2.14, portmap >= 4.0, sed, gawk
-Prereq: /sbin/chkconfig /usr/sbin/useradd
+Requires: kernel >= 2.2.14, portmap >= 4.0, sed, gawk, sh-utils
+Prereq: /sbin/chkconfig /usr/sbin/useradd /sbin/nologin
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
@@ -74,6 +74,7 @@ mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/statd
 
 # we are using quotad from quota utils
 rm %{buildroot}/%{_mandir}/man8/rquotad*
+rm %{buildroot}/%{_mandir}/man8/rpc.rquotad*
 rm %{buildroot}/%{_sbindir}/rpc.rquotad
 
 %clean
@@ -81,7 +82,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %pre
 /usr/sbin/useradd -c "RPC Service User" -r \
-        -s /bin/false -u 29 -d /var/lib/nfs rpcuser 2>/dev/null || :
+        -s /sbin/nologin -u 29 -d /var/lib/nfs rpcuser 2>/dev/null || :
 
 %post
 /sbin/chkconfig --add nfs
@@ -126,11 +127,23 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
-* Fri Apr 21 2001 Bill Nottingham <notting@redhat.com>
-- re-disable quota stuff for non-errata :)
+* Fri Jul 13 2001 Bob Matthews <bmatthews@redhat.com>
+- Make %pre useradd consistent with other Red Hat packages.
 
-* Tue Apr 17 2001 Preston Brown <pbrown@redhat.com>
-- re-enable quota stuff for errata
+* Tue Jul 03 2001 Michael K. Johnson <johnsonm@redhat.com>
+- Added sh-utils dependency for uname -r in nfs init script
+
+* Tue Jun 12 2001 Bob Matthews <bmatthews@redhat.com>
+- make non RH kernel release strings scan correctly in 
+-   nfslock init script (#44186)
+
+* Mon Jun 11 2001 Bob Matthews <bmatthews@redhat.com>
+- don't install any rquota pages in _mandir: (#39707, #44119)
+- don't try to manipulate rpc.rquotad in init scripts 
+-   unless said program actually exists: (#43340)
+
+* Tue Apr 10 2001 Preston Brown <pbrown@redhat.com>
+- don't translate initscripts for 6.x
 
 * Tue Apr 10 2001 Michael K. Johnson <johnsonm@redhat.com>
 - do not start lockd on kernel 2.2.18 or higher (done automatically)

@@ -42,44 +42,54 @@ else
 	RPCMOUNTDOPTS="--no-nfs-version 3"
 fi
 
+if [ -n "$MOUNTD_PORT" ]; then
+    RPCMOUNDOPTS="$RPCMOUNTDOPTS --port $MOUNTD_PORT"
+fi
+
 # See how we were called.
 case "$1" in
   start)
 	# Start daemons.
-	action $"Starting NFS services: " /usr/sbin/exportfs -r
-	echo -n $"Starting NFS quotas: "
-	daemon rpc.rquotad
-	echo
-	echo -n $"Starting NFS mountd: "
+	action "Starting NFS services: " /usr/sbin/exportfs -r
+	if [ -x /usr/sbin/rpc.rquotad ] ; then
+	    echo -n "Starting NFS quotas: "
+	    daemon rpc.rquotad
+	    echo
+	fi
+	echo -n "Starting NFS mountd: "
 	daemon rpc.mountd $RPCMOUNTDOPTS
 	echo
-	echo -n $"Starting NFS daemon: "
+	echo -n "Starting NFS daemon: "
 	daemon rpc.nfsd $RPCNFSDCOUNT
 	echo
 	touch /var/lock/subsys/nfs
 	;;
   stop)
 	# Stop daemons.
-	echo -n $"Shutting down NFS mountd: "
+	echo -n "Shutting down NFS mountd: "
 	killproc rpc.mountd
 	echo
-	echo -n $"Shutting down NFS daemon: "
+	echo -n "Shutting down NFS daemon: "
 	killproc nfsd
 	echo
-	action $"Shutting down NFS services: " /usr/sbin/exportfs -au
-	echo -n $"Shutting down NFS quotas: "
-	killproc rpc.rquotad
-	echo
+	action "Shutting down NFS services: " /usr/sbin/exportfs -au
+	if [ -x /usr/sbin/rpc.rquotad ] ; then
+	    echo -n "Shutting down NFS quotas: "
+	    killproc rpc.rquotad
+	    echo
+	fi
 	rm -f /var/lock/subsys/nfs
 	;;
   status)
 	status rpc.mountd
 	status nfsd
-	status rpc.rquotad
+	if [ -x /usr/sbin/rpc.rquotad ] ; then
+	    status rpc.rquotad
+	fi
 	;;
   restart)
-	echo -n $"Restarting NFS services: "
-	echo -n $"rpc.mountd "
+	echo -n "Restarting NFS services: "
+	echo -n "rpc.mountd "
 	killproc rpc.mountd
 	daemon rpc.mountd $RPCMOUNTDOPTS
 	/usr/sbin/exportfs -r
@@ -104,7 +114,7 @@ case "$1" in
 	fi
 	;;
   *)
-	echo $"Usage: $0 {start|stop|status|restart|reload}"
+	echo "Usage: $0 {start|stop|status|restart|reload}"
 	exit 1
 esac
 
