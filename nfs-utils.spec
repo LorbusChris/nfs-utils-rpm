@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.7
-Release: 3
+Release: 4
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -152,6 +152,8 @@ rm %{buildroot}/%{_sbindir}/rpc.rquotad
 
 %clean
 rm -rf $RPM_BUILD_ROOT
+# Remove .orig files
+find . -name "*.orig" | xargs rm -f
 
 %pre
 /usr/sbin/useradd -c "RPC Service User" -r \
@@ -241,6 +243,11 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Mon Mar 29 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-4
+- Updated the statd-notify-hostname.patch to eliminate 
+  a segmentation fault in rpc.statd when an network 
+  interface was down. (bz 151828)
+
 * Sat Mar 19 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-3
 - Changed xlog to use LOG_INFO instead of LOG_DEBUG
   so debug messages will appear w/out any config
