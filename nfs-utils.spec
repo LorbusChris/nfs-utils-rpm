@@ -15,7 +15,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.6
-%define release 27
+%define release 29
 
 %define Release %{release}
 %if %{rhel3build}
@@ -39,6 +39,7 @@ Patch4: nfs-utils-1.0.3-aclexport.patch
 Patch5: nfs-utils-1.0.6-zerostats.patch
 Patch6: nfs-utils-1.0.6-mountd.patch
 Patch7: nfs-utils-1.0.6-expwarn.patch
+
 %if %{nfsv4_support}
 Patch20: nfs-utils-nfsv4-pseudoflavor-clients.patch
 Patch21: nfs-utils-nfsv4-mountd_flavors.patch
@@ -194,6 +195,7 @@ fi
 %preun
 if [ "$1" = "0" ]; then
     /etc/rc.d/init.d/nfs stop
+    /etc/rc.d/init.d/nfslock stop
     /sbin/chkconfig --del nfs
     /sbin/chkconfig --del nfslock
     /usr/sbin/userdel rpcuser 2>/dev/null || :
@@ -256,6 +258,11 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Wed Jun 16 2004 <SteveD@RedHat.com>
+- nfslock stop is now done on package removals
+- Eliminate 4 syslog messages that are logged for
+  successful events.
+
 * Tue Jun 15 2004 Elliot Lee <sopwith@redhat.com>
 - rebuilt
 
