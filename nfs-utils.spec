@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.6
-Release: 38
+Release: 39
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -263,6 +263,10 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Sun Oct 17 2004 Steve Dickson <SteveD@RedHat.com>
+- Changed nfs.init to bring down rquotad correctly
+  (bz# 136041)
+
 * Thu Oct 14 2004 Steve Dickson <SteveD@RedHat.com>
 - Added "$RQUOTAD_PORT" variable to nfs.init which
   allows the rpc.rquotad to use a predefined port
