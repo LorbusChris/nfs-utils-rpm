@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.7
-Release: 1
+Release: 2
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -38,6 +38,7 @@ Patch56: nfs-utils-1.0.6-idmap-syslog.patch
 Patch57: nfs-utils-1.0.6-idmap.conf.patch
 Patch58: nfs-utils-1.0.6-rquotad-overflow.patch
 Patch59: nfs-utils-1.0.6-statd-notify-hostname.patch
+Patch60: nfs-utils-1.0.7-rpcsecgss-debug.patch
 
 Patch100: nfs-utils-1.0.7-compile.patch
 Patch150: nfs-utils-1.0.6-pie.patch
@@ -90,6 +91,7 @@ mv libevent-%{eventvers} support/event
 %patch57 -p1 -b .conf
 %patch58 -p1 -b .overflow
 %patch59 -p1 -b .notify
+%patch60 -p1 -b .rpcsecgss
 
 
 # Do the magic to get things to compile
@@ -237,6 +239,10 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Wed Mar  2 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-2
+- Tied the rpcsecgss debugging in with gssd and
+  svcgssd debugging
+
 * Mon Feb 14 2005 Steve Dickson <SteveD@RedHat.com>
 - Added support to rpcgssd.init and rpcsvcgssd.init scripts
   to insmod security modules.
