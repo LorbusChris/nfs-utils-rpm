@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 0.3.1
-Release: 5
+Release: 6.71
 Source0: ftp://nfs.sourceforge.net/pub/nfs/nfs-utils-%{version}.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source10: nfs.init
@@ -13,6 +13,7 @@ Patch3: nfs-utils-0.3.1-statd-manpage.patch
 Patch4: eepro-support.patch
 Patch5: time-h.patch
 Patch6: syslog-level.patch
+Patch7: nfs-utils-1.0.3-mountd.secfix.patch
 Group: System Environment/Daemons
 Obsoletes: nfs-server
 Obsoletes: knfsd
@@ -48,6 +49,7 @@ clients which are mounted on that host.
 %patch4 -p1 -b .eepro-support
 %patch5 -p1 -b .time-h
 %patch6 -p1 -b .syslog-level
+%patch7 -p1 -b .secfix
 
 %build
 #
@@ -126,6 +128,9 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Tue Apr 10 2001 Michael K. Johnson <johnsonm@redhat.com>
+- do not start lockd on kernel 2.2.18 or higher (done automatically)
+
 * Fri Mar 30 2001 Preston Brown <pbrown@redhat.com>
 - don't use rquotad from here now; quota package contains a version that 
   works with 2.4 (#33738)

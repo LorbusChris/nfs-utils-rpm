@@ -23,6 +23,7 @@ fi
 [ ${NETWORKING} = "no" ] && exit 0
 
 KERNVER=`uname -r | awk -F . '{ print $1.$2 }'`
+KERNREL=`uname -r | awk -F '[.-]' '{ print $3 }'`
 
 RETVAL=0
 
@@ -34,7 +35,7 @@ fi
 start() {
 	# Start daemons.
 	echo $"Starting NFS file locking services: "
-	if [ "$KERNVER" -lt 24 ]; then
+	if [ "$KERNVER" -lt 24 -a "$KERNREL" -lt 18 ]; then
 	  echo -n $"Starting NFS lockd: "
 	  daemon rpc.lockd
 	  echo
@@ -50,7 +51,7 @@ start() {
 stop() {
 	# Stop daemons.
 	echo $"Shutting down NFS file locking services: "
-	if [ "$KERNVER" -lt 24 ]; then 
+	if [ "$KERNVER" -lt 24 -a "$KERNREL" -lt 18 ]; then
 	   echo -n $"Shutting down NFS lockd: "
 	   killproc lockd
 	   echo
@@ -72,7 +73,7 @@ case "$1" in
   	stop
 	;;
   status)
-        if [ "$KERNVER" -lt 24 ]; then
+	if [ "$KERNVER" -lt 24 -a "$KERNREL" -lt 18 ]; then
 	  status lockd
 	fi 
 	status rpc.statd
@@ -86,7 +87,7 @@ case "$1" in
 	  echo start; exit 0
 	fi
 	/sbin/pidof rpc.statd >/dev/null 2>&1; STATD="$?"
-	if [ "$KERNVER" -lt 24 ]; then 
+	if [ "$KERNVER" -lt 24 -a "$KERNREL" -lt 18 ]; then
 	   /sbin/pidof lockd >/dev/null 2>&1; LOCKD="$?"
 	else
 	   LOCKD=0
