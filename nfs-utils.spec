@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.1
-Release: 2
+Release: 2.6
 Source0: http://prdownloads.sourceforge.net/nfs/nfs-utils-1.0.1.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source10: nfs.init
@@ -12,6 +12,8 @@ Patch2: no-chroot.patch
 Patch3: nfs-utils-0.3.3.statd-manpage.patch
 Patch4: eepro-support.patch
 Patch5: time-h.patch
+Patch6: nfs-utils-sigpipe.patch
+Patch7: install-prefix.patch
 Group: System Environment/Daemons
 Obsoletes: nfs-server
 Obsoletes: knfsd
@@ -46,6 +48,8 @@ clients which are mounted on that host.
 %patch3 -p1 -b .statd-manpage
 %patch4 -p1 -b .eepro-support
 %patch5 -p1 -b .time-h
+%patch6 -p1 -b .sigpipe
+%patch7 -p1 -b .prefix
 
 %build
 #
@@ -53,7 +57,7 @@ clients which are mounted on that host.
 # this, please help yourself.
 #
 ac_cv_func_innetgr=yes \
-CFLAGS="$RPM_OPT_FLAGS" ./configure --mandir=${RPM_BUILD_ROOT}%{_mandir}
+CFLAGS="$RPM_OPT_FLAGS" %configure
 make all
 
 %install
@@ -124,7 +128,7 @@ fi
 /sbin/rpc.statd
 /usr/sbin/exportfs
 /usr/sbin/nfsstat
-/usr/sbin/nhfsstone
+/usr/sbin/nhfs*
 /usr/sbin/rpc.mountd
 /usr/sbin/rpc.nfsd
 /usr/sbin/showmount
@@ -132,6 +136,16 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Mon Nov 18 2002 Stephen C. Tweedie <sct@redhat.com>
+- Build with %configure
+- Add nhfsgraph, nhfsnums and nhfsrun to the files list
+
+* Mon Nov 11 2002 Stephen C. Tweedie <sct@redhat.com>
+- Don't drop privs until we've bound the notification socket
+
+* Thu Nov  7 2002 Stephen C. Tweedie <sct@redhat.com>
+- Ignore SIGPIPE in rpc.mountd
+
 * Thu Aug  1 2002 Bob Matthews <bmatthews@redhat.com>
 - Add Sean O'Connell's <sean@ee.duke.edu> nfs control tweaks
 - to nfs init script.
