@@ -15,15 +15,15 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.6
-%define release 19
+%define release 20
 
 %define Release %{release}
 %if %{rhelbuild}
-%define Release %{release}.EL
-%define nfsv3_support 0
+%define Release %{release}EL
+%define nfsv4_support 0
 %endif
 %if %{fc2build}
-%define Release %{release}.fc2
+%define Release %{release}
 %endif
 Release: %{Release}
 
@@ -41,10 +41,11 @@ Patch6: nfs-utils-1.0.6-mountd.patch
 %if %{nfsv4_support}
 Patch20: nfs-utils-nfsv4-pseudoflavor-clients.patch
 Patch21: nfs-utils-nfsv4-mountd_flavors.patch
-Patch22: nfs-utils-nfsv4-add_idmapd.patch
-Patch23: nfs-utils-nfsv4-upcall_export_check.patch
-Patch24: nfs-utils-nfsv4-add_gssd.patch
-Patch30: nfs-utils-nfsv4-idmapd.patch
+Patch22: nfs-utils-nfsv4-upcall_export_check.patch
+Patch25: nfs-utils-nfsv4-add_idmapd.patch
+Patch26: nfs-utils-nfsv4-idmapd.patch
+Patch30: nfs-utils-nfsv4-add_gssd.patch
+Patch31: nfs-utils-nfsv4-gssd.patch
 Patch35: nfs-utils-nfsv4-redhat-only.patch
 %endif
 
@@ -101,10 +102,11 @@ perl -pi -e 's/-fpie/-fPIE/' */*/Makefile
 %if %{nfsv4_support}
 %patch20 -p1 -b .v4
 %patch21 -p1 -b .v4mountd
-%patch22 -p1 -b .add_idmapd
-%patch23 -p1 -b .v4upcall
-%patch24 -p1 -b .gssd
-%patch30 -p1 -b .idmapd
+%patch22 -p1 -b .v4upcall
+%patch25 -p1 -b .add_idmapd
+%patch26 -p1 -b .idmapd
+%patch30 -p1 -b .add_gssd
+%patch31 -p1 -b .gssd
 %patch35 -p1 -b .rhonly
 %endif
 
@@ -134,9 +136,9 @@ install -m 755 etc/redhat/rpcgssd.init \
 	$RPM_BUILD_ROOT/etc/rc.d/init.d/rpcgssd
 install -m 755 etc/redhat/rpcsvcgssd.init \
 	$RPM_BUILD_ROOT/etc/rc.d/init.d/rpcsvcgssd
-install -m 755 utils/idmapd/idmapd.conf \
+install -m 644 utils/idmapd/idmapd.conf \
 	$RPM_BUILD_ROOT/etc/idmapd.conf
-install -m 755 support/gssapi/SAMPLE_gssapi_mech.conf \
+install -m 644 support/gssapi/SAMPLE_gssapi_mech.conf \
 	$RPM_BUILD_ROOT/etc/gssapi_mech.conf
 
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/rpc_pipefs
@@ -238,6 +240,18 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Thu Apr 15 2004 <SteveD@RedHat.com>
+- Changed the permission on idmapd.conf to 644
+- Added mydaemon code to svcgssd
+- Updated the add_gssd.patch from upstream
+
+* Wed Apr 14 2004 <SteveD@RedHat.com>
+- Created a pipe between the parent and child so 
+  the parent process can report the correct exit
+  status to the init scripts
+- Added SIGHUP processing to rpc.idmapd and the 
+  rpcidmapd init script.
+
 * Mon Mar 22 2004 <SteveD@RedHat.com>
 - Make sure check_new_cache() is looking in the right place 
 
