@@ -1,7 +1,7 @@
 Summary: NFS utilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 0.3.1
-Release: 13.7.2.2
+Release: 13.7.2.3
 Source0: ftp://nfs.sourceforge.net/pub/nfs/nfs-utils-%{version}.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source10: nfs.init
@@ -82,7 +82,7 @@ rm -rf $RPM_BUILD_ROOT
 %pre
 # Cleanup from installation 0.3.1-13
 rm -f /var/spool/mail/nfsnobody 2> /dev/null || :
-rm -f `find /var/lib/nfs -uid 65534 -print` > /dev/null 2>&1 || :
+rm -f `find /var/lib/nfs -uid 65534 -print 2> /dev/null` > /dev/null 2>&1 || :
 /usr/sbin/useradd -c "RPC Service User" -r \
         -s /sbin/nologin -u 29 -d /var/lib/nfs rpcuser 2>/dev/null || :
 
@@ -137,6 +137,9 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Thu Dec 13 2001 Bob Matthews <bmatthews@redhat.com>
+- 0.3.1-13 cleanup code still not silent on clean install.  Fixed.
+
 * Fri Nov 30 2001 Bob Matthews <bmatthews@redhat.com>
 - Add Tim P's. "shaddup" code to 0.3.1-13 cleanup code
 
