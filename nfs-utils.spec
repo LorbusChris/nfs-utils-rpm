@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.6
-Release: 35
+Release: 36
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -41,6 +41,7 @@ Patch35: nfs-utils-1.0.6-update_idmap.patch
 
 Patch40: nfs-utils-1.0.6-add_gssd.patch
 Patch45: nfs-utils-1.0.6-update_gssd.patch
+Patch46: nfs-utils-1.0.6-fd-sig-cleanup.patch
 
 Patch50: nfs-utils-1.0.6-compile.patch
 Patch100: nfs-utils-1.0.6-pie.patch
@@ -112,6 +113,8 @@ mv libevent-%{eventvers} support/event
 %patch40 -p1 -b .add_gssd
 # local updates
 %patch45 -p1 -b .update_gssd
+
+%patch46 -p1 -b .cleanup
 
 # Do the magic to get things to compile
 %patch50 -p1 -b .compile
@@ -260,6 +263,11 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Fri Oct  1 2004 <SteveD@RedHat.com
+- Incorporate some clean up code from Ulrich Drepper (bz# 134025)
+- Fixed the chkconfig number in the rpcgssd, rpcidmapd, and 
+  rpcsvcgssd initscrpts (bz# 132284)
+
 * Fri Sep 24 2004 <SteveD@RedHat.com>
 - Make sure the uid/gid of nfsnobody is the
   correct value for all archs (bz# 123900)
