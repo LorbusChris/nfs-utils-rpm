@@ -1,7 +1,7 @@
 Summary: NFS utilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 0.3.1
-Release: 13
+Release: 13.7.2.1
 Source0: ftp://nfs.sourceforge.net/pub/nfs/nfs-utils-%{version}.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source10: nfs.init
@@ -80,12 +80,17 @@ rm %{buildroot}/%{_sbindir}/rpc.rquotad
 rm -rf $RPM_BUILD_ROOT
 
 %pre
+# Cleanup from installation 0.3.1-13
+rm -f /var/spool/mail/nfsnobody 2> /dev/null || :
+rm -f `find /var/lib/nfs -uid 65534 -print` 2> /dev/null || :
+
 /usr/sbin/useradd -c "RPC Service User" -r \
         -s /sbin/nologin -u 29 -d /var/lib/nfs rpcuser 2>/dev/null || :
+
 # If UID 65534 is unassigned, create user "nfsnobody"
 cat /etc/passwd | cut -d':' -f 3 | grep --quiet 65534 2>/dev/null
 if [ "$?" -eq 1 ]; then
-	/usr/sbin/useradd -c "Anonymous NFS User" \
+	/usr/sbin/useradd -c "Anonymous NFS User" -r \
 		-s /sbin/nologin -u 65534 -d /var/lib/nfs nfsnobody 2>/dev/null || :
 fi
 
@@ -133,6 +138,10 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Tue Oct 16 2001 Bob Matthews <bmatthews@redhat.com>
+- cvs branch for 7.2 errata
+- user nfsnobody should be a system account (#54221)
+
 * Tue Aug 21 2001 Bob Matthews <bmatthews@redhat.com>
 - if UID 65534 is unassigned, add user nfsnobody (#22865)
 
