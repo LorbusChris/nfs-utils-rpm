@@ -15,7 +15,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.6
-%define release 29
+%define release 30
 
 %define Release %{release}
 %if %{rhel3build}
@@ -260,7 +260,7 @@ fi
 %changelog
 * Wed Jun 16 2004 <SteveD@RedHat.com>
 - nfslock stop is now done on package removals
-- Eliminate 4 syslog messages that are logged for
+- Eliminate 3 syslog messages that are logged for
   successful events.
 
 * Tue Jun 15 2004 Elliot Lee <sopwith@redhat.com>

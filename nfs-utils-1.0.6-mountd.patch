@@ -30,7 +30,7 @@
 
 
 #
-# Eliminate 4 syslog message that are logged for
+# Eliminate 3 syslog message that are logged for
 # successful events.
 #
 --- src/utils/mountd/mountd.c.org	2003-09-12 18:14:16.000000000 -0400
@@ -79,16 +79,3 @@
  	return 1;
  }
  
---- src/utils/mountd/auth.c.org	2004-06-16 08:54:32.000000000 -0400
-+++ src/utils/mountd/auth.c	2004-06-16 08:55:15.000000000 -0400
-@@ -194,9 +194,8 @@ auth_authenticate(char *what, struct soc
- 		break;
- 
- 	case success:
--		xlog(L_NOTICE, "authenticated %s request from %s:%d for %s (%s)",
--		     what, hp->h_name, ntohs(caller->sin_port), path, epath);
- 		break;
-+
- 	default:
- 		xlog(L_NOTICE, "%s request from %s:%d for %s (%s) gave %d",
- 		     what, hp->h_name, ntohs(caller->sin_port), path, epath, error);
