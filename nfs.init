@@ -21,7 +21,7 @@ fi
 . /etc/sysconfig/network
 
 # Check that networking is up.
-[ ${NETWORKING} = "no" ] && exit 0
+[ "${NETWORKING}" = "no" ] && exit 0
 
 [ -x /usr/sbin/rpc.nfsd ] || exit 0
 [ -x /usr/sbin/rpc.mountd ] || exit 0

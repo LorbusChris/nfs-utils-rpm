@@ -23,7 +23,7 @@ fi
 . /etc/sysconfig/network
 
 # Check that networking is up.
-[ ${NETWORKING} = "no" ] && exit 0
+[ "${NETWORKING}" = "no" ] && exit 0
 
 # Start lockd from userland only if kernel <= 2.2.18
 OS_RELEASE=`uname --release`

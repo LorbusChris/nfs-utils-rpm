@@ -15,7 +15,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.6
-%define release 24
+%define release 27
 
 %define Release %{release}
 %if %{rhel3build}
@@ -174,13 +174,22 @@ if [ "$?" -eq 1 ]; then
 fi
 
 %post
-/sbin/chkconfig --add nfs
-/sbin/chkconfig --add nfslock
+if [ "$1" -ge 1 ]; then
 %if %{nfsv4_support}
-/sbin/chkconfig --add rpcidmapd
-/sbin/chkconfig --add rpcgssd
-/sbin/chkconfig --add rpcsvcgssd
+	/etc/rc.d/init.d/rpcidmapd condrestart > /dev/null
+	/etc/rc.d/init.d/rpcgssd condrestart > /dev/null
+	/etc/rc.d/init.d/rpcsvcgssd condrestart > /dev/null
 %endif
+	/etc/rc.d/init.d/nfs condrestart > /dev/null
+else 
+	/sbin/chkconfig --add nfs
+	/sbin/chkconfig --add nfslock
+%if %{nfsv4_support}
+	/sbin/chkconfig --add rpcidmapd
+	/sbin/chkconfig --add rpcgssd
+	/sbin/chkconfig --add rpcsvcgssd
+%endif
+fi
 
 %preun
 if [ "$1" = "0" ]; then
@@ -200,6 +209,7 @@ if [ "$1" = "0" ]; then
     /sbin/chkconfig --del rpcsvcgssd
 %endif
 fi
+
 
 %triggerpostun -- nfs-server
 /sbin/chkconfig --add nfs
@@ -246,7 +256,12 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Tue Jun 15 2004 Elliot Lee <sopwith@redhat.com>
+- rebuilt
+
 * Mon Jun 14 2004 <SteveD@RedHat.com>
+- Fixed syntax error in nfs initscripts when
+  NETWORKING is not defined
 - Removed sync warning on readonly exports.
 %if %{fcbuild}
 - Changed run levels in rpc initscripts.
