@@ -1,8 +1,8 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
-Version: 0.3.3
-Release: 6.73
-Source0: ftp://nfs.sourceforge.net/pub/nfs/nfs-utils-%{version}.tar.gz
+Version: 1.0.1
+Release: 1
+Source0: http://prdownloads.sourceforge.net/nfs/nfs-utils-1.0.1.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source10: nfs.init
 Source11: nfslock.init
@@ -12,7 +12,6 @@ Patch2: no-chroot.patch
 Patch3: nfs-utils-0.3.3.statd-manpage.patch
 Patch4: eepro-support.patch
 Patch5: time-h.patch
-Patch6: nfs-utils-1.0.3-mountd.secfix.patch
 Group: System Environment/Daemons
 Obsoletes: nfs-server
 Obsoletes: knfsd
@@ -47,7 +46,6 @@ clients which are mounted on that host.
 %patch3 -p1 -b .statd-manpage
 %patch4 -p1 -b .eepro-support
 %patch5 -p1 -b .time-h
-%patch6 -p1 -b .secfix
 
 %build
 #
@@ -93,12 +91,9 @@ fi
 %post
 /sbin/chkconfig --add nfs
 /sbin/chkconfig --add nfslock
-/sbin/service nfs condrestart
 
 %preun
 if [ "$1" = "0" ]; then
-	status="`/sbin/service nfs probe`"
-	[ -z "$status" ] && /sbin/service nfs stop
     /sbin/chkconfig --del nfs
     /sbin/chkconfig --del nfslock
     /usr/sbin/userdel rpcuser 2>/dev/null || :
@@ -137,13 +132,6 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
-* Fri Jun 20 2003 Steve Dickson <SteveD@Redhat.com>
-- Added mountd security fix
-
-* Thu Aug  1 2002 Bob Matthews <bmatthews@redhat.com>
-- Add Sean O'Connell's <sean@ee.duke.edu> nfs control tweaks
-- to nfs init script.
-
 * Mon Jul 22 2002 Bob Matthews <bmatthews@redhat.com>
 - Move to nfs-utils-1.0.1
 
