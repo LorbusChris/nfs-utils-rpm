@@ -13,10 +13,6 @@ Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source2: http://www.citi.umich.edu/projects/nfsv4/linux/libnfsidmap/nfsidmap-%{idmapvers}.tar.gz
 %define eventvers 1.0b
 Source3: http://monkey.org/~provos/libevent-%{eventvers}.tar.gz
-%define rpcsecgss 0.1
-Source4: http://www.citi.umich.edu/projects/nfsv4/linux/librpcsecgss/librpcsecgss-%{rpcsecgss}.tar.gz 
-#%define gssapivers 0.1
-#Source4: http://www.citi.umich.edu/projects/nfsv4/linux/libgssapi/libgssapi-%{gssapivers}.tar.gz
 
 Source10: nfs.init
 Source11: nfslock.init
@@ -25,20 +21,9 @@ Source13: rpcgssd.init
 Source14: rpcsvcgssd.init
 
 #
-# CITI NFS4 Patches (nfs-utils-1.0.6-23)
+# CITI NFS4 Patches
 #
-#Patch20: nfs-utils-1.0.6-citi-rpcdebug.patch
-#Patch21: nfs-utils-1.0.6-citi-svcgssd_memleak_fix.patch
-#Patch22: nfs-utils-1.0.6-citi-svcgssd_remove_NOGROUPS.patch
-#Patch23: nfs-utils-1.0.6-citi-idmapd_remove_mapping_related_options.patch
-#Patch24: nfs-utils-1.0.6-citi-update_idmapd.patch
-#Patch25: nfs-utils-1.0.6-citi-idmapd_let_libnfsidmap_parse_conf_file.patch
-#Patch26: nfs-utils-1.0.6-citi-mountd_flavors.patch
-#Patch27: nfs-utils-1.0.6-citi-gssd_downcall_err_reporting.patch
-#Patch28: nfs-utils-1.0.6-citi-gssd_restore_euid_on_failure.patch
-#Patch29: nfs-utils-1.0.6-citi-svcgssd-princ-to-uid.patch
-#Patch30: nfs-utils-1.0.6-citi-use_libgssapi.patch
-#Patch31: nfs-utils-1.0.6-citi-use_librpcsecgss.patch
+Patch20: nfs-utils-1.0.6-citi-mountd_flavors.patch
 
 #
 # Local Patches
@@ -86,36 +71,14 @@ System) server on the remote host.  For example, showmount can display the
 clients which are mounted on that host.
 
 %prep
-%setup -q -a1 -a2 -a3 -a4
+%setup -q -a1 -a2 -a3
 #
 # Set up the support libs
 #
 mv nfsidmap-%{idmapvers} support/nfsidmap
 mv libevent-%{eventvers} support/event
-mv librpcsecgss-%{rpcsecgss} support/rpcsecgss
-#mv libgssapi-%{gssapivers} support/gssapi
 
-#%patch1 -p1
-#%patch2 -p1
-#%patch3 -p1
-#%patch4 -p1
-#%patch5 -p1
-#%patch6 -p1
-#%patch7 -p1
-#%patch8 -p1
-
-#%patch20 -p1
-#%patch21 -p1
-#%patch22 -p1 
-#%patch23 -p1 
-#%patch24 -p1 
-#%patch25 -p1 
-#%patch26 -p1 
-#%patch27 -p1 
-#%patch28 -p1 
-#%patch29 -p1 
-#%patch30 -p1 
-#%patch31 -p1 
+%patch20 -p1 
 
 %patch50 -p1 -b .statdpath
 %patch51 -p1 -b .zerostats
@@ -149,8 +112,6 @@ ac_cv_func_innetgr=yes \
 
 cd support/nfsidmap; %configure --prefix=$RPM_BUILD_ROOT
 cd ../../support/event; %configure --prefix=$RPM_BUILD_ROOT
-#cd ../../support/gssapi; %configure --prefix=$RPM_BUILD_ROOT
-cd ../../support/rpcsecgss; %configure --prefix=$RPM_BUILD_ROOT
 cd ../../
 
 make all
