@@ -4,7 +4,7 @@
 #
 # Authors:	Chuck Lever <cel@netapp.com>
 #
-# chkconfig: 345 19 69
+# chkconfig: - 19 69
 # description: Starts user-level daemon that manages RPCSEC GSS contexts \
 #	       for the NFSv4 server.
 
@@ -26,6 +26,9 @@ fi
 [ -f /etc/sysconfig/nfs ] && . /etc/sysconfig/nfs
 [ "${SECURE_NFS}" != "yes" ] && exit 0
 
+# List of kernel modules to load
+[ -z "${SECURE_NFS_MODS}" ] && SECURE_NFS_MODS="des rpcsec_gss_krb5"
+
 OPTIONS=""
 RETVAL=0
 prog="rpc.svcgssd"
@@ -38,13 +41,20 @@ case "$1" in
 	fi
 	rm -f /var/lock/subsys/$prog
 
-	echo -n $"Starting NFS4 svcgssd: "
+	echo -n $"Starting RPC svcgssd: "
 
 	# Load sunrpc which mounts the rpc_pipes fs.
 	[ -x /sbin/lsmod -a -x /sbin/modprobe ] && {
 		if ! /sbin/lsmod | grep sunrpc > /dev/null ; then
 			 /sbin/modprobe sunrpc || exit 1
 		fi
+		# Load rpcsec modules
+		for i in ${SECURE_NFS_MODS}
+		do 
+			if ! /sbin/lsmod | grep $i > /dev/null ;  then
+				 /sbin/modprobe $i || exit 1
+			fi
+		done
 	}
 
 	# Make sure the mount worked.
@@ -63,7 +73,7 @@ case "$1" in
 	;;
   stop)
 	# Stop daemon.
-	echo -n $"Shutting down NFS4 svcgssd: "
+	echo -n $"Shutting down RPC svcgssd: "
 	killproc $prog
 	RETVAL=$?
 	echo

@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.6
-Release: 49
+Release: 52
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -231,25 +231,23 @@ fi
 %preun
 if [ "$1" = "0" ]; then
     /etc/rc.d/init.d/nfs stop
+	/etc/rc.d/init.d/rpcgssd stop
+	/etc/rc.d/init.d/rpcidmapd stop
     /etc/rc.d/init.d/nfslock stop
+    /sbin/chkconfig --del rpcidmapd
+    /sbin/chkconfig --del rpcgssd
+    /sbin/chkconfig --del rpcsvcgssd
     /sbin/chkconfig --del nfs
     /sbin/chkconfig --del nfslock
     /usr/sbin/userdel rpcuser 2>/dev/null || :
     /usr/sbin/groupdel rpcuser 2>/dev/null || :
     /usr/sbin/userdel nfsnobody 2>/dev/null || :
-	/etc/rc.d/init.d/rpcidmapd stop
-	/etc/rc.d/init.d/rpcgssd stop
-	/etc/rc.d/init.d/rpcsvcgssd stop
-    /sbin/chkconfig --del rpcidmapd
-    /sbin/chkconfig --del rpcgssd
-    /sbin/chkconfig --del rpcsvcgssd
 fi
 
 %postun
 if [ "$1" -ge 1 ]; then
 	/etc/rc.d/init.d/rpcidmapd condrestart > /dev/null
 	/etc/rc.d/init.d/rpcgssd condrestart > /dev/null
-	/etc/rc.d/init.d/rpcsvcgssd condrestart > /dev/null
 	/etc/rc.d/init.d/nfs condrestart > /dev/null
 fi
 
@@ -294,6 +292,12 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Mon Feb 14 2005 Steve Dickson <SteveD@RedHat.com>
+- Added support to rpcgssd.init and rpcsvcgssd.init scripts
+  to insmod security modules.
+- Changed the nfs.init script to bring rpc.svcgssd up and down,
+  since rpc.svcgssd is only needed with the NFS server is running.
+
 * Tue Dec 14 2004 Steve Dickson <SteveD@RedHat.com>
 - Fix problem in idmapd that was causing "xdr error 10008"
   errors (bz 142813)

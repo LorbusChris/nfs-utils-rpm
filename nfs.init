@@ -48,6 +48,8 @@ fi
 case "$1" in
   start)
 	# Start daemons.
+	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd start
+
 	action $"Starting NFS services: " /usr/sbin/exportfs -r
 
 	# Set the ports lockd should listen on
@@ -87,13 +89,13 @@ case "$1" in
 	echo
 	touch /var/lock/subsys/nfs
 
-	# See if rpc.imapd and rpc.svcgssd need to be started.
+	# Let rpc.idmapd know that rpc.mountd just started
 	[ -x /usr/sbin/rpc.idmapd ] && /sbin/service rpcidmapd condstart
-	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd condstart
 
 	;;
   stop)
 	# Stop daemons.
+	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd stop
 	echo -n $"Shutting down NFS mountd: "
 	killproc rpc.mountd
 	echo
@@ -118,6 +120,8 @@ case "$1" in
 	rm -f /var/lock/subsys/nfs
 	;;
   status)
+	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd status
+	echo -n $"Shutting down NFS mountd: "
 	status rpc.mountd
 	status nfsd
 	if [ -n "$RQUOTAD" -a "$RQUOTAD" != "no" ]; then
@@ -146,6 +150,7 @@ case "$1" in
 	fi
 	;;
   condrestart)
+	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd condrestart
   	[ -f /var/lock/subsys/nfs ] && {
 		$0 stop
 		$0 start

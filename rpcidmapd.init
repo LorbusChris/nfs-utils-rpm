@@ -4,7 +4,7 @@
 #
 # Authors:	Chuck Lever <cel@netapp.com>
 #
-# chkconfig: 345 19 69
+# chkconfig: 345 18 68
 # description: Starts user-level daemon for NFSv4 that maps user \
 #              names to UID and GID numbers.
 
@@ -35,7 +35,7 @@ case "$1" in
 	fi
 	rm -f /var/lock/subsys/$prog
 
-	echo -n $"Starting NFS4 idmapd: "
+	echo -n $"Starting RPC idmapd: "
 
 	# Load sunrpc which mounts the rpc_pipes fs.
 	[ -x /sbin/lsmod -a -x /sbin/modprobe ] && {
@@ -60,7 +60,7 @@ case "$1" in
 	;;
   stop)
 	# Stop daemon.
-	echo -n $"Shutting down NFS4 idmapd: "
+	echo -n $"Shutting down RPC idmapd: "
 	killproc $prog
 	RETVAL=$?
 	echo
