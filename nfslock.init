@@ -78,6 +78,8 @@ stop() {
 	   echo -n $"Stopping NFS locking: "
 	   killproc lockd
 	   echo
+	else
+	   killproc lockd -KILL
 	fi
 	echo -n $"Stopping NFS statd: "
 	killproc rpc.statd

@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.6
-Release: 43
+Release: 47
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -65,6 +65,7 @@ Patch56: nfs-utils-1.0.6-fd-sig-cleanup.patch
 Patch57: nfs-utils-1.0.6-idmap-syslog.patch
 Patch58: nfs-utils-1.0.6-idmap.conf.patch
 Patch59: nfs-utils-1.0.6-rquotad-overflow.patch
+Patch60: nfs-utils-1.0.6-statd-notify-hostname.patch
 
 Patch100: nfs-utils-1.0.6-compile.patch
 Patch150: nfs-utils-1.0.6-pie.patch
@@ -139,6 +140,7 @@ mv librpcsecgss-%{rpcsecgss} support/rpcsecgss
 %patch57 -p1 -b .syslog
 %patch58 -p1 -b .conf
 %patch59 -p1 -b .overflow
+%patch60 -p1 -b .notify
 
 
 # Do the magic to get things to compile
@@ -290,6 +292,14 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Tue Dec 14 2004 Steve Dickson <SteveD@RedHat.com>
+- make sure the correct hostname is used in the SM_NOTIFY
+  message that is sent from a rebooted server which has 
+  multiple network interfaces. (bz 139101)
+
+- Changed nfslock to send lockd a -KILL signal
+  when coming down. (bz 125257)
+
 * Thu Nov 11 2004 Steve Dickson <SteveD@RedHat.com>
 - Replaced a memcopy with explicit assignments
   in getquotainfo() of rquotad to fix potential overflow
