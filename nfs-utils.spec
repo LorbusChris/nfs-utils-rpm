@@ -1,7 +1,7 @@
 Summary: NFS utilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 0.3.1
-Release: 12
+Release: 13
 Source0: ftp://nfs.sourceforge.net/pub/nfs/nfs-utils-%{version}.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source10: nfs.init
@@ -26,7 +26,7 @@ Provides: knfsd-clients
 Provides: knfsd
 License: GPL
 Buildroot: %{_tmppath}/%{name}-root
-Requires: kernel >= 2.2.14, portmap >= 4.0, sed, gawk, sh-utils, fileutils
+Requires: kernel >= 2.2.14, portmap >= 4.0, sed, gawk, sh-utils, fileutils, textutils, grep
 Prereq: /sbin/chkconfig /usr/sbin/useradd /sbin/nologin
 
 %description
@@ -82,6 +82,12 @@ rm -rf $RPM_BUILD_ROOT
 %pre
 /usr/sbin/useradd -c "RPC Service User" -r \
         -s /sbin/nologin -u 29 -d /var/lib/nfs rpcuser 2>/dev/null || :
+# If UID 65534 is unassigned, create user "nfsnobody"
+cat /etc/passwd | cut -d':' -f 3 | grep --quiet 65534 2>/dev/null
+if [ "$?" -eq 1 ]; then
+	/usr/sbin/useradd -c "Anonymous NFS User" \
+		-s /sbin/nologin -u 65534 -d /var/lib/nfs nfsnobody 2>/dev/null || :
+fi
 
 %post
 /sbin/chkconfig --add nfs
@@ -93,6 +99,7 @@ if [ "$1" = "0" ]; then
     /sbin/chkconfig --del nfslock
     /usr/sbin/userdel rpcuser 2>/dev/null || :
     /usr/sbin/groupdel rpcuser 2>/dev/null || :
+    /usr/sbin/userdel nfsnobody 2>/dev/null || :
 fi
 
 %triggerpostun -- nfs-server
@@ -126,6 +133,12 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Tue Aug 21 2001 Bob Matthews <bmatthews@redhat.com>
+- if UID 65534 is unassigned, add user nfsnobody (#22865)
+
+* Mon Aug 20 2001 Bob Matthews <bmatthews@redhat.com>
+- fix typo in nfs init script which prevented MOUNTD_PORT from working (#52113)
+
 * Tue Aug  7 2001 Bob Matthews <bmatthews@redhat.com>
 - nfs init script shouldn't fail if /etc/exports doesn't exist (#46432)
 

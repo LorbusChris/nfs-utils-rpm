@@ -47,7 +47,7 @@ else
 fi
 
 if [ -n "$MOUNTD_PORT" ]; then
-    RPCMOUNDOPTS="$RPCMOUNTDOPTS --port $MOUNTD_PORT"
+    RPCMOUNTDOPTS="$RPCMOUNTDOPTS --port $MOUNTD_PORT"
 fi
 
 # See how we were called.
