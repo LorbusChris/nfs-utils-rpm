@@ -3,6 +3,9 @@ Name: nfs-utils
 Version: 1.0.6
 Release: 34
 
+# group all 32bit related archs
+%define all_32bit_archs i386 i686 athlon
+
 Source0: http://prdownloads.sourceforge.net/nfs/nfs-utils-1.0.6.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 
@@ -25,6 +28,7 @@ Patch4: nfs-utils-1.0.6-expwarn.patch
 Patch5: nfs-utils-1.0.6-sourceforge-cvs-2004-07-09.patch
 Patch6: nfs-utils-1.0.6-cache_select_bugfix.patch
 Patch7: nfs-utils-1.0.6-export-permisions.patch
+Patch8: nfs-utils-1.0.6-sgi-statd-fixes.patch
 
 Patch20: nfs-utils-1.0.6-pseudoflavor-clients.patch
 Patch21: nfs-utils-1.0.6-mountd_flavors.patch
@@ -84,6 +88,7 @@ mv libevent-%{eventvers} support/event
 %patch5 -p1 -b .source
 %patch6 -p1 -b .cache
 %patch7 -p1 -b .expperms
+%patch8 -p1 -b .sgi
 
 %patch20 -p1 -b .flavors
 %patch21 -p1 -b .mntflavors
@@ -124,7 +129,7 @@ autoconf
 # this, please help yourself.
 #
 ac_cv_func_innetgr=yes \
-	CFLAGS="$RPM_OPT_FLAGS" %configure
+	CFLAGS="$RPM_OPT_FLAGS" %configure --enable-secure-statd
 
 cd support/nfsidmap; %configure --prefix=$RPM_BUILD_ROOT
 cd ../../support/event; %configure --prefix=$RPM_BUILD_ROOT
@@ -168,11 +173,18 @@ rm -rf $RPM_BUILD_ROOT
 %pre
 /usr/sbin/useradd -c "RPC Service User" -r \
         -s /sbin/nologin -u 29 -d /var/lib/nfs rpcuser 2>/dev/null || :
-# If UID 65534 is unassigned, create user "nfsnobody"
-cat /etc/passwd | cut -d':' -f 3 | grep --quiet 65534 2>/dev/null
+# Define the correct unsigned uid value for 32 or 64 bit archs
+%ifarch %{all_32bit_archs}
+%define nfsnobody_uid   65534
+%else
+%define nfsnobody_uid   4294967294
+%endif
+
+# If UID 65534 (or 4294967294 64bit archs) is unassigned, create user "nfsnobody"
+cat /etc/passwd | cut -d':' -f 3 | grep --quiet %{nfsnobody_uid} 2>/dev/null
 if [ "$?" -eq 1 ]; then
 	/usr/sbin/useradd -c "Anonymous NFS User" -r \
-		-s /sbin/nologin -u 65534 -d /var/lib/nfs nfsnobody 2>/dev/null || :
+		-s /sbin/nologin -u %{nfsnobody_uid} -d /var/lib/nfs nfsnobody 2>/dev/null || :
 fi
 
 %post
@@ -248,6 +260,11 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Fri Sep 24 2004 <SteveD@RedHat.com>
+- Make sure the uid/gid of nfsnobody is the
+  correct value for all archs (bz# 123900)
+- Fixed some security issues found by SGI (bz# 133556)
+
 * Mon Aug 30 2004 Steve Dickson <SteveD@RedHat.com>
 - Major clean up. 
 - Removed all unused/old patches
