@@ -1,7 +1,7 @@
 Summary: NFS utilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 0.3.1
-Release: 13.7.2.1
+Release: 13.7.2.1a
 Source0: ftp://nfs.sourceforge.net/pub/nfs/nfs-utils-%{version}.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source10: nfs.init
@@ -82,7 +82,7 @@ rm -rf $RPM_BUILD_ROOT
 %pre
 # Cleanup from installation 0.3.1-13
 rm -f /var/spool/mail/nfsnobody 2> /dev/null || :
-rm -f `find /var/lib/nfs -uid 65534 -print` 2> /dev/null || :
+rm -f `find /var/lib/nfs -uid 65534 -print 2> /dev/null` || :
 
 /usr/sbin/useradd -c "RPC Service User" -r \
         -s /sbin/nologin -u 29 -d /var/lib/nfs rpcuser 2>/dev/null || :
@@ -138,6 +138,9 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Fri Nov 16 2001 Florian La Roche <Florian.LaRoche@redhat.de>
+- fix pre script #56355
+
 * Tue Oct 16 2001 Bob Matthews <bmatthews@redhat.com>
 - cvs branch for 7.2 errata
 - user nfsnobody should be a system account (#54221)
