@@ -1,28 +1,28 @@
-%define rhelbuild 0
-%define fc2build 1
+%define rhel3build 0
+%define fcbuild 1
 
-%if %{fc2build}
+%if %{fcbuild}
 %define nfsv4_support 1
 %else
 %define nfsv4_support 0
 %endif
 
-%if %{rhelbuild}
+%if %{rhel3build}
 %define nfsv4_support 0
-%define fc2build 0
+%define fcbuild 0
 %endif
 
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.6
-%define release 20
+%define release 24
 
 %define Release %{release}
-%if %{rhelbuild}
+%if %{rhel3build}
 %define Release %{release}EL
 %define nfsv4_support 0
 %endif
-%if %{fc2build}
+%if %{fcbuild}
 %define Release %{release}
 %endif
 Release: %{Release}
@@ -38,6 +38,7 @@ Patch3: nfs-utils-0.3.3.statd-manpage.patch
 Patch4: nfs-utils-1.0.3-aclexport.patch
 Patch5: nfs-utils-1.0.6-zerostats.patch
 Patch6: nfs-utils-1.0.6-mountd.patch
+Patch7: nfs-utils-1.0.6-expwarn.patch
 %if %{nfsv4_support}
 Patch20: nfs-utils-nfsv4-pseudoflavor-clients.patch
 Patch21: nfs-utils-nfsv4-mountd_flavors.patch
@@ -49,7 +50,10 @@ Patch31: nfs-utils-nfsv4-gssd.patch
 Patch35: nfs-utils-nfsv4-redhat-only.patch
 %endif
 
-Patch8: nfs-utils-1.0.6-pie.patch
+Patch100: nfs-utils-1.0.6-pie.patch
+
+
+
 Group: System Environment/Daemons
 Obsoletes: nfs-server
 Obsoletes: knfsd
@@ -89,15 +93,12 @@ clients which are mounted on that host.
 %patch1 -p1 -b .prefix
 %patch2 -p1 -b .statdpath
 %patch3 -p1 -b .statd-manpage
-%if %{rhelbuild}
+%if %{rhel3build}
 %patch4 -p1 -b .aclexp
 %endif
 %patch5 -p1 -b .zerostats
 %patch6 -p1 -b .mountd
-%patch8 -p1 -b .pie
-%ifarch s390 s390x
-perl -pi -e 's/-fpie/-fPIE/' */*/Makefile
-%endif
+%patch7 -p1 -b .expwarn
 
 %if %{nfsv4_support}
 %patch20 -p1 -b .v4
@@ -108,6 +109,11 @@ perl -pi -e 's/-fpie/-fPIE/' */*/Makefile
 %patch30 -p1 -b .add_gssd
 %patch31 -p1 -b .gssd
 %patch35 -p1 -b .rhonly
+%endif
+
+%patch100 -p1 -b .pie
+%ifarch s390 s390x
+perl -pi -e 's/-fpie/-fPIE/' */*/Makefile
 %endif
 
 %build
@@ -240,6 +246,28 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Mon Jun 14 2004 <SteveD@RedHat.com>
+- Removed sync warning on readonly exports.
+%if %{fcbuild}
+- Changed run levels in rpc initscripts.
+- Replaced modinfo with lsmod when checking
+  for loaded modules.
+%endif
+
+* Tue Jun  1 2004 <SteveD@RedHat.com>
+- Changed the rpcgssd init script to ensure the 
+  rpcsec_gss_krb5 module is loaded
+
+* Tue May 18 2004 <SteveD@RedHat.com>
+- Removed the auto option from MOUNTD_NFS_V2 and
+  MOUNTD_NFS_V3 variables. Since v2 and v3 are on
+  by default, there only needs to be away of 
+  turning them off.
+
+* Thu May 10 2004 <SteveD@RedHat.com>
+- Rebuilt
+
+%if %{fcbuild}
 * Thu Apr 15 2004 <SteveD@RedHat.com>
 - Changed the permission on idmapd.conf to 644
 - Added mydaemon code to svcgssd
@@ -292,6 +320,7 @@ fi
 -Changed the gssd svcgssd init scripts to only
    start up if SECURE_NFS is set to 'yes' in
    /etc/sysconfig/nfs
+%endif
 
 * Fri Feb 13 2004 Elliot Lee <sopwith@redhat.com>
 - rebuilt
@@ -299,8 +328,10 @@ fi
 * Thu Feb 12 2004 Thomas Woerner <twoerner@redhat.com>
 - make rpc.lockd, rpc.statd, rpc.mountd and rpc.nfsd pie
 
+%if %{fcbuild}
 * Wed Jan 28 2004 Steve Dickson <SteveD@RedHat.com>
 - Added the NFSv4 bits
+%endif
 
 * Mon Dec 29 2003 Steve Dickson <SteveD@RedHat.com>
 - Added the -z flag to nfsstat
