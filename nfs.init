@@ -54,31 +54,31 @@ fi
 case "$1" in
   start)
 	# Start daemons.
-	action "Starting NFS services: " /usr/sbin/exportfs -r
+	action $"Starting NFS services: " /usr/sbin/exportfs -r
 	if [ -x /usr/sbin/rpc.rquotad ] ; then
-	    echo -n "Starting NFS quotas: "
+	    echo -n $"Starting NFS quotas: "
 	    daemon rpc.rquotad
 	    echo
 	fi
-	echo -n "Starting NFS mountd: "
+	echo -n $"Starting NFS mountd: "
 	daemon rpc.mountd $RPCMOUNTDOPTS
 	echo
-	echo -n "Starting NFS daemon: "
+	echo -n $"Starting NFS daemon: "
 	daemon rpc.nfsd $RPCNFSDCOUNT
 	echo
 	touch /var/lock/subsys/nfs
 	;;
   stop)
 	# Stop daemons.
-	echo -n "Shutting down NFS mountd: "
+	echo -n $"Stopping NFS mountd: "
 	killproc rpc.mountd
 	echo
-	echo -n "Shutting down NFS daemon: "
+	echo -n $"Stopping NFS daemon: "
 	killproc nfsd
 	echo
-	action "Shutting down NFS services: " /usr/sbin/exportfs -au
+	action $"Stopping NFS services: " /usr/sbin/exportfs -au
 	if [ -x /usr/sbin/rpc.rquotad ] ; then
-	    echo -n "Shutting down NFS quotas: "
+	    echo -n $"Stopping NFS quotas: "
 	    killproc rpc.rquotad
 	    echo
 	fi
@@ -113,7 +113,7 @@ case "$1" in
 	fi
 	;;
   *)
-	echo "Usage: $0 {start|stop|status|restart|reload}"
+	echo $"Usage: $0 {start|stop|status|restart|reload}"
 	exit 1
 esac
 

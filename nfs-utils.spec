@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 0.3.3
-Release: 4
+Release: 5
 Source0: ftp://nfs.sourceforge.net/pub/nfs/nfs-utils-%{version}.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source10: nfs.init
@@ -142,7 +142,7 @@ fi
 - Make nfsnobody a system account (#54221)
 
 * Tue Aug 21 2001 Bob Matthews <bmatthews@redhat.com>
-- if UID 65534 is unassigned, add user nfsnobody (#22865)
+- if UID 65534 is unassigned, add user nfsnobody (#22685)
 
 * Mon Aug 20 2001 Bob Matthews <bmatthews@redhat.com>
 - fix typo in nfs init script which prevented MOUNTD_PORT from working (#52113)

@@ -44,13 +44,12 @@ RETVAL=0
 
 start() {
 	# Start daemons.
-	echo "Starting NFS file locking services: "
 	if [ "$USERLAND_LOCKD" ]; then
-	  echo -n "Starting NFS lockd: "
+	  echo -n $"Starting NFS locking: "
 	  daemon rpc.lockd
 	  echo
 	fi  
-	echo -n "Starting NFS statd: "
+	echo -n $"Starting NFS statd: "
 	daemon rpc.statd
 	RETVAL=$?
 	echo
@@ -60,13 +59,12 @@ start() {
 
 stop() {
 	# Stop daemons.
-	echo "Shutting down NFS file locking services: "
 	if [ "$USERLAND_LOCKD" ]; then
-	   echo -n "Shutting down NFS lockd: "
+	   echo -n $"Stopping NFS locking: "
 	   killproc lockd
 	   echo
 	fi
-	echo -n "Shutting down NFS statd: "
+	echo -n $"Stopping NFS statd: "
 	killproc rpc.statd
 	RETVAL=0
 	echo
@@ -107,7 +105,7 @@ case "$1" in
 	fi
 	;;
   *)
-	echo "Usage: $0 {start|stop|status|restart}"
+	echo $"Usage: $0 {start|stop|status|restart}"
 	exit 1
 esac
 
