@@ -1,7 +1,7 @@
-Summary: NFS utlilities and supporting daemons for the kernel NFS server.
+Summary: NFS utilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 0.3.1
-Release: 11
+Release: 12
 Source0: ftp://nfs.sourceforge.net/pub/nfs/nfs-utils-%{version}.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source10: nfs.init
@@ -26,18 +26,17 @@ Provides: knfsd-clients
 Provides: knfsd
 License: GPL
 Buildroot: %{_tmppath}/%{name}-root
-Requires: kernel >= 2.2.14, portmap >= 4.0, sed, gawk, sh-utils
+Requires: kernel >= 2.2.14, portmap >= 4.0, sed, gawk, sh-utils, fileutils
 Prereq: /sbin/chkconfig /usr/sbin/useradd /sbin/nologin
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
-related tools, which provides a much higher level of performance than the
+related tools, providing a much higher level of performance than the
 traditional Linux NFS server used by most users.
 
-This package also contains the showmount program.  Showmount queries the
-mount daemon on a remote host for information about the NFS (Network File
-System) server on the remote host.  For example, showmount can display the
-clients which are mounted on that host.
+This package also contains the showmount program. Showmount queries
+the mount daemon on a remote host for information about the NFS
+(Network File System) server on the remote host.
 
 %prep
 %setup -q -a 1 
@@ -127,6 +126,9 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Tue Aug  7 2001 Bob Matthews <bmatthews@redhat.com>
+- nfs init script shouldn't fail if /etc/exports doesn't exist (#46432)
+
 * Fri Jul 13 2001 Bob Matthews <bmatthews@redhat.com>
 - Make %pre useradd consistent with other Red Hat packages.
 

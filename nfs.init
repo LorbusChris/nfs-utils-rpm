@@ -25,7 +25,11 @@ fi
 [ -x /usr/sbin/rpc.nfsd ] || exit 0
 [ -x /usr/sbin/rpc.mountd ] || exit 0
 [ -x /usr/sbin/exportfs ] || exit 0
-[ -s /etc/exports ] || exit 0
+
+# Don't fail if /etc/exports doesn't exist; create a bare-bones version and continue.
+[ -s /etc/exports ] || \
+    { echo "#" > /etc/exports && chmod u+rw,g+r,o+r /etc/exports ; } || \
+    { echo "/etc/exports does not exist" ; exit 0 ; }
 
 # Number of servers to be started by default
 RPCNFSDCOUNT=8
