@@ -39,6 +39,7 @@ Patch57: nfs-utils-1.0.6-idmap.conf.patch
 Patch58: nfs-utils-1.0.6-rquotad-overflow.patch
 Patch59: nfs-utils-1.0.6-statd-notify-hostname.patch
 Patch60: nfs-utils-1.0.7-rpcsecgss-debug.patch
+Patch61: nfs-utils-1.0.7-xlog-loginfo.patch
 
 Patch100: nfs-utils-1.0.7-compile.patch
 Patch150: nfs-utils-1.0.6-pie.patch
@@ -92,6 +93,7 @@ mv libevent-%{eventvers} support/event
 %patch58 -p1 -b .overflow
 %patch59 -p1 -b .notify
 %patch60 -p1 -b .rpcsecgss
+%patch61 -p1 -b .xlog
 
 
 # Do the magic to get things to compile
@@ -240,6 +242,9 @@ fi
 
 %changelog
 * Sat Mar 19 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-3
+- Changed xlog to use LOG_INFO instead of LOG_DEBUG
+  so debug messages will appear w/out any config
+  changes to syslog.conf.
 - Reworked how /etc/exports is setup (bz 151389)
 
 * Wed Mar  2 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-2
