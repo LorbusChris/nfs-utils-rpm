@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.1
-Release: 1
+Release: 2
 Source0: http://prdownloads.sourceforge.net/nfs/nfs-utils-1.0.1.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source10: nfs.init
@@ -132,6 +132,10 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Thu Aug  1 2002 Bob Matthews <bmatthews@redhat.com>
+- Add Sean O'Connell's <sean@ee.duke.edu> nfs control tweaks
+- to nfs init script.
+
 * Mon Jul 22 2002 Bob Matthews <bmatthews@redhat.com>
 - Move to nfs-utils-1.0.1
 
