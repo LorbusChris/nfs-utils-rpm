@@ -17,6 +17,9 @@ if [ ! -f /etc/sysconfig/network ]; then
     exit 0
 fi
 
+# Check for and source configuration file
+[ -f /etc/sysconfig/nfs ] && . /etc/sysconfig/nfs
+
 . /etc/sysconfig/network
 
 # Check that networking is up.
@@ -41,6 +44,12 @@ fi
 [ -x /sbin/rpc.statd ] || exit 0 
 
 RETVAL=0
+if [ -n "${STATD_HOSTNAME}" ]; then
+    STATDARG="-n ${STATD_HOSTNAME}"
+else
+    STATDARG=""
+fi
+
 
 start() {
     if [ ! -f /var/lock/subsys/nfslock ]; then
@@ -51,7 +60,11 @@ start() {
 	  echo
 	fi  
 	echo -n $"Starting NFS statd: "
-	daemon rpc.statd
+	# See if a statd's ports has been defined
+	[ -n "$STATD_PORT" ] && STATDARG="$STATDARG -p $STATD_PORT"
+	[ -n "$STATD_OUTGOING_PORT" ] \
+		&& STATDARG="$STATDARG -o $STATD_OUTGOING_PORT"
+	daemon rpc.statd "$STATDARG"
 	RETVAL=$?
 	echo
 	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/nfslock
@@ -94,7 +107,7 @@ case "$1" in
 	;;
   probe)
 	if [ ! -f /var/lock/subsys/nfslock ] ; then
-	  echo start; exit 0
+	  echo $"start"; exit 0
 	fi
 	/sbin/pidof rpc.statd >/dev/null 2>&1; STATD="$?"
 	if [ "$USERLAND_LOCKD" ]; then
@@ -103,11 +116,17 @@ case "$1" in
 	   LOCKD=0
 	fi
 	if [ $STATD = 1 -o $LOCKD = 1 ] ; then
-	  echo restart; exit 0
+	  echo $"restart"; exit 0
 	fi
 	;;
+  condrestart)
+  	[ -f /var/lock/subsys/nfslock ] && {
+		stop
+		start
+	}
+	;;
   *)
-	echo $"Usage: $0 {start|stop|status|restart}"
+	echo $"Usage: $0 {start|stop|status|restart|probe|condrestart}"
 	exit 1
 esac
 

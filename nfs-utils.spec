@@ -1,20 +1,16 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
-Version: 1.0.1
-Release: 3.9
-Source0: http://prdownloads.sourceforge.net/nfs/nfs-utils-1.0.1.tar.gz
+Version: 1.0.6
+Release: 1
+Source0: http://prdownloads.sourceforge.net/nfs/nfs-utils-1.0.6.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source10: nfs.init
 Source11: nfslock.init
-Patch0: nfs-utils-0.3.3.drop-privs.patch
-Patch1: nfs-utils-0.2beta-nowrap.patch
-Patch2: no-chroot.patch
+Patch0: nfs-utils-0.2beta-nowrap.patch
+Patch1: install-prefix.patch
+Patch2: nfs-utils-1.0.5-statdpath.patch
 Patch3: nfs-utils-0.3.3.statd-manpage.patch
-Patch4: eepro-support.patch
-Patch5: time-h.patch
-Patch6: nfs-utils-sigpipe.patch
-Patch7: install-prefix.patch
-Patch8: nfs-utils-1.0.3-mountd.secfix.patch
+Patch4: nfs-utils-1.0.3-aclexport.patch
 Group: System Environment/Daemons
 Obsoletes: nfs-server
 Obsoletes: knfsd
@@ -43,15 +39,11 @@ clients which are mounted on that host.
 
 %prep
 %setup -q -a 1 
-%patch -p1 -b .drop-privs
-%patch1 -p0
-%patch2 -p1 -b .no-chroot
+%patch0 -p0
+%patch1 -p1 -b .prefix
+%patch2 -p1 -b .statdpath
 %patch3 -p1 -b .statd-manpage
-%patch4 -p1 -b .eepro-support
-%patch5 -p1 -b .time-h
-%patch6 -p1 -b .sigpipe
-%patch7 -p1 -b .prefix
-%patch8 -p1 -b .secfix
+#%patch4 -p1 -b .aclexp
 
 %build
 #
@@ -100,6 +92,7 @@ fi
 
 %preun
 if [ "$1" = "0" ]; then
+    /etc/rc.d/init.d/nfs stop
     /sbin/chkconfig --del nfs
     /sbin/chkconfig --del nfslock
     /usr/sbin/userdel rpcuser 2>/dev/null || :
@@ -124,6 +117,7 @@ fi
 %config(noreplace) /var/lib/nfs/xtab
 %config(noreplace) /var/lib/nfs/etab
 %config(noreplace) /var/lib/nfs/rmtab
+%config(noreplace) /var/lib/nfs/state
 %doc nfs/*.html nfs/*.ps linux-nfs/*
 /sbin/rpcdebug
 /sbin/rpc.lockd
@@ -138,8 +132,39 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
-* Fri Jun 20 2003 Steve Dickson <SteveD@RedHat.com>
-- Added mountd security fix
+* Wed Oct 22 2003 Steve Dickson <SteveD@RedHat.com>
+- Upgrated to 1.0.6
+- Commented out the acl path for fedora
+
+* Thu Aug  27 2003 Steve Dickson <SteveD@RedHat.com>
+- Added the setting of lockd ports via sysclt interface
+- Removed queue setting code since its no longer needed
+
+* Thu Aug  7 2003 Steve Dickson <SteveD@RedHat.com>
+- Added back the acl patch Taroon b2
+
+* Wed Jul 23 2003 Steve Dickson <SteveD@RedHat.com>
+- Commented out the acl patch (for now)
+
+* Wed Jul 21 2003 Steve Dickson <SteveD@RedHat.com>
+- Upgrated to 1.0.5
+
+* Wed Jun 18 2003 Steve Dickson <SteveD@RedHat.com>
+- Added security update
+- Fixed the drop-privs.patch which means the chroot
+patch could be removed.
+
+* Mon Jun  9 2003 Steve Dickson <SteveD@RedHat.com>
+- Defined the differ kinds of debugging avaliable for mountd in
+the mountd man page. 
+
+* Wed Jun 04 2003 Elliot Lee <sopwith@redhat.com>
+- rebuilt
+
+* Tue Jun  3 2003 Steve Dickson <SteveD@RedHat.com>
+- Upgraded to 1.0.3 
+- Fixed numerous bugs in init scrips
+- Added nfsstat overflow patch
 
 * Thu Jan 23 2003 Tim Powers <timp@redhat.com> 1.0.1-2.9
 - rebuild

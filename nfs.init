@@ -33,7 +33,6 @@ fi
     { echo "/etc/exports does not exist" ; exit 0 ; }
 
 # Check for and source configuration file otherwise set defaults
-# TUNE_QUEUE: controls whether to up the size of input queues
 [ -f /etc/sysconfig/nfs ] && . /etc/sysconfig/nfs
 
 [ -z "$MOUNTD_NFS_V2" ] && MOUNTD_NFS_V2=auto
@@ -45,27 +44,22 @@ fi
 # Remote quota server
 [ -z "$RQUOTAD" ] && RQUOTAD=`type -path rpc.rquotad`
 
-# Get the initial values for the input sock queues
-# at the time of running the script.
-if [ "$TUNE_QUEUE" = "yes" ]; then
-    RMEM_DEFAULT=`/sbin/sysctl -n net.core.rmem_default`
-    RMEM_MAX=`/sbin/sysctl -n net.core.rmem_max`
-    # 256kb recommended minimum size based on SPECsfs NFS benchmarks
-    [ -z "$NFS_QS" ] && NFS_QS=262144
-fi
-
 # See how we were called.
 case "$1" in
   start)
 	# Start daemons.
-	# Apply input queue increase for nfs server
-	if [ "$TUNE_QUEUE" = "yes" ]; then
- 	    /sbin/sysctl -w net.core.rmem_default=$NFSD_QS >/dev/null 2>&1
-	    /sbin/sysctl -w net.core.rmem_max=$NFSD_QS >/dev/null 2>&1
+
+	# Set the ports lockd should listen on
+	if [ -n "LOCKD_TCPPORT" ]; then
+	    /sbin/sysctl -w fs.nfs.nlm_tcpport=$LOCKD_TCPPORT >/dev/null 2>&1
 	fi
+	if [ -n "LOCKD_UDPPORT" ]; then
+	    /sbin/sysctl -w fs.nfs.nlm_udpport=$LOCKD_UDPPORT >/dev/null 2>&1
+	fi
+
 	action $"Starting NFS services: " /usr/sbin/exportfs -r
 	if [ -n "$RQUOTAD" -a "$RQUOTAD" != "no" ]; then
-	    echo -n "Starting NFS quotas: "
+	    echo -n $"Starting NFS quotas: "
 	    daemon rpc.rquotad
 	    echo
 	fi
@@ -112,11 +106,6 @@ case "$1" in
 	daemon rpc.mountd $RPCMOUNTDOPTS
 	echo
 	touch /var/lock/subsys/nfs
-	# reset input queue for rest of network services
-	if [ "$TUNE_QUEUE" = "yes" ]; then
-	    /sbin/sysctl -w net.core.rmem_default=$RMEM_DEFAULT >/dev/null 2>&1
-	    /sbin/sysctl -w net.core.rmem_max=$RMEM_MAX >/dev/null 2>&1
-	fi
 	;;
   stop)
 	# Stop daemons.
@@ -127,9 +116,16 @@ case "$1" in
 	killproc nfsd
 	echo
 	if [ -n "$RQUOTAD" ]; then
-		echo -n "Shutting down NFS quotas: "
+		echo -n $"Shutting down NFS quotas: "
 		killproc rpc.rquotad
 		echo
+	fi
+	# Reset the lockd ports if they were set
+	if [ -n "LOCKD_TCPPORT" ]; then
+	    /sbin/sysctl -w fs.nfs.nlm_tcpport=0 >/dev/null 2>&1
+	fi
+	if [ -n "LOCKD_UDPPORT" ]; then
+	    /sbin/sysctl -w fs.nfs.nlm_udpport=0 >/dev/null 2>&1
 	fi
 	# Do it the last so that clients can still access the server
 	# when the server is running.
@@ -164,8 +160,14 @@ case "$1" in
 	  echo $"reload"; exit 0
 	fi
 	;;
+  condrestart)
+  	[ -f /var/lock/subsys/nfs ] && {
+		$0 stop
+		$0 start
+	}
+	;;
   *)
-	echo $"Usage: nfs {start|stop|status|restart|reload}"
+	echo $"Usage: nfs {start|stop|status|restart|reload|condrestart}"
 	exit 1
 esac
 
