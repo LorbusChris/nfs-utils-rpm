@@ -1,19 +1,17 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
-Version: 0.3.1
-Release: 14.72
+Version: 0.3.3
+Release: 4
 Source0: ftp://nfs.sourceforge.net/pub/nfs/nfs-utils-%{version}.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source10: nfs.init
 Source11: nfslock.init
-Patch0: nfs-utils-0.3.1-drop-privs.patch
+Patch0: nfs-utils-0.3.3.drop-privs.patch
 Patch1: nfs-utils-0.2beta-nowrap.patch
 Patch2: no-chroot.patch
-Patch3: nfs-utils-0.3.1-statd-manpage.patch
+Patch3: nfs-utils-0.3.3.statd-manpage.patch
 Patch4: eepro-support.patch
 Patch5: time-h.patch
-Patch6: syslog-level.patch
-Patch7: nfs-utils-1.0.3-mountd.secfix.patch
 Group: System Environment/Daemons
 Obsoletes: nfs-server
 Obsoletes: knfsd
@@ -48,8 +46,6 @@ clients which are mounted on that host.
 %patch3 -p1 -b .statd-manpage
 %patch4 -p1 -b .eepro-support
 %patch5 -p1 -b .time-h
-%patch6 -p1 -b .syslog-level
-%patch7 -p1 -b .secfix
 
 %build
 #
@@ -136,12 +132,14 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
-* Fri Jun 20 2003 Steve Dickson <SteveD@RedHat.com>
-- Added mountd security fix
+* Mon Feb 18 2002 Bob Matthews <bmatthews@redhat.com>
+- "service nfs restart" should start services even if currently 
+-   not running (#59469)
+- bump version to 0.3.3-4
 
-* Tue Oct 16 2001 Bob Matthews <bmatthews@redhat.com>
-- cvs branch for 7.2 errata
-- user nfsnobody should be a system account (#54221)
+* Wed Oct  3 2001 Bob Matthews <bmatthews@redhat.com>
+- Move to nfs-utils-0.3.3
+- Make nfsnobody a system account (#54221)
 
 * Tue Aug 21 2001 Bob Matthews <bmatthews@redhat.com>
 - if UID 65534 is unassigned, add user nfsnobody (#22865)

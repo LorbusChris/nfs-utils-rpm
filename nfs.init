@@ -92,13 +92,8 @@ case "$1" in
 	fi
 	;;
   restart)
-	echo -n "Restarting NFS services: "
-	echo -n "rpc.mountd "
-	killproc rpc.mountd
-	daemon rpc.mountd $RPCMOUNTDOPTS
-	/usr/sbin/exportfs -r
-	touch /var/lock/subsys/nfs
-	echo
+	$0 stop || :
+	$0 start 
 	;;
   reload)
 	/usr/sbin/exportfs -r
