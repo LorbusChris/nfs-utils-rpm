@@ -60,7 +60,9 @@ case "$1" in
 
 	if [ -n "$RQUOTAD" -a "$RQUOTAD" != "no" ]; then
 	    echo -n $"Starting NFS quotas: "
-	    daemon rpc.rquotad
+		[ -n "$RQUOTAD_PORT" ] \
+			&& RPCRQUOTADOPTS="$RPCRQUOTADOPTS -p $RQUOTAD_PORT"
+	    daemon rpc.rquotad $RPCRQUOTADOPTS
 	    echo
 	fi
 	echo -n $"Starting NFS daemon: "
