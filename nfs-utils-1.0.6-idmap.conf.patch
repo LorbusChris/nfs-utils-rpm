@@ -1,0 +1,9 @@
+--- nfs-utils-1.0.6/utils/idmapd/idmapd.conf.orig	2004-11-03 12:49:06.363552000 -0500
++++ nfs-utils-1.0.6/utils/idmapd/idmapd.conf	2004-11-03 12:49:40.573380000 -0500
+@@ -8,3 +8,6 @@
+ 
+ Nobody-User = nobody
+ Nobody-Group = nobody
++
++[Translation]
++Method = nsswitch

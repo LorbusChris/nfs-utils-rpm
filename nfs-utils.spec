@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.6
-Release: 39
+Release: 40
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -9,11 +9,14 @@ Release: 39
 Source0: http://prdownloads.sourceforge.net/nfs/nfs-utils-1.0.6.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 
-%define idmapvers 0.1
+%define idmapvers 0.5
 Source2: http://www.citi.umich.edu/projects/nfsv4/linux/libnfsidmap/nfsidmap-%{idmapvers}.tar.gz
-
 %define eventvers 0.9
 Source3: http://monkey.org/~provos/libevent-%{eventvers}.tar.gz
+%define gssapivers 0.1
+Source4: http://www.citi.umich.edu/projects/nfsv4/linux/libgssapi/libgssapi-%{gssapivers}.tar.gz
+%define rpcsecgss 0.1
+Source5: http://www.citi.umich.edu/projects/nfsv4/linux/librpcsecgss/librpcsecgss-%{rpcsecgss}.tar.gz 
 
 Source10: nfs.init
 Source11: nfslock.init
@@ -21,30 +24,49 @@ Source12: rpcidmapd.init
 Source13: rpcgssd.init
 Source14: rpcsvcgssd.init
 
-Patch1: nfs-utils-1.0.5-statdpath.patch
-Patch2: nfs-utils-1.0.6-zerostats.patch
-Patch3: nfs-utils-1.0.6-mountd.patch
-Patch4: nfs-utils-1.0.6-expwarn.patch
-Patch5: nfs-utils-1.0.6-sourceforge-cvs-2004-07-09.patch
-Patch6: nfs-utils-1.0.6-cache_select_bugfix.patch
-Patch7: nfs-utils-1.0.6-export-permisions.patch
-Patch8: nfs-utils-1.0.6-sgi-statd-fixes.patch
+#
+# Upstream Patches
+#
+Patch1: nfs-utils-1-0-6-post1.patch
+Patch2: nfs-utils-1-0-6-post2.patch
+Patch3: nfs-utils-1-0-6-post3.patch
+Patch4: nfs-utils-1-0-6-post4.patch
+Patch5: nfs-utils-1-0-6-post5.patch
+Patch6: nfs-utils-1-0-6-post6.patch
+Patch7: nfs-utils-1-0-6-post7.patch
+Patch8: nfs-utils-1-0-6-post8.patch
 
-Patch20: nfs-utils-1.0.6-pseudoflavor-clients.patch
-Patch21: nfs-utils-1.0.6-mountd_flavors.patch
+#
+# CITI NFS4 Patches (nfs-utils-1.0.6-23)
+#
+Patch20: nfs-utils-1.0.6-citi-rpcdebug.patch
+Patch21: nfs-utils-1.0.6-citi-svcgssd_memleak_fix.patch
+Patch22: nfs-utils-1.0.6-citi-svcgssd_remove_NOGROUPS.patch
+Patch23: nfs-utils-1.0.6-citi-idmapd_remove_mapping_related_options.patch
+Patch24: nfs-utils-1.0.6-citi-update_idmapd.patch
+Patch25: nfs-utils-1.0.6-citi-idmapd_let_libnfsidmap_parse_conf_file.patch
+Patch26: nfs-utils-1.0.6-citi-mountd_flavors.patch
+Patch27: nfs-utils-1.0.6-citi-gssd_downcall_err_reporting.patch
+Patch28: nfs-utils-1.0.6-citi-gssd_restore_euid_on_failure.patch
+Patch29: nfs-utils-1.0.6-citi-svcgssd-princ-to-uid.patch
+Patch30: nfs-utils-1.0.6-citi-use_libgssapi.patch
+Patch31: nfs-utils-1.0.6-citi-use_librpcsecgss.patch
 
-Patch30: nfs-utils-1.0.6-add_idmapd.patch
-Patch31: nfs-utils-1.0.6-idmapd_cl_srv_flag.patch
-Patch32: nfs-utils-1.0.6-idmap_mapping_library.patch
-Patch33: nfs-utils-1.0.6-idmap_event_del_fix.patch
-Patch35: nfs-utils-1.0.6-update_idmap.patch
+#
+# Local Patches
+#
+Patch50: nfs-utils-1.0.5-statdpath.patch
+Patch51: nfs-utils-1.0.6-zerostats.patch
+Patch52: nfs-utils-1.0.6-mountd.patch
+Patch53: nfs-utils-1.0.6-expwarn.patch
+Patch54: nfs-utils-1.0.6-export-permisions.patch
+Patch55: nfs-utils-1.0.6-sgi-statd-fixes.patch
+Patch56: nfs-utils-1.0.6-fd-sig-cleanup.patch
+Patch57: nfs-utils-1.0.6-idmap-syslog.patch
+Patch58: nfs-utils-1.0.6-idmap.conf.patch
 
-Patch40: nfs-utils-1.0.6-add_gssd.patch
-Patch45: nfs-utils-1.0.6-update_gssd.patch
-Patch46: nfs-utils-1.0.6-fd-sig-cleanup.patch
-
-Patch50: nfs-utils-1.0.6-compile.patch
-Patch100: nfs-utils-1.0.6-pie.patch
+Patch100: nfs-utils-1.0.6-compile.patch
+Patch150: nfs-utils-1.0.6-pie.patch
 
 Group: System Environment/Daemons
 Obsoletes: nfs-server
@@ -75,50 +97,51 @@ System) server on the remote host.  For example, showmount can display the
 clients which are mounted on that host.
 
 %prep
-%setup -q -a1 -a2 -a3
+%setup -q -a1 -a2 -a3 -a4 -a5
 #
-# Set up the two support libs
+# Set up the support libs
 #
 mv nfsidmap-%{idmapvers} support/nfsidmap
 mv libevent-%{eventvers} support/event
+mv libgssapi-%{gssapivers} support/gssapi
+mv librpcsecgss-%{rpcsecgss} support/rpcsecgss
 
-%patch1 -p1 -b .statdpath
-%patch2 -p1 -b .zerostats
-%patch3 -p1 -b .mountd
-%patch4 -p1 -b .expwarn
-%patch5 -p1 -b .source
-%patch6 -p1 -b .cache
-%patch7 -p1 -b .expperms
-%patch8 -p1 -b .sgi
+%patch1 -p1
+%patch2 -p1
+%patch3 -p1
+%patch4 -p1
+%patch5 -p1
+%patch6 -p1
+%patch7 -p1
+%patch8 -p1
 
-%patch20 -p1 -b .flavors
-%patch21 -p1 -b .mntflavors
+%patch20 -p1
+%patch21 -p1
+%patch22 -p1 
+%patch23 -p1 
+%patch24 -p1 
+%patch25 -p1 
+%patch26 -p1 
+%patch27 -p1 
+%patch28 -p1 
+%patch29 -p1 
+%patch30 -p1 
+%patch31 -p1 
 
-#
-# Add rpc.idmapd
-#
-%patch30 -p1 -b .add_idmap
-# idmapd_cl_srv_flag.patch
-%patch31 -p1
-# idmap_mapping_library.path
-%patch32 -p1
-# idmap_event_del_fix.patch
-%patch33 -p1
-# local updates
-%patch35 -p1 -b .update_idmap
+%patch50 -p1 -b .statdpath
+%patch51 -p1 -b .zerostats
+%patch52 -p1 -b .mountd
+%patch53 -p1 -b .expwarn
+%patch54 -p1 -b .expperms
+%patch55 -p1 -b .sgi
+%patch56 -p1 -b .cleanup
+%patch57 -p1 -b .syslog
+%patch58 -p1 -b .conf
 
-#
-# Added rpc.gssd and rpc.svcgssd
-#
-%patch40 -p1 -b .add_gssd
-# local updates
-%patch45 -p1 -b .update_gssd
-
-%patch46 -p1 -b .cleanup
 
 # Do the magic to get things to compile
-%patch50 -p1 -b .compile
-%patch100 -p1 -b .pie
+%patch100 -p1 -b .compile
+%patch150 -p1 -b .pie
 %ifarch s390 s390x
 perl -pi -e 's/-fpie/-fPIE/' */*/Makefile
 %endif
@@ -136,6 +159,8 @@ ac_cv_func_innetgr=yes \
 
 cd support/nfsidmap; %configure --prefix=$RPM_BUILD_ROOT
 cd ../../support/event; %configure --prefix=$RPM_BUILD_ROOT
+cd ../../support/gssapi; %configure --prefix=$RPM_BUILD_ROOT
+cd ../../support/rpcsecgss; %configure --prefix=$RPM_BUILD_ROOT
 cd ../../
 
 make all
@@ -263,6 +288,10 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Mon Nov  8 2004 Steve Dickson <SteveD@RedHat.com>
+- Updated to latest sourceforge code
+- Updated to latest CITIT nfs4 patches
+
 * Sun Oct 17 2004 Steve Dickson <SteveD@RedHat.com>
 - Changed nfs.init to bring down rquotad correctly
   (bz# 136041)
