@@ -1,22 +1,22 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
-Version: 1.0.6
-Release: 53
+Version: 1.0.7
+Release: 0
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
 
-Source0: http://prdownloads.sourceforge.net/nfs/nfs-utils-1.0.6.tar.gz
+Source0: http://unc.dl.sourceforge.net/sourceforge/nfs/nfs-utils-1.0.7.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 
-%define idmapvers 0.5
+%define idmapvers 0.10
 Source2: http://www.citi.umich.edu/projects/nfsv4/linux/libnfsidmap/nfsidmap-%{idmapvers}.tar.gz
-%define eventvers 0.9
+%define eventvers 1.0b
 Source3: http://monkey.org/~provos/libevent-%{eventvers}.tar.gz
-%define gssapivers 0.1
-Source4: http://www.citi.umich.edu/projects/nfsv4/linux/libgssapi/libgssapi-%{gssapivers}.tar.gz
 %define rpcsecgss 0.1
-Source5: http://www.citi.umich.edu/projects/nfsv4/linux/librpcsecgss/librpcsecgss-%{rpcsecgss}.tar.gz 
+Source4: http://www.citi.umich.edu/projects/nfsv4/linux/librpcsecgss/librpcsecgss-%{rpcsecgss}.tar.gz 
+#%define gssapivers 0.1
+#Source4: http://www.citi.umich.edu/projects/nfsv4/linux/libgssapi/libgssapi-%{gssapivers}.tar.gz
 
 Source10: nfs.init
 Source11: nfslock.init
@@ -25,32 +25,20 @@ Source13: rpcgssd.init
 Source14: rpcsvcgssd.init
 
 #
-# Upstream Patches
-#
-Patch1: nfs-utils-1-0-6-post1.patch
-Patch2: nfs-utils-1-0-6-post2.patch
-Patch3: nfs-utils-1-0-6-post3.patch
-Patch4: nfs-utils-1-0-6-post4.patch
-Patch5: nfs-utils-1-0-6-post5.patch
-Patch6: nfs-utils-1-0-6-post6.patch
-Patch7: nfs-utils-1-0-6-post7.patch
-Patch8: nfs-utils-1-0-6-post8.patch
-
-#
 # CITI NFS4 Patches (nfs-utils-1.0.6-23)
 #
-Patch20: nfs-utils-1.0.6-citi-rpcdebug.patch
-Patch21: nfs-utils-1.0.6-citi-svcgssd_memleak_fix.patch
-Patch22: nfs-utils-1.0.6-citi-svcgssd_remove_NOGROUPS.patch
-Patch23: nfs-utils-1.0.6-citi-idmapd_remove_mapping_related_options.patch
-Patch24: nfs-utils-1.0.6-citi-update_idmapd.patch
-Patch25: nfs-utils-1.0.6-citi-idmapd_let_libnfsidmap_parse_conf_file.patch
-Patch26: nfs-utils-1.0.6-citi-mountd_flavors.patch
-Patch27: nfs-utils-1.0.6-citi-gssd_downcall_err_reporting.patch
-Patch28: nfs-utils-1.0.6-citi-gssd_restore_euid_on_failure.patch
-Patch29: nfs-utils-1.0.6-citi-svcgssd-princ-to-uid.patch
-Patch30: nfs-utils-1.0.6-citi-use_libgssapi.patch
-Patch31: nfs-utils-1.0.6-citi-use_librpcsecgss.patch
+#Patch20: nfs-utils-1.0.6-citi-rpcdebug.patch
+#Patch21: nfs-utils-1.0.6-citi-svcgssd_memleak_fix.patch
+#Patch22: nfs-utils-1.0.6-citi-svcgssd_remove_NOGROUPS.patch
+#Patch23: nfs-utils-1.0.6-citi-idmapd_remove_mapping_related_options.patch
+#Patch24: nfs-utils-1.0.6-citi-update_idmapd.patch
+#Patch25: nfs-utils-1.0.6-citi-idmapd_let_libnfsidmap_parse_conf_file.patch
+#Patch26: nfs-utils-1.0.6-citi-mountd_flavors.patch
+#Patch27: nfs-utils-1.0.6-citi-gssd_downcall_err_reporting.patch
+#Patch28: nfs-utils-1.0.6-citi-gssd_restore_euid_on_failure.patch
+#Patch29: nfs-utils-1.0.6-citi-svcgssd-princ-to-uid.patch
+#Patch30: nfs-utils-1.0.6-citi-use_libgssapi.patch
+#Patch31: nfs-utils-1.0.6-citi-use_librpcsecgss.patch
 
 #
 # Local Patches
@@ -59,16 +47,14 @@ Patch50: nfs-utils-1.0.5-statdpath.patch
 Patch51: nfs-utils-1.0.6-zerostats.patch
 Patch52: nfs-utils-1.0.6-mountd.patch
 Patch53: nfs-utils-1.0.6-expwarn.patch
-Patch54: nfs-utils-1.0.6-export-permisions.patch
-Patch55: nfs-utils-1.0.6-sgi-statd-fixes.patch
-Patch56: nfs-utils-1.0.6-fd-sig-cleanup.patch
-Patch57: nfs-utils-1.0.6-idmap-syslog.patch
-Patch58: nfs-utils-1.0.6-idmap.conf.patch
-Patch59: nfs-utils-1.0.6-rquotad-overflow.patch
-Patch60: nfs-utils-1.0.6-statd-notify-hostname.patch
-Patch61: nfs-utils-1.0.6-idmap-event.patch
+Patch54: nfs-utils-1.0.7-sgi-statd-fixes.patch
+Patch55: nfs-utils-1.0.6-fd-sig-cleanup.patch
+Patch56: nfs-utils-1.0.6-idmap-syslog.patch
+Patch57: nfs-utils-1.0.6-idmap.conf.patch
+Patch58: nfs-utils-1.0.6-rquotad-overflow.patch
+Patch59: nfs-utils-1.0.6-statd-notify-hostname.patch
 
-Patch100: nfs-utils-1.0.6-compile.patch
+Patch100: nfs-utils-1.0.7-compile.patch
 Patch150: nfs-utils-1.0.6-pie.patch
 
 Group: System Environment/Daemons
@@ -86,7 +72,7 @@ License: GPL
 Buildroot: %{_tmppath}/%{name}-root
 Requires: kernel >= 2.2.14, portmap >= 4.0, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
-BuildRequires: krb5-devel >= 1.3.1 autoconf >= 2.57
+BuildRequires: krb5-devel >= 1.3.1 autoconf >= 2.57 openldap-devel >= 2.2
 Prereq: /sbin/chkconfig /usr/sbin/useradd /sbin/nologin
 
 %description
@@ -100,49 +86,47 @@ System) server on the remote host.  For example, showmount can display the
 clients which are mounted on that host.
 
 %prep
-%setup -q -a1 -a2 -a3 -a4 -a5
+%setup -q -a1 -a2 -a3 -a4
 #
 # Set up the support libs
 #
 mv nfsidmap-%{idmapvers} support/nfsidmap
 mv libevent-%{eventvers} support/event
-mv libgssapi-%{gssapivers} support/gssapi
 mv librpcsecgss-%{rpcsecgss} support/rpcsecgss
+#mv libgssapi-%{gssapivers} support/gssapi
 
-%patch1 -p1
-%patch2 -p1
-%patch3 -p1
-%patch4 -p1
-%patch5 -p1
-%patch6 -p1
-%patch7 -p1
-%patch8 -p1
+#%patch1 -p1
+#%patch2 -p1
+#%patch3 -p1
+#%patch4 -p1
+#%patch5 -p1
+#%patch6 -p1
+#%patch7 -p1
+#%patch8 -p1
 
-%patch20 -p1
-%patch21 -p1
-%patch22 -p1 
-%patch23 -p1 
-%patch24 -p1 
-%patch25 -p1 
-%patch26 -p1 
-%patch27 -p1 
-%patch28 -p1 
-%patch29 -p1 
-%patch30 -p1 
-%patch31 -p1 
+#%patch20 -p1
+#%patch21 -p1
+#%patch22 -p1 
+#%patch23 -p1 
+#%patch24 -p1 
+#%patch25 -p1 
+#%patch26 -p1 
+#%patch27 -p1 
+#%patch28 -p1 
+#%patch29 -p1 
+#%patch30 -p1 
+#%patch31 -p1 
 
 %patch50 -p1 -b .statdpath
 %patch51 -p1 -b .zerostats
 %patch52 -p1 -b .mountd
 %patch53 -p1 -b .expwarn
-%patch54 -p1 -b .expperms
-%patch55 -p1 -b .sgi
-%patch56 -p1 -b .cleanup
-%patch57 -p1 -b .syslog
-%patch58 -p1 -b .conf
-%patch59 -p1 -b .overflow
-%patch60 -p1 -b .notify
-%patch61 -p1 -b .event
+%patch54 -p1 -b .sgi
+%patch55 -p1 -b .cleanup
+%patch56 -p1 -b .syslog
+%patch57 -p1 -b .conf
+%patch58 -p1 -b .overflow
+%patch59 -p1 -b .notify
 
 
 # Do the magic to get things to compile
@@ -165,7 +149,7 @@ ac_cv_func_innetgr=yes \
 
 cd support/nfsidmap; %configure --prefix=$RPM_BUILD_ROOT
 cd ../../support/event; %configure --prefix=$RPM_BUILD_ROOT
-cd ../../support/gssapi; %configure --prefix=$RPM_BUILD_ROOT
+#cd ../../support/gssapi; %configure --prefix=$RPM_BUILD_ROOT
 cd ../../support/rpcsecgss; %configure --prefix=$RPM_BUILD_ROOT
 cd ../../
 
