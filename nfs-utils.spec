@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.6
-Release: 40
+Release: 41
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -64,6 +64,7 @@ Patch55: nfs-utils-1.0.6-sgi-statd-fixes.patch
 Patch56: nfs-utils-1.0.6-fd-sig-cleanup.patch
 Patch57: nfs-utils-1.0.6-idmap-syslog.patch
 Patch58: nfs-utils-1.0.6-idmap.conf.patch
+Patch59: nfs-utils-1.0.6-rquotad-overflow.patch
 
 Patch100: nfs-utils-1.0.6-compile.patch
 Patch150: nfs-utils-1.0.6-pie.patch
@@ -137,6 +138,7 @@ mv librpcsecgss-%{rpcsecgss} support/rpcsecgss
 %patch56 -p1 -b .cleanup
 %patch57 -p1 -b .syslog
 %patch58 -p1 -b .conf
+%patch59 -p1 -b .overflow
 
 
 # Do the magic to get things to compile
@@ -288,6 +290,11 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Thu Nov 11 2004 Steve Dickson <SteveD@RedHat.com>
+- Replaced a memcopy with explicit assignments
+  in getquotainfo() of rquotad to fix potential overflow
+  that can occur on 64bit machines. (bz 138068)
+
 * Mon Nov  8 2004 Steve Dickson <SteveD@RedHat.com>
 - Updated to latest sourceforge code
 - Updated to latest CITIT nfs4 patches
