@@ -1,7 +1,7 @@
-Summary: NFS utilities and supporting daemons for the kernel NFS server.
+Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 0.3.1
-Release: 13.7.2.4
+Release: 14.72
 Source0: ftp://nfs.sourceforge.net/pub/nfs/nfs-utils-%{version}.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source10: nfs.init
@@ -13,6 +13,7 @@ Patch3: nfs-utils-0.3.1-statd-manpage.patch
 Patch4: eepro-support.patch
 Patch5: time-h.patch
 Patch6: syslog-level.patch
+Patch7: nfs-utils-1.0.3-mountd.secfix.patch
 Group: System Environment/Daemons
 Obsoletes: nfs-server
 Obsoletes: knfsd
@@ -31,12 +32,13 @@ Prereq: /sbin/chkconfig /usr/sbin/useradd /sbin/nologin
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
-related tools, providing a much higher level of performance than the
+related tools, which provides a much higher level of performance than the
 traditional Linux NFS server used by most users.
 
-This package also contains the showmount program. Showmount queries
-the mount daemon on a remote host for information about the NFS
-(Network File System) server on the remote host.
+This package also contains the showmount program.  Showmount queries the
+mount daemon on a remote host for information about the NFS (Network File
+System) server on the remote host.  For example, showmount can display the
+clients which are mounted on that host.
 
 %prep
 %setup -q -a 1 
@@ -47,6 +49,7 @@ the mount daemon on a remote host for information about the NFS
 %patch4 -p1 -b .eepro-support
 %patch5 -p1 -b .time-h
 %patch6 -p1 -b .syslog-level
+%patch7 -p1 -b .secfix
 
 %build
 #
@@ -80,12 +83,8 @@ rm %{buildroot}/%{_sbindir}/rpc.rquotad
 rm -rf $RPM_BUILD_ROOT
 
 %pre
-# Cleanup from installation 0.3.1-13
-rm -f /var/spool/mail/nfsnobody 2> /dev/null || :
-rm -f `find /var/lib/nfs -uid 65534 -print 2> /dev/null` > /dev/null 2>&1 || :
 /usr/sbin/useradd -c "RPC Service User" -r \
         -s /sbin/nologin -u 29 -d /var/lib/nfs rpcuser 2>/dev/null || :
-
 # If UID 65534 is unassigned, create user "nfsnobody"
 cat /etc/passwd | cut -d':' -f 3 | grep --quiet 65534 2>/dev/null
 if [ "$?" -eq 1 ]; then
@@ -137,14 +136,8 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
-* Tue Feb 19 2002 Tim Powers <timp@redhat.com>
-- rebuilt
-
-* Thu Dec 13 2001 Bob Matthews <bmatthews@redhat.com>
-- 0.3.1-13 cleanup code still not silent on clean install.  Fixed.
-
-* Fri Nov 30 2001 Bob Matthews <bmatthews@redhat.com>
-- Add Tim P's. "shaddup" code to 0.3.1-13 cleanup code
+* Fri Jun 20 2003 Steve Dickson <SteveD@RedHat.com>
+- Added mountd security fix
 
 * Tue Oct 16 2001 Bob Matthews <bmatthews@redhat.com>
 - cvs branch for 7.2 errata
