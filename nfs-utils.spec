@@ -1,59 +1,45 @@
-%define rhel3build 0
-%define fcbuild 1
-
-%if %{fcbuild}
-%define nfsv4_support 1
-%else
-%define nfsv4_support 0
-%endif
-
-%if %{rhel3build}
-%define nfsv4_support 0
-%define fcbuild 0
-%endif
-
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.6
-%define release 31
-
-%define Release %{release}
-%if %{rhel3build}
-%define Release %{release}EL
-%define nfsv4_support 0
-%endif
-%if %{fcbuild}
-%define Release %{release}
-%endif
-Release: %{Release}
+Release: 34
 
 Source0: http://prdownloads.sourceforge.net/nfs/nfs-utils-1.0.6.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
+
+%define idmapvers 0.1
+Source2: http://www.citi.umich.edu/projects/nfsv4/linux/libnfsidmap/nfsidmap-%{idmapvers}.tar.gz
+
+%define eventvers 0.9
+Source3: http://monkey.org/~provos/libevent-%{eventvers}.tar.gz
+
 Source10: nfs.init
 Source11: nfslock.init
-Patch0: nfs-utils-0.2beta-nowrap.patch
-Patch1: install-prefix.patch
-Patch2: nfs-utils-1.0.5-statdpath.patch
-Patch3: nfs-utils-0.3.3.statd-manpage.patch
-Patch4: nfs-utils-1.0.3-aclexport.patch
-Patch5: nfs-utils-1.0.6-zerostats.patch
-Patch6: nfs-utils-1.0.6-mountd.patch
-Patch7: nfs-utils-1.0.6-expwarn.patch
+Source12: rpcidmapd.init
+Source13: rpcgssd.init
+Source14: rpcsvcgssd.init
 
-%if %{nfsv4_support}
-Patch20: nfs-utils-nfsv4-pseudoflavor-clients.patch
-Patch21: nfs-utils-nfsv4-mountd_flavors.patch
-Patch22: nfs-utils-nfsv4-upcall_export_check.patch
-Patch25: nfs-utils-nfsv4-add_idmapd.patch
-Patch26: nfs-utils-nfsv4-idmapd.patch
-Patch30: nfs-utils-nfsv4-add_gssd.patch
-Patch31: nfs-utils-nfsv4-gssd.patch
-Patch35: nfs-utils-nfsv4-redhat-only.patch
-%endif
+Patch1: nfs-utils-1.0.5-statdpath.patch
+Patch2: nfs-utils-1.0.6-zerostats.patch
+Patch3: nfs-utils-1.0.6-mountd.patch
+Patch4: nfs-utils-1.0.6-expwarn.patch
+Patch5: nfs-utils-1.0.6-sourceforge-cvs-2004-07-09.patch
+Patch6: nfs-utils-1.0.6-cache_select_bugfix.patch
+Patch7: nfs-utils-1.0.6-export-permisions.patch
 
+Patch20: nfs-utils-1.0.6-pseudoflavor-clients.patch
+Patch21: nfs-utils-1.0.6-mountd_flavors.patch
+
+Patch30: nfs-utils-1.0.6-add_idmapd.patch
+Patch31: nfs-utils-1.0.6-idmapd_cl_srv_flag.patch
+Patch32: nfs-utils-1.0.6-idmap_mapping_library.patch
+Patch33: nfs-utils-1.0.6-idmap_event_del_fix.patch
+Patch35: nfs-utils-1.0.6-update_idmap.patch
+
+Patch40: nfs-utils-1.0.6-add_gssd.patch
+Patch45: nfs-utils-1.0.6-update_gssd.patch
+
+Patch50: nfs-utils-1.0.6-compile.patch
 Patch100: nfs-utils-1.0.6-pie.patch
-
-
 
 Group: System Environment/Daemons
 Obsoletes: nfs-server
@@ -69,10 +55,8 @@ Provides: knfsd
 License: GPL
 Buildroot: %{_tmppath}/%{name}-root
 Requires: kernel >= 2.2.14, portmap >= 4.0, sed, gawk, sh-utils, fileutils, textutils, grep
-%if %{nfsv4_support}
 Requires: modutils >= 2.4.26-9
-BuildRequires: krb5-devel >= 1.3.1
-%endif
+BuildRequires: krb5-devel >= 1.3.1 autoconf >= 2.57
 Prereq: /sbin/chkconfig /usr/sbin/useradd /sbin/nologin
 
 %description
@@ -86,44 +70,66 @@ System) server on the remote host.  For example, showmount can display the
 clients which are mounted on that host.
 
 %prep
-%setup -q -a1
-%if ! %{nfsv4_support}
-%patch0 -p0
-%endif
+%setup -q -a1 -a2 -a3
+#
+# Set up the two support libs
+#
+mv nfsidmap-%{idmapvers} support/nfsidmap
+mv libevent-%{eventvers} support/event
 
-%patch1 -p1 -b .prefix
-%patch2 -p1 -b .statdpath
-%patch3 -p1 -b .statd-manpage
-%if %{rhel3build}
-%patch4 -p1 -b .aclexp
-%endif
-%patch5 -p1 -b .zerostats
-%patch6 -p1 -b .mountd
-%patch7 -p1 -b .expwarn
+%patch1 -p1 -b .statdpath
+%patch2 -p1 -b .zerostats
+%patch3 -p1 -b .mountd
+%patch4 -p1 -b .expwarn
+%patch5 -p1 -b .source
+%patch6 -p1 -b .cache
+%patch7 -p1 -b .expperms
 
-%if %{nfsv4_support}
-%patch20 -p1 -b .v4
-%patch21 -p1 -b .v4mountd
-%patch22 -p1 -b .v4upcall
-%patch25 -p1 -b .add_idmapd
-%patch26 -p1 -b .idmapd
-%patch30 -p1 -b .add_gssd
-%patch31 -p1 -b .gssd
-%patch35 -p1 -b .rhonly
-%endif
+%patch20 -p1 -b .flavors
+%patch21 -p1 -b .mntflavors
 
+#
+# Add rpc.idmapd
+#
+%patch30 -p1 -b .add_idmap
+# idmapd_cl_srv_flag.patch
+%patch31 -p1
+# idmap_mapping_library.path
+%patch32 -p1
+# idmap_event_del_fix.patch
+%patch33 -p1
+# local updates
+%patch35 -p1 -b .update_idmap
+
+#
+# Added rpc.gssd and rpc.svcgssd
+#
+%patch40 -p1 -b .add_gssd
+# local updates
+%patch45 -p1 -b .update_gssd
+
+# Do the magic to get things to compile
+%patch50 -p1 -b .compile
 %patch100 -p1 -b .pie
 %ifarch s390 s390x
 perl -pi -e 's/-fpie/-fPIE/' */*/Makefile
 %endif
 
 %build
+
+autoconf
+
 #
 # Hack to enable netgroups.  If anybody knows the right way to do
 # this, please help yourself.
 #
 ac_cv_func_innetgr=yes \
-CFLAGS="$RPM_OPT_FLAGS" %configure
+	CFLAGS="$RPM_OPT_FLAGS" %configure
+
+cd support/nfsidmap; %configure --prefix=$RPM_BUILD_ROOT
+cd ../../support/event; %configure --prefix=$RPM_BUILD_ROOT
+cd ../../
+
 make all
 
 %install
@@ -135,21 +141,16 @@ make install install_prefix=$RPM_BUILD_ROOT
 install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT/sbin
 install -m 755 %{SOURCE10} $RPM_BUILD_ROOT/etc/rc.d/init.d/nfs
 install -m 755 %{SOURCE11} $RPM_BUILD_ROOT/etc/rc.d/init.d/nfslock
+install -m 755 %{SOURCE12} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcidmapd
+install -m 755 %{SOURCE13} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcgssd
+install -m 755 %{SOURCE14} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcsvcgssd
 
-%if %{nfsv4_support}
-install -m 755 etc/redhat/rpcidmapd.init \
-	$RPM_BUILD_ROOT/etc/rc.d/init.d/rpcidmapd
-install -m 755 etc/redhat/rpcgssd.init \
-	$RPM_BUILD_ROOT/etc/rc.d/init.d/rpcgssd
-install -m 755 etc/redhat/rpcsvcgssd.init \
-	$RPM_BUILD_ROOT/etc/rc.d/init.d/rpcsvcgssd
 install -m 644 utils/idmapd/idmapd.conf \
 	$RPM_BUILD_ROOT/etc/idmapd.conf
 install -m 644 support/gssapi/SAMPLE_gssapi_mech.conf \
 	$RPM_BUILD_ROOT/etc/gssapi_mech.conf
 
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/rpc_pipefs
-%endif
 
 touch $RPM_BUILD_ROOT/var/lib/nfs/rmtab
 mv $RPM_BUILD_ROOT/usr/sbin/{rpc.lockd,rpc.statd} $RPM_BUILD_ROOT/sbin
@@ -177,11 +178,9 @@ fi
 %post
 /sbin/chkconfig --add nfs
 /sbin/chkconfig --add nfslock
-%if %{nfsv4_support}
 /sbin/chkconfig --add rpcidmapd
 /sbin/chkconfig --add rpcgssd
 /sbin/chkconfig --add rpcsvcgssd
-%endif
 
 %preun
 if [ "$1" = "0" ]; then
@@ -192,24 +191,19 @@ if [ "$1" = "0" ]; then
     /usr/sbin/userdel rpcuser 2>/dev/null || :
     /usr/sbin/groupdel rpcuser 2>/dev/null || :
     /usr/sbin/userdel nfsnobody 2>/dev/null || :
-
-%if %{nfsv4_support}
 	/etc/rc.d/init.d/rpcidmapd stop
 	/etc/rc.d/init.d/rpcgssd stop
 	/etc/rc.d/init.d/rpcsvcgssd stop
     /sbin/chkconfig --del rpcidmapd
     /sbin/chkconfig --del rpcgssd
     /sbin/chkconfig --del rpcsvcgssd
-%endif
 fi
 
 %postun
 if [ "$1" -ge 1 ]; then
-%if %{nfsv4_support}
 	/etc/rc.d/init.d/rpcidmapd condrestart > /dev/null
 	/etc/rc.d/init.d/rpcgssd condrestart > /dev/null
 	/etc/rc.d/init.d/rpcsvcgssd condrestart > /dev/null
-%endif
 	/etc/rc.d/init.d/nfs condrestart > /dev/null
 fi
 
@@ -225,14 +219,12 @@ fi
 %files
 %defattr(-,root,root)
 %config /etc/rc.d/init.d/nfs
-%if %{nfsv4_support}
 %config /etc/rc.d/init.d/rpcidmapd
 %config /etc/rc.d/init.d/rpcgssd
 %config /etc/rc.d/init.d/rpcsvcgssd
 %config(noreplace) /etc/idmapd.conf
 %config(noreplace) /etc/gssapi_mech.conf
 %dir /var/lib/nfs/rpc_pipefs
-%endif
 %dir /var/lib/nfs
 %dir %attr(700,rpcuser,rpcuser) /var/lib/nfs/statd
 %config(noreplace) /var/lib/nfs/xtab
@@ -249,15 +241,19 @@ fi
 /usr/sbin/rpc.mountd
 /usr/sbin/rpc.nfsd
 /usr/sbin/showmount
-%if %{nfsv4_support}
 /usr/sbin/rpc.idmapd
 /usr/sbin/rpc.gssd
 /usr/sbin/rpc.svcgssd
-%endif
 %{_mandir}/*/*
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Mon Aug 30 2004 Steve Dickson <SteveD@RedHat.com>
+- Major clean up. 
+- Removed all unused/old patches
+- Rename and condensed a number of patches
+- Updated to CITI's nfs-utils-1.0.6-13 patches
+
 * Tue Aug 10 2004 Bill Nottingham <notting@redhat.com>
 - move if..fi condrestart stanza to %%postun (#127914, #128601)
 
@@ -273,11 +269,9 @@ fi
 - Fixed syntax error in nfs initscripts when
   NETWORKING is not defined
 - Removed sync warning on readonly exports.
-%if %{fcbuild}
 - Changed run levels in rpc initscripts.
 - Replaced modinfo with lsmod when checking
   for loaded modules.
-%endif
 
 * Tue Jun  1 2004 <SteveD@RedHat.com>
 - Changed the rpcgssd init script to ensure the 
@@ -292,7 +286,6 @@ fi
 * Thu May 10 2004 <SteveD@RedHat.com>
 - Rebuilt
 
-%if %{fcbuild}
 * Thu Apr 15 2004 <SteveD@RedHat.com>
 - Changed the permission on idmapd.conf to 644
 - Added mydaemon code to svcgssd
@@ -345,7 +338,6 @@ fi
 -Changed the gssd svcgssd init scripts to only
    start up if SECURE_NFS is set to 'yes' in
    /etc/sysconfig/nfs
-%endif
 
 * Fri Feb 13 2004 Elliot Lee <sopwith@redhat.com>
 - rebuilt
@@ -353,10 +345,8 @@ fi
 * Thu Feb 12 2004 Thomas Woerner <twoerner@redhat.com>
 - make rpc.lockd, rpc.statd, rpc.mountd and rpc.nfsd pie
 
-%if %{fcbuild}
 * Wed Jan 28 2004 Steve Dickson <SteveD@RedHat.com>
 - Added the NFSv4 bits
-%endif
 
 * Mon Dec 29 2003 Steve Dickson <SteveD@RedHat.com>
 - Added the -z flag to nfsstat

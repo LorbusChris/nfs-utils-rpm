@@ -14,3 +14,29 @@
  #endif
  
  #define DEFAULT_SM_DIR		DEFAULT_DIR_BASE "sm"
+--- ./utils/statd/statd.man.orig	2002-09-16 15:23:03.000000000 -0400
++++ ./utils/statd/statd.man	2003-06-02 15:01:41.000000000 -0400
+@@ -23,7 +23,7 @@ reboots.
+ For each NFS client or server machine to be monitored,
+ .B rpc.statd
+ creates a file in
+-.BR /var/lib/nfs/sm .
++.BR /var/lib/nfs/statd/sm .
+ When starting, it iterates through these files and notifies the
+ peer
+ .B rpc.statd
+@@ -136,11 +136,11 @@ and
+ manual pages.
+ 
+ .SH FILES
+-.BR /var/lib/nfs/state
++.BR /var/lib/nfs/statd/sm/state
+ .br
+-.BR /var/lib/nfs/sm/*
++.BR /var/lib/nfs/statd/sm/*
+ .br
+-.BR /var/lib/nfs/sm.bak/*
++.BR /var/lib/nfs/statd/sm.bak/*
+ .SH SEE ALSO
+ .BR rpc.nfsd(8),
+ .BR portmap(8)
