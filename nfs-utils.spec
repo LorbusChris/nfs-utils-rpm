@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.7
-Release: 0
+Release: 1
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
