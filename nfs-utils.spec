@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.1
-Release: 2.6
+Release: 2.9
 Source0: http://prdownloads.sourceforge.net/nfs/nfs-utils-1.0.1.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source10: nfs.init
@@ -136,6 +136,15 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Thu Jan 23 2003 Tim Powers <timp@redhat.com> 1.0.1-2.9
+- rebuild
+
+* Fri Dec 13 2002 Daniel J Walsh <dwalsh@redhat.com>
+- change init script to not start rpc.lock if already running
+
+* Wed Dec 11 2002 Daniel J Walsh <dwalsh@redhat.com>
+- Moved access code to be after dropping privs
+
 * Mon Nov 18 2002 Stephen C. Tweedie <sct@redhat.com>
 - Build with %configure
 - Add nhfsgraph, nhfsnums and nhfsrun to the files list

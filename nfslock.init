@@ -43,6 +43,7 @@ fi
 RETVAL=0
 
 start() {
+    if [ ! -f /var/lock/subsys/nfslock ]; then
 	# Start daemons.
 	if [ "$USERLAND_LOCKD" ]; then
 	  echo -n $"Starting NFS locking: "
@@ -54,7 +55,8 @@ start() {
 	RETVAL=$?
 	echo
 	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/nfslock
-	return $RETVAL
+    fi
+    return $RETVAL
 }
 
 stop() {
