@@ -1,7 +1,32 @@
+%define rhelbuild 0
+%define fc2build 1
+
+%if %{fc2build}
+%define nfsv4_support 1
+%else
+%define nfsv4_support 0
+%endif
+
+%if %{rhelbuild}
+%define nfsv4_support 0
+%define fc2build 0
+%endif
+
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.6
-Release: 1
+%define release 19
+
+%define Release %{release}
+%if %{rhelbuild}
+%define Release %{release}.EL
+%define nfsv3_support 0
+%endif
+%if %{fc2build}
+%define Release %{release}.fc2
+%endif
+Release: %{Release}
+
 Source0: http://prdownloads.sourceforge.net/nfs/nfs-utils-1.0.6.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source10: nfs.init
@@ -11,6 +36,19 @@ Patch1: install-prefix.patch
 Patch2: nfs-utils-1.0.5-statdpath.patch
 Patch3: nfs-utils-0.3.3.statd-manpage.patch
 Patch4: nfs-utils-1.0.3-aclexport.patch
+Patch5: nfs-utils-1.0.6-zerostats.patch
+Patch6: nfs-utils-1.0.6-mountd.patch
+%if %{nfsv4_support}
+Patch20: nfs-utils-nfsv4-pseudoflavor-clients.patch
+Patch21: nfs-utils-nfsv4-mountd_flavors.patch
+Patch22: nfs-utils-nfsv4-add_idmapd.patch
+Patch23: nfs-utils-nfsv4-upcall_export_check.patch
+Patch24: nfs-utils-nfsv4-add_gssd.patch
+Patch30: nfs-utils-nfsv4-idmapd.patch
+Patch35: nfs-utils-nfsv4-redhat-only.patch
+%endif
+
+Patch8: nfs-utils-1.0.6-pie.patch
 Group: System Environment/Daemons
 Obsoletes: nfs-server
 Obsoletes: knfsd
@@ -25,6 +63,10 @@ Provides: knfsd
 License: GPL
 Buildroot: %{_tmppath}/%{name}-root
 Requires: kernel >= 2.2.14, portmap >= 4.0, sed, gawk, sh-utils, fileutils, textutils, grep
+%if %{nfsv4_support}
+Requires: modutils >= 2.4.26-9
+BuildRequires: krb5-devel >= 1.3.1
+%endif
 Prereq: /sbin/chkconfig /usr/sbin/useradd /sbin/nologin
 
 %description
@@ -38,12 +80,33 @@ System) server on the remote host.  For example, showmount can display the
 clients which are mounted on that host.
 
 %prep
-%setup -q -a 1 
+%setup -q -a1
+%if ! %{nfsv4_support}
 %patch0 -p0
+%endif
+
 %patch1 -p1 -b .prefix
 %patch2 -p1 -b .statdpath
 %patch3 -p1 -b .statd-manpage
-#%patch4 -p1 -b .aclexp
+%if %{rhelbuild}
+%patch4 -p1 -b .aclexp
+%endif
+%patch5 -p1 -b .zerostats
+%patch6 -p1 -b .mountd
+%patch8 -p1 -b .pie
+%ifarch s390 s390x
+perl -pi -e 's/-fpie/-fPIE/' */*/Makefile
+%endif
+
+%if %{nfsv4_support}
+%patch20 -p1 -b .v4
+%patch21 -p1 -b .v4mountd
+%patch22 -p1 -b .add_idmapd
+%patch23 -p1 -b .v4upcall
+%patch24 -p1 -b .gssd
+%patch30 -p1 -b .idmapd
+%patch35 -p1 -b .rhonly
+%endif
 
 %build
 #
@@ -63,6 +126,22 @@ make install install_prefix=$RPM_BUILD_ROOT
 install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT/sbin
 install -m 755 %{SOURCE10} $RPM_BUILD_ROOT/etc/rc.d/init.d/nfs
 install -m 755 %{SOURCE11} $RPM_BUILD_ROOT/etc/rc.d/init.d/nfslock
+
+%if %{nfsv4_support}
+install -m 755 etc/redhat/rpcidmapd.init \
+	$RPM_BUILD_ROOT/etc/rc.d/init.d/rpcidmapd
+install -m 755 etc/redhat/rpcgssd.init \
+	$RPM_BUILD_ROOT/etc/rc.d/init.d/rpcgssd
+install -m 755 etc/redhat/rpcsvcgssd.init \
+	$RPM_BUILD_ROOT/etc/rc.d/init.d/rpcsvcgssd
+install -m 755 utils/idmapd/idmapd.conf \
+	$RPM_BUILD_ROOT/etc/idmapd.conf
+install -m 755 support/gssapi/SAMPLE_gssapi_mech.conf \
+	$RPM_BUILD_ROOT/etc/gssapi_mech.conf
+
+mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/rpc_pipefs
+%endif
+
 touch $RPM_BUILD_ROOT/var/lib/nfs/rmtab
 mv $RPM_BUILD_ROOT/usr/sbin/{rpc.lockd,rpc.statd} $RPM_BUILD_ROOT/sbin
 
@@ -89,6 +168,11 @@ fi
 %post
 /sbin/chkconfig --add nfs
 /sbin/chkconfig --add nfslock
+%if %{nfsv4_support}
+/sbin/chkconfig --add rpcidmapd
+/sbin/chkconfig --add rpcgssd
+/sbin/chkconfig --add rpcsvcgssd
+%endif
 
 %preun
 if [ "$1" = "0" ]; then
@@ -98,6 +182,15 @@ if [ "$1" = "0" ]; then
     /usr/sbin/userdel rpcuser 2>/dev/null || :
     /usr/sbin/groupdel rpcuser 2>/dev/null || :
     /usr/sbin/userdel nfsnobody 2>/dev/null || :
+
+%if %{nfsv4_support}
+	/etc/rc.d/init.d/rpcidmapd stop
+	/etc/rc.d/init.d/rpcgssd stop
+	/etc/rc.d/init.d/rpcsvcgssd stop
+    /sbin/chkconfig --del rpcidmapd
+    /sbin/chkconfig --del rpcgssd
+    /sbin/chkconfig --del rpcsvcgssd
+%endif
 fi
 
 %triggerpostun -- nfs-server
@@ -112,6 +205,14 @@ fi
 %files
 %defattr(-,root,root)
 %config /etc/rc.d/init.d/nfs
+%if %{nfsv4_support}
+%config /etc/rc.d/init.d/rpcidmapd
+%config /etc/rc.d/init.d/rpcgssd
+%config /etc/rc.d/init.d/rpcsvcgssd
+%config(noreplace) /etc/idmapd.conf
+%config(noreplace) /etc/gssapi_mech.conf
+%dir /var/lib/nfs/rpc_pipefs
+%endif
 %dir /var/lib/nfs
 %dir %attr(700,rpcuser,rpcuser) /var/lib/nfs/statd
 %config(noreplace) /var/lib/nfs/xtab
@@ -128,10 +229,71 @@ fi
 /usr/sbin/rpc.mountd
 /usr/sbin/rpc.nfsd
 /usr/sbin/showmount
+%if %{nfsv4_support}
+/usr/sbin/rpc.idmapd
+/usr/sbin/rpc.gssd
+/usr/sbin/rpc.svcgssd
+%endif
 %{_mandir}/*/*
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Mon Mar 22 2004 <SteveD@RedHat.com>
+- Make sure check_new_cache() is looking in the right place 
+
+* Wed Mar 17 2004 <SteveD@RedHat.com>
+- Changed the v4 initscripts to use $prog for the
+  arugment to daemon
+
+* Tue Mar 16 2004 <SteveD@RedHat.com>
+- Made the nfs4 daemons initscripts work better when 
+  sunrpc is not a module
+- added more checks to see if modules are being used.
+
+* Mon Mar 15 2004 <SteveD@RedHat.com>
+- Add patch that sets up gssapi_mech.conf correctly
+
+* Fri Mar 12 2004 <SteveD@RedHat.com>
+- Added the shutting down of the rpc v4 daemons.
+- Updated the Red Hat only patch with some init script changes.
+
+* Thu Mar 11 2004 Bill Nottingham <notting@redhat.com>
+- rpc_pipefs mounting and aliases are now in modutils; require that
+
+* Thu Mar 11 2004 <SteveD@RedHat.com>
+- Updated the gssd patch.
+
+* Sun Mar  7 2004 <SteveD@RedHat.com>
+- Added the addition and deletion of rpc_pipefs to /etc/fstab
+- Added the addition and deletion of module aliases to /etc/modules.conf
+
+* Mon Mar  1 2004 <SteveD@RedHat.com>
+- Removed gssd tarball and old nfsv4 patch.
+- Added new nfsv4 patches that include both the
+   gssd and idmapd daemons
+- Added redhat-only v4 patch that reduces the
+   static librpc.a to only contain gss rpc related
+   routines (I would rather have gssd use the glibc 
+   rpc routines)
+-Changed the gssd svcgssd init scripts to only
+   start up if SECURE_NFS is set to 'yes' in
+   /etc/sysconfig/nfs
+
+* Fri Feb 13 2004 Elliot Lee <sopwith@redhat.com>
+- rebuilt
+
+* Thu Feb 12 2004 Thomas Woerner <twoerner@redhat.com>
+- make rpc.lockd, rpc.statd, rpc.mountd and rpc.nfsd pie
+
+* Wed Jan 28 2004 Steve Dickson <SteveD@RedHat.com>
+- Added the NFSv4 bits
+
+* Mon Dec 29 2003 Steve Dickson <SteveD@RedHat.com>
+- Added the -z flag to nfsstat
+
+* Wed Dec 24 2003  Steve Dickson <SteveD@RedHat.com>
+- Fixed lockd port setting in nfs.int script
+
 * Wed Oct 22 2003 Steve Dickson <SteveD@RedHat.com>
 - Upgrated to 1.0.6
 - Commented out the acl path for fedora

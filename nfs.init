@@ -48,16 +48,16 @@ fi
 case "$1" in
   start)
 	# Start daemons.
+	action $"Starting NFS services: " /usr/sbin/exportfs -r
 
 	# Set the ports lockd should listen on
-	if [ -n "LOCKD_TCPPORT" ]; then
+	if [ -n "$LOCKD_TCPPORT" ]; then
 	    /sbin/sysctl -w fs.nfs.nlm_tcpport=$LOCKD_TCPPORT >/dev/null 2>&1
 	fi
-	if [ -n "LOCKD_UDPPORT" ]; then
+	if [ -n "$LOCKD_UDPPORT" ]; then
 	    /sbin/sysctl -w fs.nfs.nlm_udpport=$LOCKD_UDPPORT >/dev/null 2>&1
 	fi
 
-	action $"Starting NFS services: " /usr/sbin/exportfs -r
 	if [ -n "$RQUOTAD" -a "$RQUOTAD" != "no" ]; then
 	    echo -n $"Starting NFS quotas: "
 	    daemon rpc.rquotad
@@ -106,6 +106,11 @@ case "$1" in
 	daemon rpc.mountd $RPCMOUNTDOPTS
 	echo
 	touch /var/lock/subsys/nfs
+
+	# See if rpc.imapd and rpc.svcgssd need to be started.
+	[ -x /usr/sbin/rpc.idmapd ] && /sbin/service rpcidmapd condstart
+	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd condstart
+
 	;;
   stop)
 	# Stop daemons.
@@ -121,10 +126,10 @@ case "$1" in
 		echo
 	fi
 	# Reset the lockd ports if they were set
-	if [ -n "LOCKD_TCPPORT" ]; then
+	if [ -n "$LOCKD_TCPPORT" ]; then
 	    /sbin/sysctl -w fs.nfs.nlm_tcpport=0 >/dev/null 2>&1
 	fi
-	if [ -n "LOCKD_UDPPORT" ]; then
+	if [ -n "$LOCKD_UDPPORT" ]; then
 	    /sbin/sysctl -w fs.nfs.nlm_udpport=0 >/dev/null 2>&1
 	fi
 	# Do it the last so that clients can still access the server
