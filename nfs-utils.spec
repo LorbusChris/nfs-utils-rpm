@@ -1,12 +1,13 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
-Version: 0.1.9.1
-Release: 7
-Source0: ftp://nfs.sourceforge.net/pub/nfs/nfs-utils-0.1.9.1.tar.gz
+Version: 0.2
+Release: 2
+Source0: ftp://nfs.sourceforge.net/pub/nfs/nfs-utils-%{version}.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source10: nfs.init
 Source11: nfslock.init
 Patch: statd-drop-privs.patch
+Patch1: nfs-utils-0.2beta-nowrap.patch
 Group: System Environment/Daemons
 Obsoletes: nfs-server
 Obsoletes: knfsd
@@ -36,14 +37,16 @@ clients which are mounted on that host.
 %prep
 %setup -q -a 1 
 %patch -p1 -b .drop-privs
+%patch1 -p0
 
 %build
-CFLAGS="$RPM_OPT_FLAGS" ./configure
+CFLAGS="$RPM_OPT_FLAGS" ./configure --mandir=${RPM_BUILD_ROOT}%{_mandir}
 make all
 
 %install
 rm -rf $RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT{/sbin,/usr/{sbin,man/man5,man/man8,share/man/man5,share/man/man8}}
+mkdir -p $RPM_BUILD_ROOT{/sbin,/usr/sbin}
+mkdir -p ${RPM_BUILD_ROOT}%{_mandir}/{man5,man8}
 mkdir -p $RPM_BUILD_ROOT/etc/rc.d/init.d
 make install install_prefix=$RPM_BUILD_ROOT
 install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT/sbin
@@ -51,8 +54,6 @@ install -m 755 %{SOURCE10} $RPM_BUILD_ROOT/etc/rc.d/init.d/nfs
 install -m 755 %{SOURCE11} $RPM_BUILD_ROOT/etc/rc.d/init.d/nfslock
 touch $RPM_BUILD_ROOT/var/lib/nfs/rmtab
 mv $RPM_BUILD_ROOT/usr/sbin/{rpc.lockd,rpc.statd} $RPM_BUILD_ROOT/sbin
-mv $RPM_BUILD_ROOT/usr/man/man5/* $RPM_BUILD_ROOT/usr/share/man/man5/
-mv $RPM_BUILD_ROOT/usr/man/man8/* $RPM_BUILD_ROOT/usr/share/man/man8/
 
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/statd
 
@@ -107,6 +108,20 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Tue Sep  5 2000 Florian La Roche <Florian.LaRoche@redhat.com>
+- more portable fix for mandir
+
+* Sun Sep  3 2000 Florian La Roche <Florian.LaRoche@redhat.com>
+- update to 0.2-release
+
+* Fri Sep  1 2000 Florian La Roche <Florian.LaRoche@redhat.com>
+- fix reload script
+
+* Thu Aug 31 2000 Florian La Roche <Florian.LaRoche@redhat.com>
+- update to 0.2 from CVS
+- adjust statd-drop-privs patch
+- disable tcp_wrapper support
+
 * Wed Aug  2 2000 Bill Nottingham <notting@redhat.com>
 - fix stop priority of nfslock
 
