@@ -8,6 +8,7 @@
 #              networks. This service provides NFS server functionality, \
 #              which is configured via the /etc/exports file.
 # probe: true
+# config: /etc/sysconfig/nfs
 
 # Source function library.
 . /etc/rc.d/init.d/functions
@@ -31,69 +32,120 @@ fi
     { echo "#" > /etc/exports && chmod u+rw,g+r,o+r /etc/exports ; } || \
     { echo "/etc/exports does not exist" ; exit 0 ; }
 
+# Check for and source configuration file otherwise set defaults
+# TUNE_QUEUE: controls whether to up the size of input queues
+[ -f /etc/sysconfig/nfs ] && . /etc/sysconfig/nfs
+
+[ -z "$MOUNTD_NFS_V2" ] && MOUNTD_NFS_V2=auto
+[ -z "$MOUNTD_NFS_V3" ] && MOUNTD_NFS_V3=auto
+
 # Number of servers to be started by default
-RPCNFSDCOUNT=8
+[ -z "$RPCNFSDCOUNT" ] && RPCNFSDCOUNT=8
 
-# NFSv3 only if kernel >= 2.2.18
-OS_RELEASE=`uname --release`
-OS_RELEASE_MINOR=`echo "$OS_RELEASE" | sed 's/\(^[0-9]\)\.\([0-9]*\).*/\2/'`
-OS_RELEASE_VERSION=`echo "$OS_RELEASE" | sed 's/\(^[0-9]\)\.\([0-9]*\)\.\([0-9]*\).*/\3/'`
-if [ "$OS_RELEASE_MINOR" -gt 2 ]; then
-	RPCMOUNTDOPTS=
-elif [ "$OS_RELEASE_MINOR" -eq 2 -a "$OS_RELEASE_VERSION" -ge 18 ]; then
-	RPCMOUNTDOPTS=
-else
-	RPCMOUNTDOPTS="--no-nfs-version 3"
-fi
+# Remote quota server
+[ -z "$RQUOTAD" ] && RQUOTAD=`type -path rpc.rquotad`
 
-if [ -n "$MOUNTD_PORT" ]; then
-    RPCMOUNTDOPTS="$RPCMOUNTDOPTS --port $MOUNTD_PORT"
+# Get the initial values for the input sock queues
+# at the time of running the script.
+if [ "$TUNE_QUEUE" = "yes" ]; then
+    RMEM_DEFAULT=`/sbin/sysctl -n net.core.rmem_default`
+    RMEM_MAX=`/sbin/sysctl -n net.core.rmem_max`
+    # 256kb recommended minimum size based on SPECsfs NFS benchmarks
+    [ -z "$NFS_QS" ] && NFS_QS=262144
 fi
 
 # See how we were called.
 case "$1" in
   start)
 	# Start daemons.
+	# Apply input queue increase for nfs server
+	if [ "$TUNE_QUEUE" = "yes" ]; then
+ 	    /sbin/sysctl -w net.core.rmem_default=$NFSD_QS >/dev/null 2>&1
+	    /sbin/sysctl -w net.core.rmem_max=$NFSD_QS >/dev/null 2>&1
+	fi
 	action $"Starting NFS services: " /usr/sbin/exportfs -r
-	if [ -x /usr/sbin/rpc.rquotad ] ; then
-	    echo -n $"Starting NFS quotas: "
+	if [ -n "$RQUOTAD" -a "$RQUOTAD" != "no" ]; then
+	    echo -n "Starting NFS quotas: "
 	    daemon rpc.rquotad
 	    echo
 	fi
-	echo -n $"Starting NFS mountd: "
-	daemon rpc.mountd $RPCMOUNTDOPTS
-	echo
 	echo -n $"Starting NFS daemon: "
 	daemon rpc.nfsd $RPCNFSDCOUNT
 	echo
+
+	[ -n "$MOUNTD_PORT" ] \
+	&& RPCMOUNTDOPTS="$RPCMOUNTDOPTS -p $MOUNTD_PORT"
+
+	case $MOUNTD_NFS_V2 in
+	auto|AUTO)
+	    # Let's see if we support NFS version 2.
+	    /usr/sbin/rpcinfo -u localhost nfs 2 &>/dev/null
+	    if [ $? -ne 0 ]; then
+		RPCMOUNTDOPTS="$RPCMOUNTDOPTS --no-nfs-version 2"
+	    fi
+	    ;;
+	no|NO)
+	    RPCMOUNTDOPTS="$RPCMOUNTDOPTS --no-nfs-version 2"
+	    ;;
+	yes|YES)
+	    RPCMOUNTDOPTS="$RPCMOUNTDOPTS --nfs-version 2"
+	    ;;
+	esac
+
+	case $MOUNTD_NFS_V3 in
+	auto|AUTO)
+	    # Let's see if we support NFS version 3.
+	    /usr/sbin/rpcinfo -u localhost nfs 3 &>/dev/null
+	    if [ $? -ne 0 ]; then
+		RPCMOUNTDOPTS="$RPCMOUNTDOPTS --no-nfs-version 3"
+	    fi
+	    ;;
+	no|NO)
+	    RPCMOUNTDOPTS="$RPCMOUNTDOPTS --no-nfs-version 3"
+	    ;;
+	yes|YES)
+	    RPCMOUNTDOPTS="$RPCMOUNTDOPTS --nfs-version 3"
+	    ;;
+	esac
+
+	echo -n $"Starting NFS mountd: "
+	daemon rpc.mountd $RPCMOUNTDOPTS
+	echo
 	touch /var/lock/subsys/nfs
+	# reset input queue for rest of network services
+	if [ "$TUNE_QUEUE" = "yes" ]; then
+	    /sbin/sysctl -w net.core.rmem_default=$RMEM_DEFAULT >/dev/null 2>&1
+	    /sbin/sysctl -w net.core.rmem_max=$RMEM_MAX >/dev/null 2>&1
+	fi
 	;;
   stop)
 	# Stop daemons.
-	echo -n $"Stopping NFS mountd: "
+	echo -n $"Shutting down NFS mountd: "
 	killproc rpc.mountd
 	echo
-	echo -n $"Stopping NFS daemon: "
+	echo -n $"Shutting down NFS daemon: "
 	killproc nfsd
 	echo
-	action $"Stopping NFS services: " /usr/sbin/exportfs -au
-	if [ -x /usr/sbin/rpc.rquotad ] ; then
-	    echo -n $"Stopping NFS quotas: "
-	    killproc rpc.rquotad
-	    echo
+	if [ -n "$RQUOTAD" ]; then
+		echo -n "Shutting down NFS quotas: "
+		killproc rpc.rquotad
+		echo
 	fi
+	# Do it the last so that clients can still access the server
+	# when the server is running.
+	action $"Shutting down NFS services: " /usr/sbin/exportfs -au
 	rm -f /var/lock/subsys/nfs
 	;;
   status)
 	status rpc.mountd
 	status nfsd
-	if [ -x /usr/sbin/rpc.rquotad ] ; then
-	    status rpc.rquotad
+	if [ -n "$RQUOTAD" ]; then
+		status rpc.rquotad
 	fi
 	;;
   restart)
-	$0 stop || :
-	$0 start 
+	$0 stop
+	$0 start
 	;;
   reload)
 	/usr/sbin/exportfs -r
@@ -101,21 +153,26 @@ case "$1" in
 	;;
   probe)
 	if [ ! -f /var/lock/subsys/nfs ] ; then
-	  echo start; exit 0
+	  echo $"start"; exit 0
 	fi
 	/sbin/pidof rpc.mountd >/dev/null 2>&1; MOUNTD="$?"
 	/sbin/pidof nfsd >/dev/null 2>&1; NFSD="$?"
 	if [ $MOUNTD = 1 -o $NFSD = 1 ] ; then
-	  echo restart; exit 0
+	  echo $"restart"; exit 0
 	fi
 	if [ /etc/exports -nt /var/lock/subsys/nfs ] ; then
-	  echo reload; exit 0
+	  echo $"reload"; exit 0
 	fi
 	;;
+  condrestart)
+  	[ -f /var/lock/subsys/nfs ] && {
+		$0 stop
+		$0 start
+	}
+	;;
   *)
-	echo $"Usage: $0 {start|stop|status|restart|reload}"
+	echo $"Usage: nfs {start|stop|status|restart|reload|condrestart}"
 	exit 1
 esac
 
 exit 0
-
