@@ -1,13 +1,18 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
-Version: 0.2
-Release: 2
+Version: 0.3.1
+Release: 5
 Source0: ftp://nfs.sourceforge.net/pub/nfs/nfs-utils-%{version}.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source10: nfs.init
 Source11: nfslock.init
-Patch: statd-drop-privs.patch
+Patch0: nfs-utils-0.3.1-drop-privs.patch
 Patch1: nfs-utils-0.2beta-nowrap.patch
+Patch2: no-chroot.patch
+Patch3: nfs-utils-0.3.1-statd-manpage.patch
+Patch4: eepro-support.patch
+Patch5: time-h.patch
+Patch6: syslog-level.patch
 Group: System Environment/Daemons
 Obsoletes: nfs-server
 Obsoletes: knfsd
@@ -21,7 +26,7 @@ Provides: knfsd-clients
 Provides: knfsd
 License: GPL
 Buildroot: %{_tmppath}/%{name}-root
-Requires: kernel >= 2.2.14, portmap >= 4.0
+Requires: kernel >= 2.2.14, portmap >= 4.0, sed, gawk
 Prereq: /sbin/chkconfig /usr/sbin/useradd
 
 %description
@@ -38,8 +43,18 @@ clients which are mounted on that host.
 %setup -q -a 1 
 %patch -p1 -b .drop-privs
 %patch1 -p0
+%patch2 -p1 -b .no-chroot
+%patch3 -p1 -b .statd-manpage
+%patch4 -p1 -b .eepro-support
+%patch5 -p1 -b .time-h
+%patch6 -p1 -b .syslog-level
 
 %build
+#
+# Hack to enable netgroups.  If anybody knows the right way to do
+# this, please help yourself.
+#
+ac_cv_func_innetgr=yes \
 CFLAGS="$RPM_OPT_FLAGS" ./configure --mandir=${RPM_BUILD_ROOT}%{_mandir}
 make all
 
@@ -56,6 +71,10 @@ touch $RPM_BUILD_ROOT/var/lib/nfs/rmtab
 mv $RPM_BUILD_ROOT/usr/sbin/{rpc.lockd,rpc.statd} $RPM_BUILD_ROOT/sbin
 
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/statd
+
+# we are using quotad from quota utils
+rm %{buildroot}/%{_mandir}/man8/rquotad*
+rm %{buildroot}/%{_sbindir}/rpc.rquotad
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -102,12 +121,56 @@ fi
 /usr/sbin/nhfsstone
 /usr/sbin/rpc.mountd
 /usr/sbin/rpc.nfsd
-/usr/sbin/rpc.rquotad
 /usr/sbin/showmount
 %{_mandir}/*/*
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Fri Mar 30 2001 Preston Brown <pbrown@redhat.com>
+- don't use rquotad from here now; quota package contains a version that 
+  works with 2.4 (#33738)
+
+* Tue Mar 12 2001 Bob Matthews <bmatthews@redhat.com>
+- Statd logs at LOG_DAEMON rather than LOG_LOCAL5
+- s/nfs/\$0/ where appropriate in init scripts
+
+* Tue Mar  6 2001 Jeff Johnson <jbj@redhat.com>
+- Move to nfs-utils-0.3.1
+
+* Wed Feb 14 2001 Bob Matthews <bmatthews@redhat.com>
+- #include <time.h> patch
+
+* Mon Feb 12 2001 Bob Matthews <bmatthews@redhat.com>
+- Really enable netgroups
+
+* Mon Feb  5 2001 Bernhard Rosenkraenzer <bero@redhat.com>
+- i18nize initscripts
+
+* Fri Jan 19 2001 Bob Matthews <bmatthews@redhat.com>
+- Increased {s,r}blen in rpcmisc.c:makesock to accommodate eepro100
+
+* Tue Jan 16 2001 Bob Matthews <bmatthews@redhat.com>
+- Hackish fix in build section to enable netgroups
+
+* Wed Jan  3 2001 Bob Matthews <bmatthews@redhat.com>
+- Fix incorrect file specifications in statd manpage.
+- Require gawk 'cause it's used in nfslock init script.
+
+* Thu Dec 13 2000 Bob Matthews <bmatthews@redhat.com>
+- Require sed because it's used in nfs init script
+
+* Tue Dec 12 2000 Bob Matthews <bmatthews@redhat.com>
+- Don't do a chroot(2) after dropping privs, in statd.
+
+* Mon Dec 11 2000 Bob Matthews <bmatthews@redhat.com>
+- NFSv3 if kernel >= 2.2.18, detected in init script
+
+* Thu Nov 23 2000 Florian La Roche <Florian.LaRoche@redhat.de>
+- update to 0.2.1
+
+* Tue Nov 14 2000 Bill Nottingham <notting@redhat.com>
+- don't start lockd on 2.4 kernels; it's unnecessary
+
 * Tue Sep  5 2000 Florian La Roche <Florian.LaRoche@redhat.com>
 - more portable fix for mandir
 

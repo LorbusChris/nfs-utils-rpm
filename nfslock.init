@@ -22,60 +22,81 @@ fi
 # Check that networking is up.
 [ ${NETWORKING} = "no" ] && exit 0
 
-[ -x /sbin/rpc.lockd ] || exit 0
+KERNVER=`uname -r | awk -F . '{ print $1.$2 }'`
+
+RETVAL=0
+
+if [ "$KERNVER" -lt 24 ]; then
+  [ -x /sbin/rpc.lockd ] || exit 0
+fi
 [ -x /sbin/rpc.statd ] || exit 0
+
+start() {
+	# Start daemons.
+	echo $"Starting NFS file locking services: "
+	if [ "$KERNVER" -lt 24 ]; then
+	  echo -n $"Starting NFS lockd: "
+	  daemon rpc.lockd
+	  echo
+	fi  
+	echo -n $"Starting NFS statd: "
+	daemon rpc.statd
+	RETVAL=$?
+	echo
+	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/nfslock
+	return $RETVAL
+}
+
+stop() {
+	# Stop daemons.
+	echo $"Shutting down NFS file locking services: "
+	if [ "$KERNVER" -lt 24 ]; then 
+	   echo -n $"Shutting down NFS lockd: "
+	   killproc lockd
+	   echo
+	fi
+	echo -n $"Shutting down NFS statd: "
+	killproc rpc.statd
+	RETVAL=0
+	echo
+	[ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/nfslock
+	return $RETVAL
+}
 
 # See how we were called.
 case "$1" in
   start)
-	# Start daemons.
-	echo "Starting NFS file locking services: "
-	echo -n "Starting NFS lockd: "
-	daemon rpc.lockd
-	echo
-	echo -n "Starting NFS statd: "
-	daemon rpc.statd
-	echo
-	touch /var/lock/subsys/nfslock
+        start
 	;;
   stop)
-	# Stop daemons.
-	echo "Shutting down NFS file locking services: "
-	echo -n "Shutting down NFS lockd: "
-	killproc lockd
-	echo
-	echo -n "Shutting down NFS statd: "
-	killproc rpc.statd
-	echo
-	rm -f /var/lock/subsys/nfslock
+  	stop
 	;;
   status)
-	status lockd
+        if [ "$KERNVER" -lt 24 ]; then
+	  status lockd
+	fi 
 	status rpc.statd
 	;;
   restart)
-	echo -n "Restarting NFS file locking services: "
-	echo -n "rpc.lockd "
-	killproc lockd
-	daemon rpc.lockd
-	echo -n "rpc.statd "
-	killproc rpc.statd
-	daemon rpc.statd
-	touch /var/lock/subsys/nfslock
-	echo "done."
+        stop
+	start
 	;;
   probe)
 	if [ ! -f /var/lock/subsys/nfslock ] ; then
 	  echo start; exit 0
 	fi
 	/sbin/pidof rpc.statd >/dev/null 2>&1; STATD="$?"
-	/sbin/pidof lockd >/dev/null 2>&1; LOCKD="$?"
+	if [ "$KERNVER" -lt 24 ]; then 
+	   /sbin/pidof lockd >/dev/null 2>&1; LOCKD="$?"
+	else
+	   LOCKD=0
+	fi
 	if [ $STATD = 1 -o $LOCKD = 1 ] ; then
 	  echo restart; exit 0
 	fi
 	;;
   *)
-	echo "Usage: nfs {start|stop|status|restart}"
+	echo $"Usage: $0 {start|stop|status|restart}"
 	exit 1
 esac
 
