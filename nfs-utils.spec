@@ -1,7 +1,7 @@
 Summary: NFS utilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 0.3.1
-Release: 13.7.2.3
+Release: 13.7.2.4
 Source0: ftp://nfs.sourceforge.net/pub/nfs/nfs-utils-%{version}.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 Source10: nfs.init
@@ -137,6 +137,9 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Tue Feb 19 2002 Tim Powers <timp@redhat.com>
+- rebuilt
+
 * Thu Dec 13 2001 Bob Matthews <bmatthews@redhat.com>
 - 0.3.1-13 cleanup code still not silent on clean install.  Fixed.
 
