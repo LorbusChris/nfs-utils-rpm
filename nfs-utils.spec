@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.7
-Release: 4
+Release: 5
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -103,6 +103,9 @@ mv libevent-%{eventvers} support/event
 perl -pi -e 's/-fpie/-fPIE/' */*/Makefile
 %endif
 
+# Remove .orig files
+find . -name "*.orig" | xargs rm -f
+
 %build
 
 autoconf
@@ -152,8 +155,6 @@ rm %{buildroot}/%{_sbindir}/rpc.rquotad
 
 %clean
 rm -rf $RPM_BUILD_ROOT
-# Remove .orig files
-find . -name "*.orig" | xargs rm -f
 
 %pre
 /usr/sbin/useradd -c "RPC Service User" -r \
@@ -244,6 +245,7 @@ fi
 
 %changelog
 * Mon Mar 29 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-4
+- Fixed a compile error on x86_64 machines in the gss code.
 - Updated the statd-notify-hostname.patch to eliminate 
   a segmentation fault in rpc.statd when an network 
   interface was down. (bz 151828)
