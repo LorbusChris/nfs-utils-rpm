@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.7
-Release: 5
+Release: 6
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -244,6 +244,9 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Wed Apr 13 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-6
+- Fixed misformated output from nfslock script (bz 154648)
+
 * Mon Mar 29 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-4
 - Fixed a compile error on x86_64 machines in the gss code.
 - Updated the statd-notify-hostname.patch to eliminate 

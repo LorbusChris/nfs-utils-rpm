@@ -74,13 +74,13 @@ start() {
 
 stop() {
 	# Stop daemons.
+	echo -n $"Stopping NFS locking: "
 	if [ "$USERLAND_LOCKD" ]; then
-	   echo -n $"Stopping NFS locking: "
 	   killproc lockd
-	   echo
 	else
 	   killproc lockd -KILL
 	fi
+	echo
 	echo -n $"Stopping NFS statd: "
 	killproc rpc.statd
 	RETVAL=0
