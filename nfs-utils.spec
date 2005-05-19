@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.7
-Release: 6
+Release: 7
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -40,6 +40,7 @@ Patch58: nfs-utils-1.0.6-rquotad-overflow.patch
 Patch59: nfs-utils-1.0.6-statd-notify-hostname.patch
 Patch60: nfs-utils-1.0.7-rpcsecgss-debug.patch
 Patch61: nfs-utils-1.0.7-xlog-loginfo.patch
+Patch62: nfs-utils-1.0.7-svcgssd-bufover.patch
 
 Patch100: nfs-utils-1.0.7-compile.patch
 Patch150: nfs-utils-1.0.6-pie.patch
@@ -94,6 +95,7 @@ mv libevent-%{eventvers} support/event
 %patch59 -p1 -b .notify
 %patch60 -p1 -b .rpcsecgss
 %patch61 -p1 -b .xlog
+%patch62 -p1 -b .overflow
 
 
 # Do the magic to get things to compile
@@ -244,6 +246,9 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Thu May 19 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-7
+- Fixed buffer overflow in rpc.svcgssd (bz 114288)
+
 * Wed Apr 13 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-6
 - Fixed misformated output from nfslock script (bz 154648)
 
