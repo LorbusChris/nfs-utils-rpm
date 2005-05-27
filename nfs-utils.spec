@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.7
-Release: 7
+Release: 8
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -41,6 +41,7 @@ Patch59: nfs-utils-1.0.6-statd-notify-hostname.patch
 Patch60: nfs-utils-1.0.7-rpcsecgss-debug.patch
 Patch61: nfs-utils-1.0.7-xlog-loginfo.patch
 Patch62: nfs-utils-1.0.7-svcgssd-bufover.patch
+Patch63: nfs-utils-1.0.7-idmap-reopen.patch
 
 Patch100: nfs-utils-1.0.7-compile.patch
 Patch150: nfs-utils-1.0.6-pie.patch
@@ -96,6 +97,7 @@ mv libevent-%{eventvers} support/event
 %patch60 -p1 -b .rpcsecgss
 %patch61 -p1 -b .xlog
 %patch62 -p1 -b .overflow
+%patch63 -p1 -b .rename
 
 
 # Do the magic to get things to compile
@@ -246,6 +248,9 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Thu May 26 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-8
+- Fixed subscripting problem in idmapd (bz 158188)
+
 * Thu May 19 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-7
 - Fixed buffer overflow in rpc.svcgssd (bz 114288)
 
