@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.7
-Release: 12
+Release: 13
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -60,7 +60,7 @@ Provides: knfsd-clients
 Provides: knfsd
 License: GPL
 Buildroot: %{_tmppath}/%{name}-root
-Requires: kernel >= 2.2.14, portmap >= 4.0, sed, gawk, sh-utils, fileutils, textutils, grep
+Requires: kernel >= 0:2.2.14, portmap >= 4.0, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
 BuildRequires: krb5-devel >= 1.3.1 autoconf >= 2.57 openldap-devel >= 2.2
 PreReq: shadow-utils >= 4.0.3-25
@@ -251,6 +251,9 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Tue Aug  2 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-13
+- updated broken dependencies
+
 * Tue Aug  2 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-12
 - Changed useradd to use new -l flag (bz149407)
 - 64bit fix in gssd code (bz 163139)
