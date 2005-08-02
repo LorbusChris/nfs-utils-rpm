@@ -42,6 +42,7 @@ Patch60: nfs-utils-1.0.7-rpcsecgss-debug.patch
 Patch61: nfs-utils-1.0.7-xlog-loginfo.patch
 Patch62: nfs-utils-1.0.7-svcgssd-bufover.patch
 Patch63: nfs-utils-1.0.7-idmap-reopen.patch
+Patch64: nfs-utils-1.0.7-gssd-64bit.patch
 
 Patch100: nfs-utils-1.0.7-compile.patch
 Patch150: nfs-utils-1.0.6-pie.patch
@@ -62,7 +63,8 @@ Buildroot: %{_tmppath}/%{name}-root
 Requires: kernel >= 2.2.14, portmap >= 4.0, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
 BuildRequires: krb5-devel >= 1.3.1 autoconf >= 2.57 openldap-devel >= 2.2
-Prereq: /sbin/chkconfig /usr/sbin/useradd /sbin/nologin
+PreReq: shadow-utils >= 4.0.3-25
+Prereq: /sbin/chkconfig /sbin/nologin
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
@@ -98,6 +100,7 @@ mv libevent-%{eventvers} support/event
 %patch61 -p1 -b .xlog
 %patch62 -p1 -b .overflow
 %patch63 -p1 -b .rename
+%patch64 -p1 -b .64bit
 
 
 # Do the magic to get things to compile
@@ -161,7 +164,7 @@ rm %{buildroot}/%{_sbindir}/rpc.rquotad
 rm -rf $RPM_BUILD_ROOT
 
 %pre
-/usr/sbin/useradd -c "RPC Service User" -r \
+/usr/sbin/useradd -l -c "RPC Service User" -r \
         -s /sbin/nologin -u 29 -d /var/lib/nfs rpcuser 2>/dev/null || :
 # Define the correct unsigned uid value for 32 or 64 bit archs
 %ifarch %{all_32bit_archs}
@@ -173,7 +176,7 @@ rm -rf $RPM_BUILD_ROOT
 # If UID 65534 (or 4294967294 64bit archs) is unassigned, create user "nfsnobody"
 cat /etc/passwd | cut -d':' -f 3 | grep --quiet %{nfsnobody_uid} 2>/dev/null
 if [ "$?" -eq 1 ]; then
-	/usr/sbin/useradd -c "Anonymous NFS User" -r \
+	/usr/sbin/useradd -l -c "Anonymous NFS User" -r \
 		-s /sbin/nologin -u %{nfsnobody_uid} -d /var/lib/nfs nfsnobody 2>/dev/null || :
 fi
 
@@ -248,6 +251,10 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Tue Aug  2 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-12
+- Changed useradd to use new -l flag (bz149407)
+- 64bit fix in gssd code (bz 163139)
+
 * Thu May 26 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-8
 - Fixed subscripting problem in idmapd (bz 158188)
 
