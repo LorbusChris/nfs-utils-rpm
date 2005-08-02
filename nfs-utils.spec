@@ -43,6 +43,7 @@ Patch61: nfs-utils-1.0.7-xlog-loginfo.patch
 Patch62: nfs-utils-1.0.7-svcgssd-bufover.patch
 Patch63: nfs-utils-1.0.7-idmap-reopen.patch
 Patch64: nfs-utils-1.0.7-gssd-64bit.patch
+Patch65: nfs-utils-1.0.7-rquotad-curblocks.patch
 
 Patch100: nfs-utils-1.0.7-compile.patch
 Patch150: nfs-utils-1.0.6-pie.patch
@@ -101,6 +102,7 @@ mv libevent-%{eventvers} support/event
 %patch62 -p1 -b .overflow
 %patch63 -p1 -b .rename
 %patch64 -p1 -b .64bit
+%patch65 -p1 -b .curblocks
 
 
 # Do the magic to get things to compile
@@ -255,6 +257,8 @@ fi
 - Changed useradd to use new -l flag (bz149407)
 - 64bit fix in gssd code (bz 163139)
 - updated broken dependencies
+- updated rquotad to compile with latest
+  quota version.
 
 * Thu May 26 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-8
 - Fixed subscripting problem in idmapd (bz 158188)
