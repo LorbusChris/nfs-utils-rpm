@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.7
-Release: 12
+Release: 13
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -44,6 +44,7 @@ Patch62: nfs-utils-1.0.7-svcgssd-bufover.patch
 Patch63: nfs-utils-1.0.7-idmap-reopen.patch
 Patch64: nfs-utils-1.0.7-gssd-64bit.patch
 Patch65: nfs-utils-1.0.7-rquotad-curblocks.patch
+Patch66: nfs-utils-1.0.7-mountd-stat64.patch
 
 Patch100: nfs-utils-1.0.7-compile.patch
 Patch150: nfs-utils-1.0.6-pie.patch
@@ -103,6 +104,7 @@ mv libevent-%{eventvers} support/event
 %patch63 -p1 -b .rename
 %patch64 -p1 -b .64bit
 %patch65 -p1 -b .curblocks
+%patch66 -p1 -b .stat64
 
 
 # Do the magic to get things to compile
@@ -253,6 +255,9 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Tue Aug 16 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-13
+- Changed mountd to use stat64() (bz 165062)
+
 * Tue Aug  2 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-12
 - Changed useradd to use new -l flag (bz149407)
 - 64bit fix in gssd code (bz 163139)
