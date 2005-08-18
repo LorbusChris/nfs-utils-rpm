@@ -62,7 +62,7 @@ Provides: knfsd-clients
 Provides: knfsd
 License: GPL
 Buildroot: %{_tmppath}/%{name}-root
-Requires: kernel >= 0:2.2.14, portmap >= 4.0, sed, gawk, sh-utils, fileutils, textutils, grep
+Requires: portmap >= 4.0, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
 BuildRequires: krb5-devel >= 1.3.1 autoconf >= 2.57 openldap-devel >= 2.2
 PreReq: shadow-utils >= 4.0.3-25
@@ -255,6 +255,9 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Thu Aug 18 2005 Florian La Roche <laroche@redhat.com>
+- no need to still keep a requirement for kernel-2.2 or newer
+
 * Tue Aug 16 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-13
 - Changed mountd to use stat64() (bz 165062)
 
