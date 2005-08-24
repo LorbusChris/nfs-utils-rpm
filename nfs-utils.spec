@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.7
-Release: 14
+Release: 15
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -48,6 +48,7 @@ Patch66: nfs-utils-1.0.7-mountd-stat64.patch
 
 Patch100: nfs-utils-1.0.7-compile.patch
 Patch150: nfs-utils-1.0.6-pie.patch
+Patch151: nfs-utils-1.0.7-strip.patch
 
 Group: System Environment/Daemons
 Obsoletes: nfs-server
@@ -110,6 +111,7 @@ mv libevent-%{eventvers} support/event
 # Do the magic to get things to compile
 %patch100 -p1 -b .compile
 %patch150 -p1 -b .pie
+%patch151 -p1 -b .strip
 %ifarch s390 s390x
 perl -pi -e 's/-fpie/-fPIE/' */*/Makefile
 %endif
@@ -255,6 +257,9 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Wed Aug 24 2005 Peter Jones <pjones@redhat.com> - 1.0.7-15
+- don't strip during "make install", so debuginfo packages are generated right
+
 * Thu Aug 18 2005 Florian La Roche <laroche@redhat.com>
 - no need to still keep a requirement for kernel-2.2 or newer
 
