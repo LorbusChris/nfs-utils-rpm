@@ -77,8 +77,6 @@ stop() {
 	echo -n $"Stopping NFS locking: "
 	if [ "$USERLAND_LOCKD" ]; then
 	   killproc lockd
-	else
-	   killproc lockd -KILL
 	fi
 	echo
 	echo -n $"Stopping NFS statd: "
