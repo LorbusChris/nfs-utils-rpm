@@ -29,10 +29,10 @@ prog="rpc.idmapd"
 case "$1" in
   start|condstart)
 	# Make sure the daemon is not already running.
-	if status $prog > /dev/null ; then
-		[ "$1" = "condstart" ] && killproc $prog "-SIGHUP"
+	[ "$1" = "condstart" -a -n "`pidofproc $prog`" ] && {
+		killproc $prog "-SIGHUP" > /dev/null
 		exit 0
-	fi
+	}
 	rm -f /var/lock/subsys/$prog
 
 	echo -n $"Starting RPC idmapd: "

@@ -257,9 +257,11 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
-* Tue Sep  6 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-16
-- The nfslock init script no longer needs to bring lockd
-  down. (bz 162446)
+* Tue Sep  8 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-16
+- Reworked the nfslock init script so if lockd is running
+  it will be killed which is what the HA community needs. (bz 162446)
+- Stopped rpcidmapd.init from doing extra echoing when
+  condstart-ed.
 
 * Wed Aug 24 2005 Peter Jones <pjones@redhat.com> - 1.0.7-15
 - don't strip during "make install", so debuginfo packages are generated right
