@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.7
-Release: 16
+Release: 17.FC5
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -11,40 +11,45 @@ Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 
 %define idmapvers 0.10
 Source2: http://www.citi.umich.edu/projects/nfsv4/linux/libnfsidmap/nfsidmap-%{idmapvers}.tar.gz
-%define eventvers 1.0b
+%define eventvers 1.1a
 Source3: http://monkey.org/~provos/libevent-%{eventvers}.tar.gz
+%define gssapivers 0.4
+Source4: http://www.citi.umich.edu/projects/nfsv4/linux/libgssapi/libgssapi-%{gssapivers}.tar.gz
+%define rpcsecgssvers 0.6
+Source5: http://www.citi.umich.edu/projects/nfsv4/linux/librpcsecgss/librpcsecgss-%{rpcsecgssvers}.tar.gz
 
 Source10: nfs.init
 Source11: nfslock.init
 Source12: rpcidmapd.init
 Source13: rpcgssd.init
 Source14: rpcsvcgssd.init
+Source15: gssapi_mech.conf
 
+# Updstream Patches
 #
-# CITI NFS4 Patches
-#
-Patch20: nfs-utils-1.0.6-citi-mountd_flavors.patch
+Patch0: nfs-utils-1.0.7-post0.patch
+Patch1: nfs-utils-1.0.7-post1.patch
+Patch2: nfs-utils-1.0.7-post2.patch
+Patch3: nfs-utils-1.0.7-post3.patch
+Patch4: nfs-utils-1.0.7-post4.patch
+
 
 #
 # Local Patches
 #
 Patch50: nfs-utils-1.0.5-statdpath.patch
-Patch51: nfs-utils-1.0.6-zerostats.patch
-Patch52: nfs-utils-1.0.6-mountd.patch
-Patch53: nfs-utils-1.0.6-expwarn.patch
-Patch54: nfs-utils-1.0.7-sgi-statd-fixes.patch
-Patch55: nfs-utils-1.0.6-fd-sig-cleanup.patch
-Patch56: nfs-utils-1.0.6-idmap-syslog.patch
-Patch57: nfs-utils-1.0.6-idmap.conf.patch
-Patch58: nfs-utils-1.0.6-rquotad-overflow.patch
-Patch59: nfs-utils-1.0.6-statd-notify-hostname.patch
-Patch60: nfs-utils-1.0.7-rpcsecgss-debug.patch
-Patch61: nfs-utils-1.0.7-xlog-loginfo.patch
-Patch62: nfs-utils-1.0.7-svcgssd-bufover.patch
-Patch63: nfs-utils-1.0.7-idmap-reopen.patch
-Patch64: nfs-utils-1.0.7-gssd-64bit.patch
-Patch65: nfs-utils-1.0.7-rquotad-curblocks.patch
-Patch66: nfs-utils-1.0.7-mountd-stat64.patch
+Patch51: nfs-utils-1.0.6-mountd.patch
+Patch52: nfs-utils-1.0.6-expwarn.patch
+Patch53: nfs-utils-1.0.7-sgi-statd-fixes.patch
+Patch54: nfs-utils-1.0.6-fd-sig-cleanup.patch
+Patch55: nfs-utils-1.0.6-idmap.conf.patch
+Patch56: nfs-utils-1.0.6-rquotad-overflow.patch
+Patch57: nfs-utils-1.0.6-statd-notify-hostname.patch
+Patch58: nfs-utils-1.0.7-rpcsecgss-debug.patch
+Patch59: nfs-utils-1.0.7-xlog-loginfo.patch
+Patch60: nfs-utils-1.0.7-idmap-reopen.patch
+Patch61: nfs-utils-1.0.7-rquotad-curblocks.patch
+Patch62: nfs-utils-1.0.7-mountd-stat64.patch
 
 Patch100: nfs-utils-1.0.7-compile.patch
 Patch150: nfs-utils-1.0.6-pie.patch
@@ -65,7 +70,7 @@ License: GPL
 Buildroot: %{_tmppath}/%{name}-root
 Requires: portmap >= 4.0, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
-BuildRequires: krb5-devel >= 1.3.1 autoconf >= 2.57 openldap-devel >= 2.2
+BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 PreReq: shadow-utils >= 4.0.3-25
 Prereq: /sbin/chkconfig /sbin/nologin
 
@@ -80,32 +85,41 @@ System) server on the remote host.  For example, showmount can display the
 clients which are mounted on that host.
 
 %prep
-%setup -q -a1 -a2 -a3
+%setup -q -a1 -a2 -a3 -a4 -a5
 #
 # Set up the support libs
 #
 mv nfsidmap-%{idmapvers} support/nfsidmap
 mv libevent-%{eventvers} support/event
+mv librpcsecgss-%{rpcsecgssvers} support/rpcsecgss
 
-%patch20 -p1 
+#
+# Upstream Patches
+#
+%patch0 -p1 
+%patch1 -p1
+#
+# In nfs-utils-1-0-7-post2 the libgssapi is used
+# instead of the gssapi code in the tarball.
+[ -d support/gssapi ] && rm -r support/gssapi
+mv libgssapi-%{gssapivers} support/gssapi
+%patch2 -p1
+%patch3 -p1
+%patch4 -p1 
 
 %patch50 -p1 -b .statdpath
-%patch51 -p1 -b .zerostats
-%patch52 -p1 -b .mountd
-%patch53 -p1 -b .expwarn
-%patch54 -p1 -b .sgi
-%patch55 -p1 -b .cleanup
-%patch56 -p1 -b .syslog
-%patch57 -p1 -b .conf
-%patch58 -p1 -b .overflow
-%patch59 -p1 -b .notify
-%patch60 -p1 -b .rpcsecgss
-%patch61 -p1 -b .xlog
-%patch62 -p1 -b .overflow
-%patch63 -p1 -b .rename
-%patch64 -p1 -b .64bit
-%patch65 -p1 -b .curblocks
-%patch66 -p1 -b .stat64
+%patch51 -p1 -b .mountd
+%patch52 -p1 -b .expwarn
+%patch53 -p1 -b .sgi
+%patch54 -p1 -b .cleanup
+%patch55 -p1 -b .conf
+%patch56 -p1 -b .overflow
+%patch57 -p1 -b .notify
+%patch58 -p1 -b .rpcsecgss
+%patch59 -p1 -b .xlog
+%patch60 -p1 -b .reopen
+%patch61 -p1 -b .curblocks
+%patch62 -p1 -b .stat64
 
 
 # Do the magic to get things to compile
@@ -131,7 +145,9 @@ ac_cv_func_innetgr=yes \
 	CFLAGS="$RPM_OPT_FLAGS" %configure --enable-secure-statd
 
 cd support/nfsidmap; %configure --prefix=$RPM_BUILD_ROOT
-cd ../../support/event; %configure --prefix=$RPM_BUILD_ROOT
+cd ../event; %configure --prefix=$RPM_BUILD_ROOT
+cd ../gssapi; %configure --prefix=$RPM_BUILD_ROOT
+cd ../rpcsecgss; %configure --prefix=$RPM_BUILD_ROOT
 cd ../../
 
 make all
@@ -148,11 +164,10 @@ install -m 755 %{SOURCE11} $RPM_BUILD_ROOT/etc/rc.d/init.d/nfslock
 install -m 755 %{SOURCE12} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcidmapd
 install -m 755 %{SOURCE13} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcgssd
 install -m 755 %{SOURCE14} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcsvcgssd
+install -m 644 %{SOURCE15} $RPM_BUILD_ROOT/etc/gssapi_mech.conf
 
 install -m 644 utils/idmapd/idmapd.conf \
 	$RPM_BUILD_ROOT/etc/idmapd.conf
-install -m 644 support/gssapi/SAMPLE_gssapi_mech.conf \
-	$RPM_BUILD_ROOT/etc/gssapi_mech.conf
 
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/rpc_pipefs
 
@@ -257,6 +272,11 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Sun Sep 18 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-17
+- Updated to latest nfs-utils code in upstream CVS tree
+- Updated libevent from 1.0b to 1.1a
+- Added libgssapi-0.4 and librpcsecgss-0.6 libs from CITI
+
 * Tue Sep  8 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-16
 - Reworked the nfslock init script so if lockd is running
   it will be killed which is what the HA community needs. (bz 162446)
