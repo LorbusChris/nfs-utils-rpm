@@ -45,11 +45,10 @@ Patch54: nfs-utils-1.0.6-fd-sig-cleanup.patch
 Patch55: nfs-utils-1.0.6-idmap.conf.patch
 Patch56: nfs-utils-1.0.6-rquotad-overflow.patch
 Patch57: nfs-utils-1.0.6-statd-notify-hostname.patch
-Patch58: nfs-utils-1.0.7-rpcsecgss-debug.patch
-Patch59: nfs-utils-1.0.7-xlog-loginfo.patch
-Patch60: nfs-utils-1.0.7-idmap-reopen.patch
-Patch61: nfs-utils-1.0.7-rquotad-curblocks.patch
-Patch62: nfs-utils-1.0.7-mountd-stat64.patch
+Patch58: nfs-utils-1.0.7-xlog-loginfo.patch
+Patch59: nfs-utils-1.0.7-idmap-reopen.patch
+Patch60: nfs-utils-1.0.7-rquotad-curblocks.patch
+Patch61: nfs-utils-1.0.7-mountd-stat64.patch
 
 Patch100: nfs-utils-1.0.7-compile.patch
 Patch150: nfs-utils-1.0.6-pie.patch
@@ -87,26 +86,27 @@ clients which are mounted on that host.
 %prep
 %setup -q -a1 -a2 -a3 -a4 -a5
 #
+# Remove code that no longer used
+#
+rm -r support/rpc
+rm -r support/gssapi
+
+#
 # Set up the support libs
 #
 mv nfsidmap-%{idmapvers} support/nfsidmap
 mv libevent-%{eventvers} support/event
 mv librpcsecgss-%{rpcsecgssvers} support/rpcsecgss
+mv libgssapi-%{gssapivers} support/gssapi
 
-#
 # Upstream Patches
-#
 %patch0 -p1 
 %patch1 -p1
-#
-# In nfs-utils-1-0-7-post2 the libgssapi is used
-# instead of the gssapi code in the tarball.
-[ -d support/gssapi ] && rm -r support/gssapi
-mv libgssapi-%{gssapivers} support/gssapi
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1 
 
+# Local Patches
 %patch50 -p1 -b .statdpath
 %patch51 -p1 -b .mountd
 %patch52 -p1 -b .expwarn
@@ -115,11 +115,10 @@ mv libgssapi-%{gssapivers} support/gssapi
 %patch55 -p1 -b .conf
 %patch56 -p1 -b .overflow
 %patch57 -p1 -b .notify
-%patch58 -p1 -b .rpcsecgss
-%patch59 -p1 -b .xlog
-%patch60 -p1 -b .reopen
-%patch61 -p1 -b .curblocks
-%patch62 -p1 -b .stat64
+%patch58 -p1 -b .xlog
+%patch59 -p1 -b .reopen
+%patch60 -p1 -b .curblocks
+%patch61 -p1 -b .stat64
 
 
 # Do the magic to get things to compile
@@ -272,9 +271,12 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
-* Thu Sep 22 09:08:12 EDT 2005
+* Thu Sep 22 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-18
 - Updated libnfsidmap to 0.11
 - Updated libgssapi to 0.5
+- Made sure the gss daemons and new libs are
+  all using the same include files.
+- Removed code from the tree that is no longer used.
 
 * Sun Sep 18 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-17
 - Updated to latest nfs-utils code in upstream CVS tree
