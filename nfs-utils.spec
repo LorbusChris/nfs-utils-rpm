@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.7
-Release: 17.FC5
+Release: 18.FC5
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -9,11 +9,11 @@ Release: 17.FC5
 Source0: http://unc.dl.sourceforge.net/sourceforge/nfs/nfs-utils-1.0.7.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 
-%define idmapvers 0.10
+%define idmapvers 0.11
 Source2: http://www.citi.umich.edu/projects/nfsv4/linux/libnfsidmap/nfsidmap-%{idmapvers}.tar.gz
 %define eventvers 1.1a
 Source3: http://monkey.org/~provos/libevent-%{eventvers}.tar.gz
-%define gssapivers 0.4
+%define gssapivers 0.5
 Source4: http://www.citi.umich.edu/projects/nfsv4/linux/libgssapi/libgssapi-%{gssapivers}.tar.gz
 %define rpcsecgssvers 0.6
 Source5: http://www.citi.umich.edu/projects/nfsv4/linux/librpcsecgss/librpcsecgss-%{rpcsecgssvers}.tar.gz
@@ -272,6 +272,10 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Thu Sep 22 09:08:12 EDT 2005
+- Updated libnfsidmap to 0.11
+- Updated libgssapi to 0.5
+
 * Sun Sep 18 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-17
 - Updated to latest nfs-utils code in upstream CVS tree
 - Updated libevent from 1.0b to 1.1a
