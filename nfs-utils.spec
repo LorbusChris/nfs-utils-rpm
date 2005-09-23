@@ -49,6 +49,7 @@ Patch58: nfs-utils-1.0.7-xlog-loginfo.patch
 Patch59: nfs-utils-1.0.7-idmap-reopen.patch
 Patch60: nfs-utils-1.0.7-rquotad-curblocks.patch
 Patch61: nfs-utils-1.0.7-mountd-stat64.patch
+Patch62: nfs-utils-1.0.7-nfsd-ctlbits.patch
 
 Patch100: nfs-utils-1.0.7-compile.patch
 Patch150: nfs-utils-1.0.6-pie.patch
@@ -119,6 +120,7 @@ mv libgssapi-%{gssapivers} support/gssapi
 %patch59 -p1 -b .reopen
 %patch60 -p1 -b .curblocks
 %patch61 -p1 -b .stat64
+%patch62 -p1 -b .ctlbits
 
 
 # Do the magic to get things to compile
@@ -277,6 +279,8 @@ fi
 - Made sure the gss daemons and new libs are
   all using the same include files.
 - Removed code from the tree that is no longer used.
+- Add ctlbits patch that introduced the -N -T and -U
+  command line flags to rpc.nfsd.
 
 * Sun Sep 18 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-17
 - Updated to latest nfs-utils code in upstream CVS tree

@@ -68,7 +68,7 @@ case "$1" in
 	    echo
 	fi
 	echo -n $"Starting NFS daemon: "
-	daemon rpc.nfsd $RPCNFSDCOUNT
+	daemon rpc.nfsd $RPCNFSDARGS $RPCNFSDCOUNT
 	echo
 
 	[ -n "$MOUNTD_PORT" ] \
