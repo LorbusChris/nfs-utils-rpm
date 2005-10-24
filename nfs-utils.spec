@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.7
-Release: 18.FC5
+Release: 19.FC5
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -32,6 +32,20 @@ Patch1: nfs-utils-1.0.7-post1.patch
 Patch2: nfs-utils-1.0.7-post2.patch
 Patch3: nfs-utils-1.0.7-post3.patch
 Patch4: nfs-utils-1.0.7-post4.patch
+Patch5: nfs-utils-1.0.7-post5.patch
+Patch6: nfs-utils-1.0.7-post6.patch
+
+#
+# CITI Patches
+#
+Patch20: nfs-utils-1.0.7-037-svcgssd_closeall_lib.dif
+Patch21: nfs-utils-1.0.7-040-idmapd_fix_error_reporting.dif
+Patch22: nfs-utils-1.0.7-041-svcgssd_error_reporting.dif
+Patch23: nfs-utils-1.0.7-042-spkm3_lucid_context.dif
+Patch24: nfs-utils-1.0.7-043-svcgssd_continue_init.dif
+Patch25: nfs-utils-1.0.7-044-gssd_continue_init.dif
+Patch26: nfs-utils-1.0.7-045-gssd_clnt_create_error.dif
+Patch27: nfs-utils-1.0.7-046-gssd_error_messages.dif
 
 
 #
@@ -39,17 +53,11 @@ Patch4: nfs-utils-1.0.7-post4.patch
 #
 Patch50: nfs-utils-1.0.5-statdpath.patch
 Patch51: nfs-utils-1.0.6-mountd.patch
-Patch52: nfs-utils-1.0.6-expwarn.patch
-Patch53: nfs-utils-1.0.7-sgi-statd-fixes.patch
-Patch54: nfs-utils-1.0.6-fd-sig-cleanup.patch
-Patch55: nfs-utils-1.0.6-idmap.conf.patch
-Patch56: nfs-utils-1.0.6-rquotad-overflow.patch
-Patch57: nfs-utils-1.0.6-statd-notify-hostname.patch
-Patch58: nfs-utils-1.0.7-xlog-loginfo.patch
-Patch59: nfs-utils-1.0.7-idmap-reopen.patch
-Patch60: nfs-utils-1.0.7-rquotad-curblocks.patch
-Patch61: nfs-utils-1.0.7-mountd-stat64.patch
-Patch62: nfs-utils-1.0.7-nfsd-ctlbits.patch
+Patch52: nfs-utils-1.0.6-idmap.conf.patch
+Patch53: nfs-utils-1.0.7-rquotad-curblocks.patch
+Patch54: nfs-utils-1.0.7-mountd-stat64.patch
+Patch55: nfs-utils-1.0.7-nfsd-ctlbits.patch
+Patch56: nfs-utils-1.0.7-idmapd-mapinit.patch
 
 Patch100: nfs-utils-1.0.7-compile.patch
 Patch150: nfs-utils-1.0.6-pie.patch
@@ -106,21 +114,27 @@ mv libgssapi-%{gssapivers} support/gssapi
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1 
+%patch5 -p1 
+%patch6 -p1
+
+# CITI Patches
+%patch20 -p1
+%patch21 -p1
+%patch22 -p1
+%patch23 -p1
+%patch24 -p1
+%patch25 -p1
+%patch26 -p1
+%patch27 -p1
 
 # Local Patches
 %patch50 -p1 -b .statdpath
 %patch51 -p1 -b .mountd
-%patch52 -p1 -b .expwarn
-%patch53 -p1 -b .sgi
-%patch54 -p1 -b .cleanup
-%patch55 -p1 -b .conf
-%patch56 -p1 -b .overflow
-%patch57 -p1 -b .notify
-%patch58 -p1 -b .xlog
-%patch59 -p1 -b .reopen
-%patch60 -p1 -b .curblocks
-%patch61 -p1 -b .stat64
-%patch62 -p1 -b .ctlbits
+%patch52 -p1 -b .conf
+%patch53 -p1 -b .curblocks
+%patch54 -p1 -b .stat64
+%patch55 -p1 -b .ctlbits
+%patch56 -p1 -b .mapinit
 
 
 # Do the magic to get things to compile
@@ -273,6 +287,11 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Sun Oct 23 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-19
+- Updated to latest code in SourceForge CVS
+- Updated to latest CITI patches (1.0.7-4)
+- Fix bug in nfsdreopen by compiling in server defaults
+
 * Thu Sep 22 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-18
 - Updated libnfsidmap to 0.11
 - Updated libgssapi to 0.5
