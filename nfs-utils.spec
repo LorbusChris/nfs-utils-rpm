@@ -547,7 +547,7 @@ the mountd man page.
 - Moved access code to be after dropping privs
 
 * Mon Nov 18 2002 Stephen C. Tweedie <sct@redhat.com>
-- Build with %configure
+- Build with %%configure
 - Add nhfsgraph, nhfsnums and nhfsrun to the files list
 
 * Mon Nov 11 2002 Stephen C. Tweedie <sct@redhat.com>
