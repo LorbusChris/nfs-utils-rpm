@@ -1,67 +1,29 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
-Version: 1.0.7
-Release: 19.FC5.1
+Version: 1.0.8.rc2
+Release: 1.FC5
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
 
-Source0: http://unc.dl.sourceforge.net/sourceforge/nfs/nfs-utils-1.0.7.tar.gz
+Source0: http://prdownloads.sourceforge.net/nfs/nfs-utils-1.0.8-rc2.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
-
-%define idmapvers 0.11
-Source2: http://www.citi.umich.edu/projects/nfsv4/linux/libnfsidmap/nfsidmap-%{idmapvers}.tar.gz
-%define eventvers 1.1a
-Source3: http://monkey.org/~provos/libevent-%{eventvers}.tar.gz
-%define gssapivers 0.5
-Source4: http://www.citi.umich.edu/projects/nfsv4/linux/libgssapi/libgssapi-%{gssapivers}.tar.gz
-%define rpcsecgssvers 0.6
-Source5: http://www.citi.umich.edu/projects/nfsv4/linux/librpcsecgss/librpcsecgss-%{rpcsecgssvers}.tar.gz
 
 Source10: nfs.init
 Source11: nfslock.init
 Source12: rpcidmapd.init
 Source13: rpcgssd.init
 Source14: rpcsvcgssd.init
-Source15: gssapi_mech.conf
 
-# Updstream Patches
-#
-Patch0: nfs-utils-1.0.7-post0.patch
-Patch1: nfs-utils-1.0.7-post1.patch
-Patch2: nfs-utils-1.0.7-post2.patch
-Patch3: nfs-utils-1.0.7-post3.patch
-Patch4: nfs-utils-1.0.7-post4.patch
-Patch5: nfs-utils-1.0.7-post5.patch
-Patch6: nfs-utils-1.0.7-post6.patch
-
-#
-# CITI Patches
-#
-Patch20: nfs-utils-1.0.7-037-svcgssd_closeall_lib.dif
-Patch21: nfs-utils-1.0.7-040-idmapd_fix_error_reporting.dif
-Patch22: nfs-utils-1.0.7-041-svcgssd_error_reporting.dif
-Patch23: nfs-utils-1.0.7-042-spkm3_lucid_context.dif
-Patch24: nfs-utils-1.0.7-043-svcgssd_continue_init.dif
-Patch25: nfs-utils-1.0.7-044-gssd_continue_init.dif
-Patch26: nfs-utils-1.0.7-045-gssd_clnt_create_error.dif
-Patch27: nfs-utils-1.0.7-046-gssd_error_messages.dif
-
-
-#
-# Local Patches
-#
 Patch50: nfs-utils-1.0.5-statdpath.patch
 Patch51: nfs-utils-1.0.6-mountd.patch
 Patch52: nfs-utils-1.0.6-idmap.conf.patch
 Patch53: nfs-utils-1.0.7-rquotad-curblocks.patch
 Patch54: nfs-utils-1.0.7-mountd-stat64.patch
 Patch55: nfs-utils-1.0.7-nfsd-ctlbits.patch
-Patch56: nfs-utils-1.0.7-idmapd-mapinit.patch
+Patch56: nfs-utils-1.0.8-rc2-Makefileam.patch
 
-Patch100: nfs-utils-1.0.7-compile.patch
-Patch150: nfs-utils-1.0.6-pie.patch
-Patch151: nfs-utils-1.0.7-strip.patch
+Patch100: nfs-utils-1.0.8-compile.patch
 
 Group: System Environment/Daemons
 Obsoletes: nfs-server
@@ -75,12 +37,14 @@ Provides: knfsd-lock
 Provides: knfsd-clients 
 Provides: knfsd
 License: GPL
-Buildroot: %{_tmppath}/%{name}-root
+Buildroot: %{_tmppath}/%{name}-%{version}-root
 Requires: portmap >= 4.0, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
+BuildRequires: nfs-utils-lib-devel
 PreReq: shadow-utils >= 4.0.3-25
-Prereq: /sbin/chkconfig /sbin/nologin
+PreReq: /sbin/chkconfig /sbin/nologin
+PreReq: nfs-utils-lib libevent
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
@@ -93,77 +57,43 @@ System) server on the remote host.  For example, showmount can display the
 clients which are mounted on that host.
 
 %prep
-%setup -q -a1 -a2 -a3 -a4 -a5
-#
-# Remove code that no longer used
-#
-rm -r support/rpc
-rm -r support/gssapi
-
-#
-# Set up the support libs
-#
-mv nfsidmap-%{idmapvers} support/nfsidmap
-mv libevent-%{eventvers} support/event
-mv librpcsecgss-%{rpcsecgssvers} support/rpcsecgss
-mv libgssapi-%{gssapivers} support/gssapi
-
-# Upstream Patches
-%patch0 -p1 
-%patch1 -p1
-%patch2 -p1
-%patch3 -p1
-%patch4 -p1 
-%patch5 -p1 
-%patch6 -p1
-
-# CITI Patches
-%patch20 -p1
-%patch21 -p1
-%patch22 -p1
-%patch23 -p1
-%patch24 -p1
-%patch25 -p1
-%patch26 -p1
-%patch27 -p1
-
-# Local Patches
+%setup -q -n nfs-utils-1.0.8-rc2 -a1
 %patch50 -p1 -b .statdpath
 %patch51 -p1 -b .mountd
 %patch52 -p1 -b .conf
 %patch53 -p1 -b .curblocks
 %patch54 -p1 -b .stat64
 %patch55 -p1 -b .ctlbits
-%patch56 -p1 -b .mapinit
-
+%patch56 -p1 -b .makeam
 
 # Do the magic to get things to compile
 %patch100 -p1 -b .compile
-%patch150 -p1 -b .pie
-%patch151 -p1 -b .strip
-%ifarch s390 s390x
-perl -pi -e 's/-fpie/-fPIE/' */*/Makefile
-%endif
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
 
 %build
 
-autoconf
+%ifarch s390 s390x
+PIE="-fPIE"
+%else
+PIE="-fpie"
+%endif
+export PIE
 
+sh autogen.sh
+
+CFLAGS="`echo $RPM_OPT_FLAGS $ARCH_OPT_FLAGS $PIE`"
 #
 # Hack to enable netgroups.  If anybody knows the right way to do
 # this, please help yourself.
 #
 ac_cv_func_innetgr=yes \
-	CFLAGS="$RPM_OPT_FLAGS" %configure --enable-secure-statd
-
-cd support/nfsidmap; %configure --prefix=$RPM_BUILD_ROOT
-cd ../event; %configure --prefix=$RPM_BUILD_ROOT
-cd ../gssapi; %configure --prefix=$RPM_BUILD_ROOT
-cd ../rpcsecgss; %configure --prefix=$RPM_BUILD_ROOT
-cd ../../
+%configure \
+	CFLAGS="$CFLAGS" \
+	CPPFLAGS="$DEFINES" \
+	LDFLAGS="-pie" \
+	--prefix=$RPM_BUILD_ROOT
 
 make all
 
@@ -172,14 +102,13 @@ rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT{/sbin,/usr/sbin}
 mkdir -p ${RPM_BUILD_ROOT}%{_mandir}/{man5,man8}
 mkdir -p $RPM_BUILD_ROOT/etc/rc.d/init.d
-make install install_prefix=$RPM_BUILD_ROOT
+make DESTDIR=$RPM_BUILD_ROOT install
 install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT/sbin
 install -m 755 %{SOURCE10} $RPM_BUILD_ROOT/etc/rc.d/init.d/nfs
 install -m 755 %{SOURCE11} $RPM_BUILD_ROOT/etc/rc.d/init.d/nfslock
 install -m 755 %{SOURCE12} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcidmapd
 install -m 755 %{SOURCE13} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcgssd
 install -m 755 %{SOURCE14} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcsvcgssd
-install -m 644 %{SOURCE15} $RPM_BUILD_ROOT/etc/gssapi_mech.conf
 
 install -m 644 utils/idmapd/idmapd.conf \
 	$RPM_BUILD_ROOT/etc/idmapd.conf
@@ -262,7 +191,6 @@ fi
 %config /etc/rc.d/init.d/rpcgssd
 %config /etc/rc.d/init.d/rpcsvcgssd
 %config(noreplace) /etc/idmapd.conf
-%config(noreplace) /etc/gssapi_mech.conf
 %dir /var/lib/nfs/rpc_pipefs
 %dir /var/lib/nfs
 %dir %attr(700,rpcuser,rpcuser) /var/lib/nfs/statd
@@ -287,6 +215,12 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Mon Jan  9 2006 1.0.8-1
+- Updated to 1.0.8-rc2 release
+- Broke out libgssapi into its own rpm
+- Move librpcsecgss and libnfsidmap in the new nfs-utils-lib rpm
+- Removed libevent code; Required to be installed.
+
 * Fri Dec 09 2005 Jesse Keating <jkeating@redhat.com>
 - rebuilt
 

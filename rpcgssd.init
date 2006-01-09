@@ -31,7 +31,7 @@ fi
 
 
 # Try to use machine credentials by default
-OPTIONS="-m"
+OPTIONS=""
 RETVAL=0
 prog="rpc.gssd"
 
