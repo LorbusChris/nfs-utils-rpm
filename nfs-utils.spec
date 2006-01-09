@@ -40,6 +40,7 @@ License: GPL
 Buildroot: %{_tmppath}/%{name}-%{version}-root
 Requires: portmap >= 4.0, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
+BuildPrereq: nfs-utils-lib-devel libevent-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: nfs-utils-lib-devel libevent-devel
 PreReq: shadow-utils >= 4.0.3-25
