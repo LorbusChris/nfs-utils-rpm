@@ -40,12 +40,12 @@ License: GPL
 Buildroot: %{_tmppath}/%{name}-%{version}-root
 Requires: portmap >= 4.0, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
-BuildPrereq: nfs-utils-lib-devel libevent-devel
+BuildPrereq: nfs-utils-lib-devel libevent-devel libgssapi-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
-BuildRequires: nfs-utils-lib-devel libevent-devel
+BuildRequires: nfs-utils-lib-devel libevent-devel libgssapi-devel
 PreReq: shadow-utils >= 4.0.3-25
 PreReq: /sbin/chkconfig /sbin/nologin
-PreReq: nfs-utils-lib libevent
+PreReq: nfs-utils-lib libevent libgssapi
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
