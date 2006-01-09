@@ -41,7 +41,7 @@ Buildroot: %{_tmppath}/%{name}-%{version}-root
 Requires: portmap >= 4.0, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
-BuildRequires: nfs-utils-lib-devel
+BuildRequires: nfs-utils-lib-devel libevent
 PreReq: shadow-utils >= 4.0.3-25
 PreReq: /sbin/chkconfig /sbin/nologin
 PreReq: nfs-utils-lib libevent
