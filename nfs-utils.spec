@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.8.rc2
-Release: 1.FC5
+Release: 2.FC5
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -216,7 +216,10 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
-* Mon Jan  9 2006 1.0.8-1
+* Wed Jan 11 2006 Peter Jones <pjones@redhat.com> 1.0.8.rc2-2.FC5
+- Fix lockfile naming in the initscripts so they're stopped correctly.
+
+* Mon Jan  9 2006 Steve Dickson <SteveD@RedHat.com> 1.0.8.rc2-1.FC5
 - Updated to 1.0.8-rc2 release
 - Broke out libgssapi into its own rpm
 - Move librpcsecgss and libnfsidmap in the new nfs-utils-lib rpm

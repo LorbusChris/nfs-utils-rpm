@@ -33,6 +33,7 @@ fi
 # Try to use machine credentials by default
 OPTIONS=""
 RETVAL=0
+LOCKFILE=/var/lock/subsys/rpcgssd
 prog="rpc.gssd"
 
 case "$1" in
@@ -41,7 +42,7 @@ case "$1" in
 	if status $prog > /dev/null ; then
 		exit 0
 	fi
-	rm -f /var/lock/subsys/$prog
+	rm -f $LOCKFILE
 
 	echo -n $"Starting RPC gssd: "
 
@@ -70,7 +71,7 @@ case "$1" in
 	daemon $prog ${OPTIONS}
 	RETVAL=$?
 	echo
-	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/rpc.gssd
+	[ $RETVAL -eq 0 ] && touch $LOCKFILE
 	;;
   stop)
 	# Stop daemon.
@@ -78,7 +79,7 @@ case "$1" in
 	killproc $prog
 	RETVAL=$?
 	echo
-	[ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/rpc.gssd
+	[ $RETVAL -eq 0 ] && rm -f $LOCKFILE
 	;;
   status)
 	status rpc.gssd
@@ -90,7 +91,7 @@ case "$1" in
 	RETVAL=$?
 	;;
   condrestart)
-	if [ -f /var/lock/subsys/rpc.gssd ]; then
+	if [ -f $LOCKFILE ]; then
 		$0 restart
 		RETVAL=$?
 	fi
