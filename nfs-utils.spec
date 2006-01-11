@@ -130,6 +130,13 @@ rm %{buildroot}/%{_sbindir}/rpc.rquotad
 rm -rf $RPM_BUILD_ROOT
 
 %pre
+# move files so the running service will have this applied as well
+for x in gssd svcgssd idmapd ; do
+	if [ -f /var/lock/subsys/rpc.$x ]; then
+		mv /var/lock/subsys/rpc.$x /var/lock/subsys/rpc$x
+	fi
+done
+
 /usr/sbin/useradd -l -c "RPC Service User" -r \
         -s /sbin/nologin -u 29 -d /var/lib/nfs rpcuser 2>/dev/null || :
 # Define the correct unsigned uid value for 32 or 64 bit archs
