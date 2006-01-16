@@ -221,8 +221,8 @@ fi
 
 %changelog
 * Mon Jan 16 2006 Steve Dickson <SteveD@RedHat.com> 1.0.8.rc2-3.FC5
-- Added innetgr patch that changes configure scripts to
-  check for the innetgr function.
+- Added innetgr patch that changes configure scripts to 
+  check for the innetgr function. (bz 177899)
 
 * Wed Jan 11 2006 Peter Jones <pjones@redhat.com> 1.0.8.rc2-2.FC5
 - Fix lockfile naming in the initscripts so they're stopped correctly.
