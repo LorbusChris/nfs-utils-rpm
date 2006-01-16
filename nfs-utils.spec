@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.8.rc2
-Release: 2.FC5
+Release: 3.FC5
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -22,6 +22,7 @@ Patch53: nfs-utils-1.0.7-rquotad-curblocks.patch
 Patch54: nfs-utils-1.0.7-mountd-stat64.patch
 Patch55: nfs-utils-1.0.7-nfsd-ctlbits.patch
 Patch56: nfs-utils-1.0.8-rc2-Makefileam.patch
+Patch57: nfs-utils-1.0.8-rc2-innetgr.patch
 
 Patch100: nfs-utils-1.0.8-compile.patch
 
@@ -66,6 +67,7 @@ clients which are mounted on that host.
 %patch54 -p1 -b .stat64
 %patch55 -p1 -b .ctlbits
 %patch56 -p1 -b .makeam
+%patch57 -p1 -b .innetgr
 
 # Do the magic to get things to compile
 %patch100 -p1 -b .compile
@@ -82,14 +84,9 @@ PIE="-fpie"
 %endif
 export PIE
 
-sh autogen.sh
+sh -x autogen.sh
 
 CFLAGS="`echo $RPM_OPT_FLAGS $ARCH_OPT_FLAGS $PIE`"
-#
-# Hack to enable netgroups.  If anybody knows the right way to do
-# this, please help yourself.
-#
-ac_cv_func_innetgr=yes \
 %configure \
 	CFLAGS="$CFLAGS" \
 	CPPFLAGS="$DEFINES" \
@@ -223,6 +220,10 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Mon Jan 16 2006 Steve Dickson <SteveD@RedHat.com> 1.0.8.rc2-3.FC5
+- Added innetgr patch that changes configure scripts to
+  check for the innetgr function.
+
 * Wed Jan 11 2006 Peter Jones <pjones@redhat.com> 1.0.8.rc2-2.FC5
 - Fix lockfile naming in the initscripts so they're stopped correctly.
 
