@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.8.rc2
-Release: 3.FC5
+Release: 4.FC5
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -23,6 +23,7 @@ Patch54: nfs-utils-1.0.7-mountd-stat64.patch
 Patch55: nfs-utils-1.0.7-nfsd-ctlbits.patch
 Patch56: nfs-utils-1.0.8-rc2-Makefileam.patch
 Patch57: nfs-utils-1.0.8-rc2-innetgr.patch
+Patch58: nfs-utils-1.0.8-rc2-nfs4_setdebug.patch
 
 Patch100: nfs-utils-1.0.8-compile.patch
 
@@ -43,10 +44,11 @@ Requires: portmap >= 4.0, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
 BuildPrereq: nfs-utils-lib-devel libevent-devel libgssapi-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
-BuildRequires: nfs-utils-lib-devel libevent-devel libgssapi-devel
+BuildRequires: nfs-utils-lib-devel >= 1.0.8-2
+BuildRequires: libevent-devel libgssapi-devel
 PreReq: shadow-utils >= 4.0.3-25
 PreReq: /sbin/chkconfig /sbin/nologin
-PreReq: nfs-utils-lib libevent libgssapi
+PreReq: nfs-utils-lib >= 1.0.8-2 libevent libgssapi
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
@@ -68,6 +70,7 @@ clients which are mounted on that host.
 %patch55 -p1 -b .ctlbits
 %patch56 -p1 -b .makeam
 %patch57 -p1 -b .innetgr
+%patch58 -p1 -b .setdebug
 
 # Do the magic to get things to compile
 %patch100 -p1 -b .compile
@@ -220,6 +223,10 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Fri Jan 20 2006 Steve Dickson <SteveD@RedHat.com> 1.0.8.rc2-4.FC5
+- Added new libnfsidmap call, nfs4_set_debug(), to rpc.idmapd
+  which turns on debugging in the libarary.
+
 * Mon Jan 16 2006 Steve Dickson <SteveD@RedHat.com> 1.0.8.rc2-3.FC5
 - Added innetgr patch that changes configure scripts to 
   check for the innetgr function. (bz 177899)
