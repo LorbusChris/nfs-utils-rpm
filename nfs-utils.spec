@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.8.rc4
-Release: 1.FC5
+Release: 1
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -219,7 +219,7 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
-* Thu Jun  8 2006 <SteveD@RedHat.com> 1.0.8.rc4-1.FC5
+* Thu Jun  8 2006 <SteveD@RedHat.com> 1.0.8.rc4-1
 - Upgraded to the upstream 1.0.8.rc4 version
 
 * Fri Feb 10 2006 Jesse Keating <jkeating@redhat.com> - 1.0.8.rc2-4.FC5.2
