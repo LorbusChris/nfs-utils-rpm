@@ -1,12 +1,12 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
-Version: 1.0.8.rc2
-Release: 4.FC5.2
+Version: 1.0.8.rc4
+Release: 1.FC5
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
 
-Source0: http://prdownloads.sourceforge.net/nfs/nfs-utils-1.0.8-rc2.tar.gz
+Source0: http://prdownloads.sourceforge.net/nfs/nfs-utils-1.0.8-rc4.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 
 Source10: nfs.init
@@ -18,12 +18,9 @@ Source14: rpcsvcgssd.init
 Patch50: nfs-utils-1.0.5-statdpath.patch
 Patch51: nfs-utils-1.0.6-mountd.patch
 Patch52: nfs-utils-1.0.6-idmap.conf.patch
-Patch53: nfs-utils-1.0.7-rquotad-curblocks.patch
-Patch54: nfs-utils-1.0.7-mountd-stat64.patch
-Patch55: nfs-utils-1.0.7-nfsd-ctlbits.patch
-Patch56: nfs-utils-1.0.8-rc2-Makefileam.patch
-Patch57: nfs-utils-1.0.8-rc2-innetgr.patch
-Patch58: nfs-utils-1.0.8-rc2-nfs4_setdebug.patch
+Patch53: nfs-utils-1.0.7-mountd-stat64.patch
+Patch54: nfs-utils-1.0.7-nfsd-ctlbits.patch
+Patch55: nfs-utils-1.0.8-rc2-innetgr.patch
 
 Patch100: nfs-utils-1.0.8-compile.patch
 
@@ -61,16 +58,13 @@ System) server on the remote host.  For example, showmount can display the
 clients which are mounted on that host.
 
 %prep
-%setup -q -n nfs-utils-1.0.8-rc2 -a1
+%setup -q -n nfs-utils-1.0.8-rc4 -a1
 %patch50 -p1 -b .statdpath
 %patch51 -p1 -b .mountd
 %patch52 -p1 -b .conf
-%patch53 -p1 -b .curblocks
-%patch54 -p1 -b .stat64
-%patch55 -p1 -b .ctlbits
-%patch56 -p1 -b .makeam
-%patch57 -p1 -b .innetgr
-%patch58 -p1 -b .setdebug
+%patch53 -p1 -b .stat64
+%patch54 -p1 -b .ctlbits
+%patch55 -p1 -b .innetgr
 
 # Do the magic to get things to compile
 %patch100 -p1 -b .compile
@@ -219,10 +213,15 @@ fi
 /usr/sbin/rpc.idmapd
 /usr/sbin/rpc.gssd
 /usr/sbin/rpc.svcgssd
+/usr/sbin/gss_clnt_send_err
+/usr/sbin/gss_destroy_creds
 %{_mandir}/*/*
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Thu Jun  8 2006 <SteveD@RedHat.com> 1.0.8.rc4-1.FC5
+- Upgraded to the upstream 1.0.8.rc4 version
+
 * Fri Feb 10 2006 Jesse Keating <jkeating@redhat.com> - 1.0.8.rc2-4.FC5.2
 - bump again for double-long bug on ppc(64)
 
