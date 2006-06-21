@@ -41,6 +41,7 @@ BuildPrereq: nfs-utils-lib-devel libevent-devel libgssapi-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: nfs-utils-lib-devel >= 1.0.8-2
 BuildRequires: libevent-devel libgssapi-devel
+BuildRequires: automake, libtool
 PreReq: shadow-utils >= 4.0.3-25
 PreReq: /sbin/chkconfig /sbin/nologin
 PreReq: nfs-utils-lib >= 1.0.8-2 libevent libgssapi
