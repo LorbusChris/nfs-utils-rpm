@@ -1,12 +1,12 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
-Version: 1.0.8.rc4
-Release: 1
+Version: 1.0.8
+Release: 2
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
 
-Source0: http://prdownloads.sourceforge.net/nfs/nfs-utils-1.0.8-rc4.tar.gz
+Source0: http://prdownloads.sourceforge.net/nfs/nfs-utils-1.0.8.tar.gz
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 
 Source10: nfs.init
@@ -18,9 +18,7 @@ Source14: rpcsvcgssd.init
 Patch50: nfs-utils-1.0.5-statdpath.patch
 Patch51: nfs-utils-1.0.6-mountd.patch
 Patch52: nfs-utils-1.0.6-idmap.conf.patch
-Patch53: nfs-utils-1.0.7-mountd-stat64.patch
-Patch54: nfs-utils-1.0.7-nfsd-ctlbits.patch
-Patch55: nfs-utils-1.0.8-rc2-innetgr.patch
+Patch53: nfs-utils-1.0.7-nfsd-ctlbits.patch
 
 Patch100: nfs-utils-1.0.8-compile.patch
 
@@ -43,7 +41,6 @@ BuildPrereq: nfs-utils-lib-devel libevent-devel libgssapi-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: nfs-utils-lib-devel >= 1.0.8-2
 BuildRequires: libevent-devel libgssapi-devel
-BuildRequires: automake libtool krb5-devel
 PreReq: shadow-utils >= 4.0.3-25
 PreReq: /sbin/chkconfig /sbin/nologin
 PreReq: nfs-utils-lib >= 1.0.8-2 libevent libgssapi
@@ -59,13 +56,11 @@ System) server on the remote host.  For example, showmount can display the
 clients which are mounted on that host.
 
 %prep
-%setup -q -n nfs-utils-1.0.8-rc4 -a1
+%setup -q
 %patch50 -p1 -b .statdpath
 %patch51 -p1 -b .mountd
 %patch52 -p1 -b .conf
-%patch53 -p1 -b .stat64
-%patch54 -p1 -b .ctlbits
-%patch55 -p1 -b .innetgr
+%patch53 -p1 -b .ctlbits
 
 # Do the magic to get things to compile
 %patch100 -p1 -b .compile
@@ -201,7 +196,7 @@ fi
 %config(noreplace) /var/lib/nfs/etab
 %config(noreplace) /var/lib/nfs/rmtab
 %config(noreplace) /var/lib/nfs/state
-%doc nfs/*.html nfs/*.ps linux-nfs/*
+%doc linux-nfs/*
 /sbin/rpcdebug
 /sbin/rpc.lockd
 /sbin/rpc.statd
@@ -220,6 +215,9 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Wed Jun 21 2006 <SteveD@RedHat.com> 1.0.8-2
+- Updated to nfs-utils-1.0.8
+
 * Thu Jun  8 2006 <SteveD@RedHat.com> 1.0.8.rc4-1
 - Upgraded to the upstream 1.0.8.rc4 version
 
