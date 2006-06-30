@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.8
-Release: 2
+Release: 3
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -18,7 +18,8 @@ Source14: rpcsvcgssd.init
 Patch50: nfs-utils-1.0.5-statdpath.patch
 Patch51: nfs-utils-1.0.6-mountd.patch
 Patch52: nfs-utils-1.0.6-idmap.conf.patch
-Patch53: nfs-utils-1.0.7-nfsd-ctlbits.patch
+Patch53: nfs-utils-1.0.8-nfsd-vers.patch
+Patch54: nfs-utils-1.0.8-nfsd-ports.patch
 
 Patch100: nfs-utils-1.0.8-compile.patch
 
@@ -58,13 +59,14 @@ clients which are mounted on that host.
 
 %prep
 %setup -q
-%patch50 -p1 -b .statdpath
-%patch51 -p1 -b .mountd
-%patch52 -p1 -b .conf
-%patch53 -p1 -b .ctlbits
+%patch50 -p1
+%patch51 -p1
+%patch52 -p1
+%patch53 -p1
+%patch54 -p1
 
 # Do the magic to get things to compile
-%patch100 -p1 -b .compile
+%patch100 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -216,6 +218,10 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Fri Jun 30 2006 <SteveD@RedHat.com> 1.0.8-3
+- Split the controlling of nfs version, ports, and protocol 
+  into two different patches
+
 * Wed Jun 21 2006 <SteveD@RedHat.com> 1.0.8-2
 - Updated to nfs-utils-1.0.8
 
