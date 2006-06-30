@@ -20,6 +20,9 @@ Patch51: nfs-utils-1.0.6-mountd.patch
 Patch52: nfs-utils-1.0.6-idmap.conf.patch
 Patch53: nfs-utils-1.0.8-nfsd-vers.patch
 Patch54: nfs-utils-1.0.8-nfsd-ports.patch
+Patch55: nfs-utils-1.0.8-mountd-debug.patch
+Patch56: nfs-utils-1.0.6-gssd_mixed_case.patch
+Patch57: nfs-utils-1.0.8-privports.patch
 
 Patch100: nfs-utils-1.0.8-compile.patch
 
@@ -64,6 +67,9 @@ clients which are mounted on that host.
 %patch52 -p1
 %patch53 -p1
 %patch54 -p1
+%patch55 -p1
+%patch56 -p1
+%patch57 -p1
 
 # Do the magic to get things to compile
 %patch100 -p1
@@ -221,6 +227,14 @@ fi
 * Fri Jun 30 2006 <SteveD@RedHat.com> 1.0.8-3
 - Split the controlling of nfs version, ports, and protocol 
   into two different patches
+- Fixed and added debugging statements to rpc.mountd.
+- Fixed -p arg to work with priviledged ports (bz 156655)
+- Changed nfslock initscript to set LOCKD_TCPPORT and
+  LOCKD_UDPPORT (bz 162133)
+- Added MOUNTD_NFS_V1 variable to version 1 of the
+  mount protocol can be turned off. (bz 175729)
+- Fixed gssd to handel mixed case characters in
+  the domainname. (bz 186069)
 
 * Wed Jun 21 2006 <SteveD@RedHat.com> 1.0.8-2
 - Updated to nfs-utils-1.0.8

@@ -58,6 +58,16 @@ start() {
 	  echo -n $"Starting NFS locking: "
 	  daemon rpc.lockd
 	  echo
+	else 
+	# See if the kernel lockd should start up 
+	# listening on a particular port
+	#
+		LOCKDARG=""
+		[ -n "$LOCKD_TCPPORT" ] && LOCKDARG="nlm_tcpport=$LOCKD_TCPPORT"
+		[ -n "$LOCKD_UDPPORT" ] && \
+			LOCKDARG="$LOCKDARG nlm_udpport=$LOCKD_UDPPORT"
+		[ -n "$LOCKDARG" ]  && \
+			modprobe lockd $LOCKDARG
 	fi  
 	echo -n $"Starting NFS statd: "
 	# See if a statd's ports has been defined
@@ -79,6 +89,7 @@ stop() {
 		killproc lockd -KILL
 		echo
 	fi
+
 	echo -n $"Stopping NFS statd: "
 	killproc rpc.statd
 	RETVAL=0

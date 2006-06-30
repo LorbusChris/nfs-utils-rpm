@@ -74,6 +74,11 @@ case "$1" in
 	[ -n "$MOUNTD_PORT" ] \
 	&& RPCMOUNTDOPTS="$RPCMOUNTDOPTS -p $MOUNTD_PORT"
 
+	case $MOUNTD_NFS_V1 in
+	no|NO)
+	    RPCMOUNTDOPTS="$RPCMOUNTDOPTS --no-nfs-version 1" ;;
+	esac
+
 	case $MOUNTD_NFS_V2 in
 	no|NO)
 	    RPCMOUNTDOPTS="$RPCMOUNTDOPTS --no-nfs-version 2" ;;

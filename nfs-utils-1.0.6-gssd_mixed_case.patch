@@ -1,0 +1,31 @@
+--- nfs-utils-1.0.6/utils/gssd/gssd_proc.c.gssd	2006-03-02 14:36:10.000000000 -0500
++++ nfs-utils-1.0.6/utils/gssd/gssd_proc.c	2006-03-02 14:38:47.000000000 -0500
+@@ -53,6 +53,7 @@
+ #include <pwd.h>
+ #include <grp.h>
+ #include <string.h>
++#include <ctype.h>
+ #include <dirent.h>
+ #include <poll.h>
+ #include <fcntl.h>
+@@ -115,6 +116,7 @@ read_service_info(char *info_file_name, 
+ 	int		fd = -1;
+ 	struct hostent	*ent = NULL;
+ 	int		numfields;
++	char		*s;
+ 
+ 	*servicename = *servername = *protocol = NULL;
+ 
+@@ -155,6 +157,12 @@ read_service_info(char *info_file_name, 
+ 		printerr(0, "ERROR: can't resolve server %s name\n", address);
+ 		goto fail;
+ 	}
++
++	/* don't allow mixed-case names to rain on our parade */
++	for (s = ent->h_name; s && *s; s++) {
++		*s = tolower((int)*s);
++	}
++
+ 	if (!(*servername = calloc(strlen(ent->h_name) + 1, 1)))
+ 		goto fail;
+ 	memcpy(*servername, ent->h_name, strlen(ent->h_name));
