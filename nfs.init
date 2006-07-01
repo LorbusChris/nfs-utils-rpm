@@ -126,7 +126,6 @@ case "$1" in
 	;;
   status)
 	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd status
-	echo -n $"Shutting down NFS mountd: "
 	status rpc.mountd
 	status nfsd
 	if [ -n "$RQUOTAD" -a "$RQUOTAD" != "no" ]; then
