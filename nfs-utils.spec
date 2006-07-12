@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.8
-Release: 5%{?dist}
+Release: 5.1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -225,6 +225,9 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Wed Jul 12 2006 Jesse Keating <jkeating@redhat.com> - 1:1.0.8-5.1
+- rebuild
+
 * Sun Jul  2 2006 <jkeating@redhat.com> 1:1.0.8-5
 - Introduce epoch to fix upgrade path
 
