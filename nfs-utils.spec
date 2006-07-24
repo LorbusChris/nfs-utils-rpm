@@ -1,13 +1,13 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
-Version: 1.0.8
-Release: 5.1%{?dist}
-Epoch: 1
+Version: 1.0.9
+Release: 1%{?dist}
+#Epoch: 1
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
 
-Source0: http://prdownloads.sourceforge.net/nfs/nfs-utils-1.0.8.tar.gz
+Source0: http://www.kernel.org/pub/linux/utils/nfs/nfs-utils-1.0.9.tar.bz2
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 
 Source10: nfs.init
@@ -19,11 +19,8 @@ Source14: rpcsvcgssd.init
 Patch50: nfs-utils-1.0.5-statdpath.patch
 Patch51: nfs-utils-1.0.6-mountd.patch
 Patch52: nfs-utils-1.0.6-idmap.conf.patch
-Patch53: nfs-utils-1.0.8-nfsd-vers.patch
-Patch54: nfs-utils-1.0.8-nfsd-ports.patch
-Patch55: nfs-utils-1.0.8-mountd-debug.patch
-Patch56: nfs-utils-1.0.6-gssd_mixed_case.patch
-Patch57: nfs-utils-1.0.8-privports.patch
+Patch53: nfs-utils-1.0.6-gssd_mixed_case.patch
+Patch54: nfs-utils-1.0.8-privports.patch
 
 Patch100: nfs-utils-1.0.8-compile.patch
 
@@ -68,9 +65,6 @@ clients which are mounted on that host.
 %patch52 -p1
 %patch53 -p1
 %patch54 -p1
-%patch55 -p1
-%patch56 -p1
-%patch57 -p1
 
 # Do the magic to get things to compile
 %patch100 -p1
@@ -104,7 +98,7 @@ mkdir -p $RPM_BUILD_ROOT{/sbin,/usr/sbin}
 mkdir -p ${RPM_BUILD_ROOT}%{_mandir}/{man5,man8}
 mkdir -p $RPM_BUILD_ROOT/etc/rc.d/init.d
 make DESTDIR=$RPM_BUILD_ROOT install
-install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT/sbin
+install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT/usr/sbin
 install -m 755 %{SOURCE10} $RPM_BUILD_ROOT/etc/rc.d/init.d/nfs
 install -m 755 %{SOURCE11} $RPM_BUILD_ROOT/etc/rc.d/init.d/nfslock
 install -m 755 %{SOURCE12} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcidmapd
@@ -120,6 +114,7 @@ touch $RPM_BUILD_ROOT/var/lib/nfs/rmtab
 mv $RPM_BUILD_ROOT/usr/sbin/{rpc.lockd,rpc.statd} $RPM_BUILD_ROOT/sbin
 
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/statd
+mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/v4recovery
 
 # we are using quotad from quota utils
 rm %{buildroot}/%{_mandir}/man8/rquotad*
@@ -174,6 +169,8 @@ if [ "$1" = "0" ]; then
     /usr/sbin/userdel rpcuser 2>/dev/null || :
     /usr/sbin/groupdel rpcuser 2>/dev/null || :
     /usr/sbin/userdel nfsnobody 2>/dev/null || :
+	rm -rf /var/lib/nfs/statd
+	rm -rf /var/lib/nfs/v4recovery
 fi
 
 %postun
@@ -199,6 +196,7 @@ fi
 %config /etc/rc.d/init.d/rpcgssd
 %config /etc/rc.d/init.d/rpcsvcgssd
 %config(noreplace) /etc/idmapd.conf
+%dir /var/lib/nfs/v4recovery
 %dir /var/lib/nfs/rpc_pipefs
 %dir /var/lib/nfs
 %dir %attr(700,rpcuser,rpcuser) /var/lib/nfs/statd
@@ -207,12 +205,12 @@ fi
 %config(noreplace) /var/lib/nfs/rmtab
 %config(noreplace) /var/lib/nfs/state
 %doc linux-nfs/*
-/sbin/rpcdebug
 /sbin/rpc.lockd
 /sbin/rpc.statd
 /usr/sbin/exportfs
 /usr/sbin/nfsstat
 /usr/sbin/nhfs*
+/usr/sbin/rpcdebug
 /usr/sbin/rpc.mountd
 /usr/sbin/rpc.nfsd
 /usr/sbin/showmount
@@ -225,6 +223,9 @@ fi
 %config /etc/rc.d/init.d/nfslock
 
 %changelog
+* Mon Jul 24 2006 <SteveD@RedHat.com> 1.0.9-1
+- Updated to 1.0.9 release
+
 * Wed Jul 12 2006 Jesse Keating <jkeating@redhat.com> - 1:1.0.8-5.1
 - rebuild
 
