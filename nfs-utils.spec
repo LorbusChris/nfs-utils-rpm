@@ -1,11 +1,15 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.9
-Release: 1%{?dist}
-#Epoch: 1
+Release: 2%{?dist}
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
+
+# Create mount.nfs and umount.nfs binaries that will be
+# used by the system mount command to mount (and umount)
+# both NFS and NFS4 filesystems.
+%define enablemount 1
 
 Source0: http://www.kernel.org/pub/linux/utils/nfs/nfs-utils-1.0.9.tar.bz2
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
@@ -21,6 +25,9 @@ Patch51: nfs-utils-1.0.6-mountd.patch
 Patch52: nfs-utils-1.0.6-idmap.conf.patch
 Patch53: nfs-utils-1.0.6-gssd_mixed_case.patch
 Patch54: nfs-utils-1.0.8-privports.patch
+Patch55: nfs-utils-1.0.9-mount-options-v3.patch
+Patch56: nfs-utils-1.0.9-lazy-umount.patch
+Patch57: nfs-utils-1.0.9-mount-fsc.patch
 
 Patch100: nfs-utils-1.0.8-compile.patch
 
@@ -65,6 +72,9 @@ clients which are mounted on that host.
 %patch52 -p1
 %patch53 -p1
 %patch54 -p1
+%patch55 -p1
+%patch56 -p1
+%patch57 -p1
 
 # Do the magic to get things to compile
 %patch100 -p1
@@ -73,6 +83,9 @@ clients which are mounted on that host.
 find . -name "*.orig" | xargs rm -f
 
 %build
+%if %{enablemount}
+ENABLEMOUNT="--enable-mount"
+%endif
 
 %ifarch s390 s390x
 PIE="-fPIE"
@@ -88,7 +101,8 @@ CFLAGS="`echo $RPM_OPT_FLAGS $ARCH_OPT_FLAGS $PIE`"
 	CFLAGS="$CFLAGS" \
 	CPPFLAGS="$DEFINES" \
 	LDFLAGS="-pie" \
-	--prefix=$RPM_BUILD_ROOT
+	--prefix=$RPM_BUILD_ROOT \
+	$ENABLEMOUNT
 
 make all
 
@@ -112,6 +126,10 @@ mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/rpc_pipefs
 
 touch $RPM_BUILD_ROOT/var/lib/nfs/rmtab
 mv $RPM_BUILD_ROOT/usr/sbin/{rpc.lockd,rpc.statd} $RPM_BUILD_ROOT/sbin
+
+%if %{enablemount}
+mv $RPM_BUILD_ROOT/usr/sbin/{mount.*,umount.*} $RPM_BUILD_ROOT/sbin
+%endif
 
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/statd
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/v4recovery
@@ -222,7 +240,20 @@ fi
 %{_mandir}/*/*
 %config /etc/rc.d/init.d/nfslock
 
+%if %{enablemount}
+%attr(4755,root,root)   /sbin/mount.nfs
+%attr(4755,root,root)   /sbin/mount.nfs4
+%attr(4755,root,root)   /sbin/umount.nfs
+%attr(4755,root,root)   /sbin/umount.nfs4
+%endif
+
 %changelog
+* Fri Jul 28 2006 <SteveD@RedHat.com> 1.0.9-2
+- Enabled the creating of mount.nfs and umount.nfs binaries
+- Added mount option fixes suggested by upstream.
+- Fix lazy umounts (bz 169299)
+- Added -o fsc mount option.
+
 * Mon Jul 24 2006 <SteveD@RedHat.com> 1.0.9-1
 - Updated to 1.0.9 release
 
