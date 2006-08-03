@@ -1,7 +1,8 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.9
-Release: 2%{?dist}
+Release: 3%{?dist}
+Epoch: 1
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
@@ -248,6 +249,9 @@ fi
 %endif
 
 %changelog
+* Wed Aug 02 2006 <wtogami@redhatcom> 1.0.9-3
+- add epoch (#196359)
+
 * Fri Jul 28 2006 <SteveD@RedHat.com> 1.0.9-2
 - Enabled the creating of mount.nfs and umount.nfs binaries
 - Added mount option fixes suggested by upstream.
