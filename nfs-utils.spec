@@ -251,7 +251,7 @@ fi
 %changelog
 * Wed Aug 16 2006 <SteveD@RedHat.com> 1.0.9-2
 - Allow variable for HA callout program in /etc/init.d/nfslock
-  (bz 201897)
+  (bz 202790)
 
 * Wed Aug 02 2006 <wtogami@redhatcom> 1.0.9-3
 - add epoch (#196359)
