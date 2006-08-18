@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.9
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -29,6 +29,7 @@ Patch54: nfs-utils-1.0.8-privports.patch
 Patch55: nfs-utils-1.0.9-mount-options-v3.patch
 Patch56: nfs-utils-1.0.9-lazy-umount.patch
 Patch57: nfs-utils-1.0.9-mount-fsc.patch
+Patch58: nfs-utils-1.0.9-krb5-memory.patch
 
 Patch100: nfs-utils-1.0.8-compile.patch
 
@@ -76,6 +77,7 @@ clients which are mounted on that host.
 %patch55 -p1
 %patch56 -p1
 %patch57 -p1
+%patch58 -p1
 
 # Do the magic to get things to compile
 %patch100 -p1
@@ -249,7 +251,12 @@ fi
 %endif
 
 %changelog
-* Wed Aug 16 2006 <SteveD@RedHat.com> 1.0.9-2
+* Fri Aug 18 2006 <SteveD@RedHat.com> 1.0.9-5
+- Changed gssd daemons to cache things in memory
+  instead of /tmp which makes selinux much happier.
+  (bz 203078)
+
+* Wed Aug 16 2006 <SteveD@RedHat.com> 1.0.9-4
 - Allow variable for HA callout program in /etc/init.d/nfslock
   (bz 202790)
 
