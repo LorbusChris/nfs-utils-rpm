@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.9
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -31,7 +31,7 @@ Patch56: nfs-utils-1.0.9-lazy-umount.patch
 Patch57: nfs-utils-1.0.9-mount-fsc.patch
 Patch58: nfs-utils-1.0.9-krb5-memory.patch
 
-Patch100: nfs-utils-1.0.8-compile.patch
+Patch100: nfs-utils-1.0.9-compile.patch
 
 Group: System Environment/Daemons
 Obsoletes: nfs-server
@@ -251,6 +251,11 @@ fi
 %endif
 
 %changelog
+* Mon Sep 11 2006  <SteveD@RedHat.com> 1.0.9-6
+- Removed the compiling of getiversion and getkversion since
+  UTS_RELEASE is no longer defined and these binary are
+  not installed.
+
 * Fri Aug 18 2006 <SteveD@RedHat.com> 1.0.9-5
 - Changed gssd daemons to cache things in memory
   instead of /tmp which makes selinux much happier.
