@@ -1,7 +1,7 @@
-Summary: NFS utlilities and supporting daemons for the kernel NFS server.
+Summary: NFS utlilities and supporting clients and daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.9
-Release: 6%{?dist}
+Release: 7%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -30,6 +30,8 @@ Patch55: nfs-utils-1.0.9-mount-options-v3.patch
 Patch56: nfs-utils-1.0.9-lazy-umount.patch
 Patch57: nfs-utils-1.0.9-mount-fsc.patch
 Patch58: nfs-utils-1.0.9-krb5-memory.patch
+Patch59: nfs-utils-1.0.9-mount-sloppy.patch
+Patch60: nfs-utils-1.0.9-mount-man-nfs.patch
 
 Patch100: nfs-utils-1.0.9-compile.patch
 
@@ -67,6 +69,8 @@ mount daemon on a remote host for information about the NFS (Network File
 System) server on the remote host.  For example, showmount can display the
 clients which are mounted on that host.
 
+This package also contains the mount.nfs and umount.nfs program.
+
 %prep
 %setup -q
 %patch50 -p1
@@ -78,6 +82,8 @@ clients which are mounted on that host.
 %patch56 -p1
 %patch57 -p1
 %patch58 -p1
+%patch59 -p1
+%patch60 -p1
 
 # Do the magic to get things to compile
 %patch100 -p1
@@ -251,6 +257,11 @@ fi
 %endif
 
 %changelog
+* Wed Sep 20 2006 Karel Zak <kzak@redhat.com> 1.0.9-7
+- Added support for the mount -s (sloppy) option (#205038)
+- Added nfs.5 man page from util-linux
+- Added info about [u]mount.nfs to the package description
+
 * Mon Sep 11 2006  <SteveD@RedHat.com> 1.0.9-6
 - Removed the compiling of getiversion and getkversion since
   UTS_RELEASE is no longer defined and these binary are
