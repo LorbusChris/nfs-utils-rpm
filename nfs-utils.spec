@@ -32,6 +32,7 @@ Patch57: nfs-utils-1.0.9-mount-fsc.patch
 Patch58: nfs-utils-1.0.9-krb5-memory.patch
 Patch59: nfs-utils-1.0.9-mount-sloppy.patch
 Patch60: nfs-utils-1.0.9-mount-man-nfs.patch
+Patch61: nfs-utils-1.0.9-return-mount-error.patch
 
 Patch100: nfs-utils-1.0.9-compile.patch
 
@@ -84,6 +85,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch58 -p1
 %patch59 -p1
 %patch60 -p1
+%patch61 -p1
 
 # Do the magic to get things to compile
 %patch100 -p1
@@ -257,6 +259,10 @@ fi
 %endif
 
 %changelog
+* Tue Sep 26 2006 Steve Dickson <steved@redhat.com> 1.0.9-8
+- mount.nfs was not returning a non-zero exit value 
+  on failed mounts (bz 206705)
+
 * Wed Sep 20 2006 Karel Zak <kzak@redhat.com> 1.0.9-7
 - Added support for the mount -s (sloppy) option (#205038)
 - Added nfs.5 man page from util-linux
