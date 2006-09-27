@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting clients and daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.9
-Release: 7%{?dist}
+Release: 8%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
