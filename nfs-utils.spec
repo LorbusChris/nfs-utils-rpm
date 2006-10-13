@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting clients and daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.9
-Release: 8%{?dist}
+Release: 9%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -33,6 +33,7 @@ Patch58: nfs-utils-1.0.9-krb5-memory.patch
 Patch59: nfs-utils-1.0.9-mount-sloppy.patch
 Patch60: nfs-utils-1.0.9-mount-man-nfs.patch
 Patch61: nfs-utils-1.0.9-return-mount-error.patch
+Patch62: nfs-utils-1.0.9-nfsmount-authnone.patch
 
 Patch100: nfs-utils-1.0.9-compile.patch
 
@@ -86,6 +87,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch59 -p1
 %patch60 -p1
 %patch61 -p1
+%patch62 -p1
 
 # Do the magic to get things to compile
 %patch100 -p1
@@ -259,6 +261,9 @@ fi
 %endif
 
 %changelog
+* Fri Oct 13 2006 Steve Dickson <steved@redhat.com> 1.0.9-9
+- Unable to mount NFS V3 share where sec=none is specified (bz 210644)
+
 * Tue Sep 26 2006 Steve Dickson <steved@redhat.com> 1.0.9-8
 - mount.nfs was not returning a non-zero exit value 
   on failed mounts (bz 206705)
