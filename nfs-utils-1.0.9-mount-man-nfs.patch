@@ -1,6 +1,6 @@
---- nfs-utils-1.0.9/utils/mount/nfs.man.kzak	2006-09-20 13:47:50.000000000 +0200
-+++ nfs-utils-1.0.9/utils/mount/nfs.man	2006-09-20 13:47:50.000000000 +0200
-@@ -0,0 +1,464 @@
+--- /dev/null	2006-10-11 11:03:58.566320005 -0400
++++ nfs-utils-1.0.9/utils/mount/nfs.man	2006-10-16 08:31:02.204578000 -0400
+@@ -0,0 +1,456 @@
 +.\" nfs.5 "Rick Sladkey" <jrs@world.std.com>
 +.\" Wed Feb  8 12:52:42 1995, faith@cs.unc.edu: updates for Ross Biro's
 +.\" patches. "
@@ -275,10 +275,6 @@
 +.I udp
 +Mount the NFS filesystem using the UDP protocol.  This
 +is the default.
-+.TP 1.5i
-+.I fsc
-+Unable the use of persistent caching to the local disk using 
-+the FS-Cache facility for the given mount point. 
 +.P
 +All of the non-value options have corresponding nooption forms.
 +For example, nointr means don't allow file operations to be
@@ -435,10 +431,6 @@
 +server performance penalty but it allows two different NFS clients
 +to get reasonable good results when both clients are actively
 +writing to common filesystem on the server.
-+.TP 1.5i
-+.I fsc
-+Unable the use of persistent caching to the local disk using 
-+the FS-Cache facility for the given mount point. 
 +.P
 +All of the non-value options have corresponding nooption forms.
 +For example, nointr means don't allow file operations to be
@@ -465,8 +457,8 @@
 +.BR ioctl
 +families of functions) may lead to inconsistent result due to the lack of
 +consistency check in kernel even if noac is used.
---- nfs-utils-1.0.9/utils/mount/Makefile.am.kzak	2006-09-20 13:47:57.000000000 +0200
-+++ nfs-utils-1.0.9/utils/mount/Makefile.am	2006-09-20 13:51:36.000000000 +0200
+--- nfs-utils-1.0.9/utils/mount/Makefile.am.orig	2006-10-16 08:29:34.790243000 -0400
++++ nfs-utils-1.0.9/utils/mount/Makefile.am	2006-10-16 08:30:32.594308000 -0400
 @@ -1,9 +1,10 @@
  ## Process this file with automake to produce Makefile.in
  
@@ -479,7 +471,7 @@
  mount_nfs_SOURCES = mount.c nfsmount.c nfs4mount.c nfsumount.c \
  		  mount_constants.h nfs4_mount.h nfs_mount4.h
  
-@@ -29,6 +30,11 @@
+@@ -29,6 +30,11 @@ install-man-links:
  	    inst=`echo $$m | sed -e 's/man$$/8/'`; \
  	    rm -f $$inst ; \
  	  done)
@@ -491,7 +483,7 @@
  
  uninstall-man-links:
  	(cd $(DESTDIR)$(man8dir) && \
-@@ -36,4 +42,9 @@
+@@ -36,4 +42,9 @@ uninstall-man-links:
  	    inst=`echo $$m | sed -e 's/man$$/8/'`; \
  	    rm -f $$inst ; \
  	  done)

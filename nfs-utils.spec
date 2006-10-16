@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting clients and daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.9
-Release: 9%{?dist}
+Release: 10%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -11,6 +11,10 @@ Epoch: 1
 # used by the system mount command to mount (and umount)
 # both NFS and NFS4 filesystems.
 %define enablemount 1
+
+# Enable the ability to set the 'fsc' mount flag which
+# will allow NFS to use FS-Cache.
+%define enablefscache 1
 
 Source0: http://www.kernel.org/pub/linux/utils/nfs/nfs-utils-1.0.9.tar.bz2
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
@@ -26,14 +30,21 @@ Patch51: nfs-utils-1.0.6-mountd.patch
 Patch52: nfs-utils-1.0.6-idmap.conf.patch
 Patch53: nfs-utils-1.0.6-gssd_mixed_case.patch
 Patch54: nfs-utils-1.0.8-privports.patch
-Patch55: nfs-utils-1.0.9-mount-options-v3.patch
-Patch56: nfs-utils-1.0.9-lazy-umount.patch
-Patch57: nfs-utils-1.0.9-mount-fsc.patch
-Patch58: nfs-utils-1.0.9-krb5-memory.patch
-Patch59: nfs-utils-1.0.9-mount-sloppy.patch
-Patch60: nfs-utils-1.0.9-mount-man-nfs.patch
-Patch61: nfs-utils-1.0.9-return-mount-error.patch
-Patch62: nfs-utils-1.0.9-nfsmount-authnone.patch
+Patch55: nfs-utils-1.0.9-krb5-memory.patch
+
+%if %{enablemount}
+Patch70: nfs-utils-1.0.9-mount-options-v3.patch
+Patch71: nfs-utils-1.0.9-lazy-umount.patch
+Patch72: nfs-utils-1.0.9-mount-sloppy.patch
+Patch73: nfs-utils-1.0.9-mount-man-nfs.patch
+Patch74: nfs-utils-1.0.9-return-mount-error.patch
+Patch75: nfs-utils-1.0.9-nfsmount-authnone.patch
+
+%if %{enablefscache}
+Patch90: nfs-utils-1.0.9-mount-fsc.patch
+%endif
+
+%endif
 
 Patch100: nfs-utils-1.0.9-compile.patch
 
@@ -81,13 +92,17 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch53 -p1
 %patch54 -p1
 %patch55 -p1
-%patch56 -p1
-%patch57 -p1
-%patch58 -p1
-%patch59 -p1
-%patch60 -p1
-%patch61 -p1
-%patch62 -p1
+%if %{enablemount}
+%patch70 -p1
+%patch71 -p1
+%patch72 -p1
+%patch73 -p1
+%patch74 -p1
+%patch75 -p1
+%if %{enablefscache}
+%patch90 -p1
+%endif
+%endif
 
 # Do the magic to get things to compile
 %patch100 -p1
@@ -261,6 +276,9 @@ fi
 %endif
 
 %changelog
+* Mon Oct 16 2006 Steve Dickson <steved@redhat.com> 1.0.9-10
+- Fixed typo in nfs man page (bz 210864).
+
 * Fri Oct 13 2006 Steve Dickson <steved@redhat.com> 1.0.9-9
 - Unable to mount NFS V3 share where sec=none is specified (bz 210644)
 
