@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting clients and daemons for the kernel NFS server.
 Name: nfs-utils
-Version: 1.0.9
-Release: 10%{?dist}
+Version: 1.0.10
+Release: 1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -16,7 +16,7 @@ Epoch: 1
 # will allow NFS to use FS-Cache.
 %define enablefscache 1
 
-Source0: http://www.kernel.org/pub/linux/utils/nfs/nfs-utils-1.0.9.tar.bz2
+Source0: http://www.kernel.org/pub/linux/utils/nfs/nfs-utils-1.0.10.tar.bz2
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 
 Source10: nfs.init
@@ -276,6 +276,9 @@ fi
 %endif
 
 %changelog
+* Wed Oct 25 2006 Steve Dickson <steved@redhat.com> 1.0.10-1
+- Upgraded to 1.0.10 
+
 * Mon Oct 16 2006 Steve Dickson <steved@redhat.com> 1.0.9-10
 - Fixed typo in nfs man page (bz 210864).
 
