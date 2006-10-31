@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting clients and daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.10
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -31,6 +31,8 @@ Patch52: nfs-utils-1.0.6-idmap.conf.patch
 Patch53: nfs-utils-1.0.6-gssd_mixed_case.patch
 Patch54: nfs-utils-1.0.8-privports.patch
 Patch55: nfs-utils-1.0.9-krb5-memory.patch
+Patch56: nfs-utils-1.0.9-idmapd-scandir-leak.patch
+Patch57: nfs-utils-1.0.9-idmap-dirscancb-listloop.patch
 
 %if %{enablemount}
 Patch70: nfs-utils-1.0.9-mount-options-v3.patch
@@ -39,6 +41,8 @@ Patch72: nfs-utils-1.0.9-mount-sloppy.patch
 Patch73: nfs-utils-1.0.9-mount-man-nfs.patch
 Patch74: nfs-utils-1.0.9-return-mount-error.patch
 Patch75: nfs-utils-1.0.9-nfsmount-authnone.patch
+Patch76: nfs-utils-1.0.9-mount-remount.patch
+Patch77: nfs-utils-1.0.10-export-nosubtree.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.0.9-mount-fsc.patch
@@ -92,6 +96,8 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch53 -p1
 %patch54 -p1
 %patch55 -p1
+%patch57 -p1
+%patch56 -p1
 %if %{enablemount}
 %patch70 -p1
 %patch71 -p1
@@ -99,6 +105,8 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch73 -p1
 %patch74 -p1
 %patch75 -p1
+%patch76 -p1
+%patch77 -p1
 %if %{enablefscache}
 %patch90 -p1
 %endif
@@ -276,6 +284,12 @@ fi
 %endif
 
 %changelog
+* Tue Oct 31 2006 Steve Dickson <steved@redhat.com> 1.0.10-2
+- Fixed -o remount (bz 210346)
+- fix memory leak in rpc.idmapd (bz 212547)
+- fix use after free bug in dirscancb (bz 212547)
+- Made no_subtree_check a default export option (bz 212218)
+
 * Wed Oct 25 2006 Steve Dickson <steved@redhat.com> 1.0.10-1
 - Upgraded to 1.0.10 
 
