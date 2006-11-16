@@ -1,0 +1,45 @@
+--- nfs-utils-1.0.10/utils/mount/nfsmount.c.orig	2006-11-14 19:47:45.000000000 -0500
++++ nfs-utils-1.0.10/utils/mount/nfsmount.c	2006-11-14 20:18:01.000000000 -0500
+@@ -822,8 +822,7 @@ nfsmnt_check_compat(const struct pmap *n
+ 
+ int
+ nfsmount(const char *spec, const char *node, int *flags,
+-	 char **extra_opts, char **mount_opts, int *nfs_mount_vers,
+-	 int running_bg)
++	 char **extra_opts, char **mount_opts, int running_bg)
+ {
+ 	static char *prev_bg_host;
+ 	char hostdir[1024];
+@@ -854,9 +853,7 @@ nfsmount(const char *spec, const char *n
+ 
+ 	/* The version to try is either specified or 0
+ 	   In case it is 0 we tell the caller what we tried */
+-	if (!*nfs_mount_vers)
+-		*nfs_mount_vers = find_kernel_nfs_mount_version();
+-	nfs_mount_version = *nfs_mount_vers;
++	nfs_mount_version = find_kernel_nfs_mount_version();
+ 
+ 	retval = EX_FAIL;
+ 	fsock = -1;
+--- nfs-utils-1.0.10/utils/mount/mount.c.orig	2006-11-14 19:47:45.000000000 -0500
++++ nfs-utils-1.0.10/utils/mount/mount.c	2006-11-14 20:10:18.000000000 -0500
+@@ -491,7 +491,7 @@ int main(int argc, char *argv[])
+ 	else {
+ 		if (!strcmp(progname, "mount.nfs")) {
+ 			mnt_err = nfsmount(spec, mount_point, &flags,
+-					&extra_opts, &mount_opts, &nfs_mount_vers, 0);
++					&extra_opts, &mount_opts,  0);
+ 		}
+ 	}
+ 	if (fake)
+--- nfs-utils-1.0.10/utils/mount/nfs_mount.h.orig	2006-11-14 19:47:45.000000000 -0500
++++ nfs-utils-1.0.10/utils/mount/nfs_mount.h	2006-11-14 20:09:01.000000000 -0500
+@@ -79,7 +79,7 @@ struct nfs_mount_data {
+ #define AUTH_GSS_SPKMP		390011
+ #endif
+ 
+-int nfsmount(const char *, const char *, int *, char **, char **, int *, int);
++int nfsmount(const char *, const char *, int *, char **, char **, int);
+ void mount_errors(char *, int, int);
+ int contains(const char *, const char *);
+ char *get_value(const char *, const char *);
