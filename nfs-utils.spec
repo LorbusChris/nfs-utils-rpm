@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting clients and daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.10
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -43,6 +43,7 @@ Patch74: nfs-utils-1.0.9-return-mount-error.patch
 Patch75: nfs-utils-1.0.9-nfsmount-authnone.patch
 Patch76: nfs-utils-1.0.9-mount-remount.patch
 Patch77: nfs-utils-1.0.10-export-nosubtree.patch
+Patch78: nfs-utils-1.0.10-mount-nfsvers.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.0.9-mount-fsc.patch
@@ -107,6 +108,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch75 -p1
 %patch76 -p1
 %patch77 -p1
+%patch78 -p1
 %if %{enablefscache}
 %patch90 -p1
 %endif
@@ -284,6 +286,10 @@ fi
 %endif
 
 %changelog
+* Wed Nov 15 2006 Steve Dickson <steved@redhat.com> 1.0.10-3
+- Removed some old mounting versioning code that was
+  stopping tcp mount from working (bz 212471)
+
 * Tue Oct 31 2006 Steve Dickson <steved@redhat.com> 1.0.10-2
 - Fixed -o remount (bz 210346)
 - fix memory leak in rpc.idmapd (bz 212547)
