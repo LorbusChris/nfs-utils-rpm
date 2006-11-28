@@ -1,0 +1,11 @@
+--- nfs-utils-1.0.9/support/nfs/conn.c.noconnect
++++ nfs-utils-1.0.9/support/nfs/conn.c
+@@ -98,7 +98,7 @@ int get_socket(struct sockaddr_in *saddr
+ 			return RPC_ANYSOCK;
+ 		}
+ 	}
+-	if (type == SOCK_STREAM || type == SOCK_DGRAM) {
++	if (type == SOCK_STREAM) {
+ 		cc = connect(so, (struct sockaddr *)saddr, namelen);
+ 		if (cc < 0) {
+ 			rpc_createerr.cf_stat = RPC_SYSTEMERROR;
