@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting clients and daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.10
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -45,6 +45,7 @@ Patch76: nfs-utils-1.0.9-mount-remount.patch
 Patch77: nfs-utils-1.0.10-export-nosubtree.patch
 Patch78: nfs-utils-1.0.10-mount-nfsvers.patch
 Patch79: nfs-utils-1.0.10-udp-no-connect.patch
+Patch80: nfs-utils-1.0.10-v4-umounts.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.0.9-mount-fsc.patch
@@ -111,6 +112,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch77 -p1
 %patch78 -p1
 %patch79 -p1
+%patch80 -p1
 %if %{enablefscache}
 %patch90 -p1
 %endif
@@ -288,6 +290,9 @@ fi
 %endif
 
 %changelog
+* Wed Dec 13 2006 Steve Dickson <steved@redhat.com> 1.0.10-5
+- Stopped v4 umounts from ping rpc.mountd (bz 215553)
+
 * Wed Nov 28 2006 Steve Dickson <steved@redhat.com> 1.0.10-4
 - Doing a connect on UDP sockets causes the linux network
   stack to reject UDP patches from multi-home server with

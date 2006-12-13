@@ -1,0 +1,76 @@
+--- nfs-utils-1.0.10/utils/mount/nfsumount.c.orig	2006-12-07 10:25:41.000000000 -0500
++++ nfs-utils-1.0.10/utils/mount/nfsumount.c	2006-12-11 15:00:29.000000000 -0500
+@@ -333,7 +333,7 @@ void umount_usage()
+ 
+ int nfsumount(int argc, char *argv[])
+ {
+-	int c, ret;
++	int c, ret, v4=0;
+ 	char *spec;
+ 	struct mntentchn *mc;
+ 
+@@ -371,39 +371,33 @@ int nfsumount(int argc, char *argv[])
+ 	mc = getmntdirbackward(spec, NULL);
+ 	if (!mc)
+ 		mc = getmntdevbackward(spec, NULL);
+-	if (!mc && verbose)
+-		printf(_("Could not find %s in mtab\n"), spec);
+-
+-	if(mc) {
+-		if(contains(mc->m.mnt_opts, "user") && getuid() != 0) {
+-			struct passwd *pw = getpwuid(getuid());
+-			if(!pw || strcmp(pw->pw_name, get_value(mc->m.mnt_opts, "user="))) {
+-				fprintf(stderr, "%s: permission denied to unmount %s\n",
+-						progname, spec);
+-				exit(1);
+-			}
+-		} else {
+-			if(!contains(mc->m.mnt_opts, "users") && getuid() != 0) {
+-				fprintf(stderr, "%s: only root can unmount %s from %s\n",
+-						progname, mc->m.mnt_fsname, mc->m.mnt_dir);
+-				exit(1);
+-			}
+-		}
+-
+-		ret = 0;
+-		if(!force && !lazy)
+-			ret = _nfsumount(mc->m.mnt_fsname, mc->m.mnt_opts);
+-		if(!ret)
+-			ret = add_mtab2(mc->m.mnt_fsname, mc->m.mnt_dir,
+-				mc->m.mnt_type, mc->m.mnt_opts, mc);
++	if (mc == NULL) {
++		fprintf(stderr, "%s: Unable to find '%s' in mount table\n",
++				progname, spec);
++		exit(1);
+ 	}
+-	else {
+-		ret = 0;
+-		if(!force && !lazy)
+-			ret = _nfsumount(spec, NULL);
+-		if(!ret)
+-			ret = add_mtab2(spec, spec, spec, spec, NULL);
++	if(contains(mc->m.mnt_opts, "user") && getuid() != 0) {
++		struct passwd *pw = getpwuid(getuid());
++		if(!pw || strcmp(pw->pw_name, get_value(mc->m.mnt_opts, "user="))) {
++			fprintf(stderr, "%s: permission denied to unmount %s\n",
++					progname, spec);
++			exit(1);
++		}
++	} else {
++		if(!contains(mc->m.mnt_opts, "users") && getuid() != 0) {
++			fprintf(stderr, "%s: only root can unmount %s from %s\n",
++					progname, mc->m.mnt_fsname, mc->m.mnt_dir);
++			exit(1);
++		}
+ 	}
++	v4 = contains(mc->m.mnt_type, "nfs4");
++
++	ret = 0;
++	if(!force && !lazy && !v4)
++		ret = _nfsumount(mc->m.mnt_fsname, mc->m.mnt_opts);
++	if(!ret)
++		ret = add_mtab2(mc->m.mnt_fsname, mc->m.mnt_dir,
++			mc->m.mnt_type, mc->m.mnt_opts, mc);
+ 
+ 	return(ret);
+ }
