@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting clients and daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.10
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -46,6 +46,7 @@ Patch77: nfs-utils-1.0.10-export-nosubtree.patch
 Patch78: nfs-utils-1.0.10-mount-nfsvers.patch
 Patch79: nfs-utils-1.0.10-udp-no-connect.patch
 Patch80: nfs-utils-1.0.10-v4-umounts.patch
+Patch81: nfs-utils-1.0.9-mount-quotes.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.0.9-mount-fsc.patch
@@ -113,6 +114,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch78 -p1
 %patch79 -p1
 %patch80 -p1
+%patch81 -p1
 %if %{enablefscache}
 %patch90 -p1
 %endif
@@ -290,6 +292,9 @@ fi
 %endif
 
 %changelog
+* Mon Dec 18 2006 Karel Zak <kzak@redhat.com> 1.0.10-6
+- add support for mount options that contain commas (bz 219645)
+
 * Wed Dec 13 2006 Steve Dickson <steved@redhat.com> 1.0.10-5
 - Stopped v4 umounts from ping rpc.mountd (bz 215553)
 
