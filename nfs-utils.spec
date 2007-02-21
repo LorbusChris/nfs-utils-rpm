@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting clients and daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.10
-Release: 6%{?dist}
+Release: 7%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -33,6 +33,7 @@ Patch54: nfs-utils-1.0.8-privports.patch
 Patch55: nfs-utils-1.0.9-krb5-memory.patch
 Patch56: nfs-utils-1.0.9-idmapd-scandir-leak.patch
 Patch57: nfs-utils-1.0.9-idmap-dirscancb-listloop.patch
+Patch58: nfs-utils-1.0.10-fsloc.patch
 
 %if %{enablemount}
 Patch70: nfs-utils-1.0.9-mount-options-v3.patch
@@ -100,8 +101,9 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch53 -p1
 %patch54 -p1
 %patch55 -p1
-%patch57 -p1
 %patch56 -p1
+%patch57 -p1
+%patch58 -p1
 %if %{enablemount}
 %patch70 -p1
 %patch71 -p1
@@ -292,6 +294,9 @@ fi
 %endif
 
 %changelog
+* Wed Feb 21 2007 Steve Dickson <steved@redhat.com> 1.0.10-7
+- Added FS_Location support
+
 * Mon Dec 18 2006 Karel Zak <kzak@redhat.com> 1.0.10-6
 - add support for mount options that contain commas (bz 219645)
 
