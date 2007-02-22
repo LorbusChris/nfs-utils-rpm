@@ -31,7 +31,7 @@ fi
 
 
 # Try to use machine credentials by default
-OPTIONS=""
+OPTIONS="-M"
 RETVAL=0
 LOCKFILE=/var/lock/subsys/rpcgssd
 prog="rpc.gssd"

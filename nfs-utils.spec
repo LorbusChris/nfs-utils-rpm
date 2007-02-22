@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting clients and daemons for the kernel NFS server.
 Name: nfs-utils
-Version: 1.0.10
-Release: 7%{?dist}
+Version: 1.0.11
+Release: 1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -16,7 +16,7 @@ Epoch: 1
 # will allow NFS to use FS-Cache.
 %define enablefscache 1
 
-Source0: http://www.kernel.org/pub/linux/utils/nfs/nfs-utils-1.0.10.tar.bz2
+Source0: http://www.kernel.org/pub/linux/utils/nfs/%{name}-%{version}.tar.bz2
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 
 Source10: nfs.init
@@ -30,10 +30,7 @@ Patch51: nfs-utils-1.0.6-mountd.patch
 Patch52: nfs-utils-1.0.6-idmap.conf.patch
 Patch53: nfs-utils-1.0.6-gssd_mixed_case.patch
 Patch54: nfs-utils-1.0.8-privports.patch
-Patch55: nfs-utils-1.0.9-krb5-memory.patch
-Patch56: nfs-utils-1.0.9-idmapd-scandir-leak.patch
-Patch57: nfs-utils-1.0.9-idmap-dirscancb-listloop.patch
-Patch58: nfs-utils-1.0.10-fsloc.patch
+Patch55: nfs-utils-1.0.11-fsloc.patch
 
 %if %{enablemount}
 Patch70: nfs-utils-1.0.9-mount-options-v3.patch
@@ -43,11 +40,10 @@ Patch73: nfs-utils-1.0.9-mount-man-nfs.patch
 Patch74: nfs-utils-1.0.9-return-mount-error.patch
 Patch75: nfs-utils-1.0.9-nfsmount-authnone.patch
 Patch76: nfs-utils-1.0.9-mount-remount.patch
-Patch77: nfs-utils-1.0.10-export-nosubtree.patch
-Patch78: nfs-utils-1.0.10-mount-nfsvers.patch
-Patch79: nfs-utils-1.0.10-udp-no-connect.patch
-Patch80: nfs-utils-1.0.10-v4-umounts.patch
-Patch81: nfs-utils-1.0.9-mount-quotes.patch
+Patch77: nfs-utils-1.0.10-mount-nfsvers.patch
+Patch78: nfs-utils-1.0.10-udp-no-connect.patch
+Patch79: nfs-utils-1.0.10-v4-umounts.patch
+Patch80: nfs-utils-1.0.9-mount-quotes.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.0.9-mount-fsc.patch
@@ -101,9 +97,6 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch53 -p1
 %patch54 -p1
 %patch55 -p1
-%patch56 -p1
-%patch57 -p1
-%patch58 -p1
 %if %{enablemount}
 %patch70 -p1
 %patch71 -p1
@@ -116,7 +109,6 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch78 -p1
 %patch79 -p1
 %patch80 -p1
-%patch81 -p1
 %if %{enablefscache}
 %patch90 -p1
 %endif
@@ -273,7 +265,6 @@ fi
 /sbin/rpc.statd
 /usr/sbin/exportfs
 /usr/sbin/nfsstat
-/usr/sbin/nhfs*
 /usr/sbin/rpcdebug
 /usr/sbin/rpc.mountd
 /usr/sbin/rpc.nfsd
@@ -294,6 +285,9 @@ fi
 %endif
 
 %changelog
+* Thu Feb 22 2007 Steve Dickson <steved@redhat.com> 1.0.11-1
+- Upgraded to 1.0.11 
+
 * Wed Feb 21 2007 Steve Dickson <steved@redhat.com> 1.0.10-7
 - Added FS_Location support
 

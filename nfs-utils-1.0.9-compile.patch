@@ -9,15 +9,6 @@
                     -f $dir/lib/libgssapi_krb5.so \) ; then
           AC_DEFINE(HAVE_KRB5, 1, [Define this if you have MIT Kerberos libraries])
           KRBDIR="$dir"
---- nfs-utils-1.0.9/tools/Makefile.am.orig	2006-07-07 20:04:32.000000000 -0400
-+++ nfs-utils-1.0.9/tools/Makefile.am	2006-09-11 14:39:11.000000000 -0400
-@@ -1,5 +1,5 @@
- ## Process this file with automake to produce Makefile.in
- 
--SUBDIRS = getiversion getkversion locktest rpcdebug rpcgen nlmtest
-+SUBDIRS = locktest rpcdebug rpcgen nlmtest
- 
- MAINTAINERCLEANFILES = Makefile.in
 --- nfs-utils-1.0.9/Makefile.am.orig	2006-07-07 20:04:32.000000000 -0400
 +++ nfs-utils-1.0.9/Makefile.am	2006-09-11 14:38:39.000000000 -0400
 @@ -47,7 +47,6 @@
