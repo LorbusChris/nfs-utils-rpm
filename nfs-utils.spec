@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting clients and daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.11
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -44,6 +44,7 @@ Patch77: nfs-utils-1.0.10-mount-nfsvers.patch
 Patch78: nfs-utils-1.0.10-udp-no-connect.patch
 Patch79: nfs-utils-1.0.10-v4-umounts.patch
 Patch80: nfs-utils-1.0.9-mount-quotes.patch
+Patch81: nfs-utils-1.0.10-mount-fake.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.0.9-mount-fsc.patch
@@ -109,6 +110,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch78 -p1
 %patch79 -p1
 %patch80 -p1
+%patch81 -p1
 %if %{enablefscache}
 %patch90 -p1
 %endif
@@ -285,6 +287,9 @@ fi
 %endif
 
 %changelog
+* Thu Mar  1 2007 Karel Zak <kzak@redhat.com>  1.0.11-2
+- Fixed mount.nfs -f (fake) option (bz 227988)
+
 * Thu Feb 22 2007 Steve Dickson <steved@redhat.com> 1.0.11-1
 - Upgraded to 1.0.11 
 
