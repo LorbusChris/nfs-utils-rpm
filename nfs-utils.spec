@@ -1,7 +1,7 @@
 Summary: NFS utlilities and supporting clients and daemons for the kernel NFS server.
 Name: nfs-utils
-Version: 1.0.11
-Release: 2%{?dist}
+Version: 1.0.12
+Release: 1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -30,7 +30,6 @@ Patch51: nfs-utils-1.0.6-mountd.patch
 Patch52: nfs-utils-1.0.6-idmap.conf.patch
 Patch53: nfs-utils-1.0.6-gssd_mixed_case.patch
 Patch54: nfs-utils-1.0.8-privports.patch
-Patch55: nfs-utils-1.0.11-fsloc.patch
 
 %if %{enablemount}
 Patch70: nfs-utils-1.0.9-mount-options-v3.patch
@@ -73,7 +72,7 @@ BuildPrereq: nfs-utils-lib-devel libevent-devel libgssapi-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: nfs-utils-lib-devel >= 1.0.8-2
 BuildRequires: libevent-devel libgssapi-devel krb5-devel
-BuildRequires: automake, libtool
+BuildRequires: automake, libtool, tcp_wrappers-devel
 PreReq: shadow-utils >= 4.0.3-25
 PreReq: /sbin/chkconfig /sbin/nologin
 PreReq: nfs-utils-lib >= 1.0.8-2 libevent libgssapi
@@ -97,7 +96,6 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch52 -p1
 %patch53 -p1
 %patch54 -p1
-%patch55 -p1
 %if %{enablemount}
 %patch70 -p1
 %patch71 -p1
@@ -287,6 +285,9 @@ fi
 %endif
 
 %changelog
+* Tue Mar  6 2007 Steve Dickson <steved@redhat.com> 1.0.12-1
+- Upgraded to 1.0.12 
+
 * Thu Mar  1 2007 Karel Zak <kzak@redhat.com>  1.0.11-2
 - Fixed mount.nfs -f (fake) option (bz 227988)
 
