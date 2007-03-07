@@ -1,4 +1,4 @@
-Summary: NFS utlilities and supporting clients and daemons for the kernel NFS server.
+Summary: NFS utilities and supporting clients and daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.12
 Release: 1%{?dist}
@@ -287,6 +287,7 @@ fi
 %changelog
 * Tue Mar  6 2007 Steve Dickson <steved@redhat.com> 1.0.12-1
 - Upgraded to 1.0.12 
+- Fixed typo in Summary.
 
 * Thu Mar  1 2007 Karel Zak <kzak@redhat.com>  1.0.11-2
 - Fixed mount.nfs -f (fake) option (bz 227988)
