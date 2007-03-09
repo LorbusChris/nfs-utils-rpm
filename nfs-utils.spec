@@ -30,6 +30,7 @@ Patch51: nfs-utils-1.0.6-mountd.patch
 Patch52: nfs-utils-1.0.6-idmap.conf.patch
 Patch53: nfs-utils-1.0.6-gssd_mixed_case.patch
 Patch54: nfs-utils-1.0.8-privports.patch
+Patch55: nfs-utils-1.0.12-export-nosubtree.patch
 
 %if %{enablemount}
 Patch70: nfs-utils-1.0.9-mount-options-v3.patch
@@ -71,8 +72,8 @@ Requires: modutils >= 2.4.26-9
 BuildPrereq: nfs-utils-lib-devel libevent-devel libgssapi-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: nfs-utils-lib-devel >= 1.0.8-2
-BuildRequires: libevent-devel libgssapi-devel krb5-devel
 BuildRequires: automake, libtool, tcp_wrappers-devel
+BuildRequires: automake, libtool
 PreReq: shadow-utils >= 4.0.3-25
 PreReq: /sbin/chkconfig /sbin/nologin
 PreReq: nfs-utils-lib >= 1.0.8-2 libevent libgssapi
@@ -287,6 +288,7 @@ fi
 %changelog
 * Fri Mar  9 2007 Steve Dickson <steved@redhat.com> 1.0.12-2
 - Added condstop to all the initscripts (bz 196934)
+- Made no_subtree_check a default export option (bz 212218)
 
 * Tue Mar  6 2007 Steve Dickson <steved@redhat.com> 1.0.12-1
 - Upgraded to 1.0.12 
