@@ -139,8 +139,13 @@ case "$1" in
 		start
 	}
 	;;
+  condstop)
+  	[ -f /var/lock/subsys/nfslock ] && {
+		stop
+	}
+	;;
   *)
-	echo $"Usage: $0 {start|stop|status|restart|probe|condrestart}"
+	echo $"Usage: $0 {start|stop|status|restart|probe|condrestart|condstop}"
 	exit 1
 esac
 

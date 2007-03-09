@@ -1,7 +1,7 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server.
 Name: nfs-utils
 Version: 1.0.12
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -213,10 +213,10 @@ fi
 
 %preun
 if [ "$1" = "0" ]; then
-    /etc/rc.d/init.d/nfs stop
-	/etc/rc.d/init.d/rpcgssd stop
-	/etc/rc.d/init.d/rpcidmapd stop
-    /etc/rc.d/init.d/nfslock stop
+    /etc/rc.d/init.d/nfs condstop
+	/etc/rc.d/init.d/rpcgssd condstop
+	/etc/rc.d/init.d/rpcidmapd condstop
+    /etc/rc.d/init.d/nfslock condstop
     /sbin/chkconfig --del rpcidmapd
     /sbin/chkconfig --del rpcgssd
     /sbin/chkconfig --del rpcsvcgssd
@@ -285,6 +285,9 @@ fi
 %endif
 
 %changelog
+* Fri Mar  9 2007 Steve Dickson <steved@redhat.com> 1.0.12-2
+- Added condstop to all the initscripts (bz 196934)
+
 * Tue Mar  6 2007 Steve Dickson <steved@redhat.com> 1.0.12-1
 - Upgraded to 1.0.12 
 - Fixed typo in Summary.

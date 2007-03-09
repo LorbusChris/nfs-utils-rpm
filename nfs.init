@@ -160,8 +160,14 @@ case "$1" in
 		$0 start
 	}
 	;;
+  condstop)
+	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd condstop
+  	[ -f /var/lock/subsys/nfs ] && {
+		$0 stop
+	}
+	;;
   *)
-	echo $"Usage: nfs {start|stop|status|restart|reload|condrestart}"
+	echo $"Usage: nfs {start|stop|status|restart|reload|condrestart|condstop}"
 	exit 1
 esac
 
