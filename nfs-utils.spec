@@ -97,6 +97,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch52 -p1
 %patch53 -p1
 %patch54 -p1
+%patch55 -p1
 %if %{enablemount}
 %patch70 -p1
 %patch71 -p1
