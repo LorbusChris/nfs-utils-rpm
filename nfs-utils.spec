@@ -1,7 +1,8 @@
-Summary: NFS utilities and supporting clients and daemons for the kernel NFS server.
+Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
+URL: http://sourceforge.net/projects/nfs
 Version: 1.0.12
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -55,28 +56,33 @@ Patch90: nfs-utils-1.0.9-mount-fsc.patch
 Patch100: nfs-utils-1.0.9-compile.patch
 
 Group: System Environment/Daemons
-Obsoletes: nfs-server
-Obsoletes: knfsd
-Obsoletes: knfsd-clients
-Obsoletes: nfs-server-clients 
-Obsoletes: knfsd-lock
-Provides: nfs-server 
-Provides: nfs-server-clients 
-Provides: knfsd-lock 
-Provides: knfsd-clients 
-Provides: knfsd
+Provides: exportfs    = %{epoch}:%{version}-%{release}
+Provides: nfsstat     = %{epoch}:%{version}-%{release}
+Provides: showmount   = %{epoch}:%{version}-%{release}
+Provides: rpcdebug    = %{epoch}:%{version}-%{release}
+Provides: rpc.idmapd  = %{epoch}:%{version}-%{release}
+Provides: rpc.mountd  = %{epoch}:%{version}-%{release}
+Provides: rpc.nfsd    = %{epoch}:%{version}-%{release}
+Provides: rpc.statd   = %{epoch}:%{version}-%{release}
+Provides: rpc.lockd   = %{epoch}:%{version}-%{release}
+Provides: rpc.gssd    = %{epoch}:%{version}-%{release}
+Provides: rpc.svcgssd = %{epoch}:%{version}-%{release}
+Provides: mount.nfs   = %{epoch}:%{version}-%{release}
+Provides: mount.nfs4  = %{epoch}:%{version}-%{release}
+Provides: umount.nfs  = %{epoch}:%{version}-%{release}
+Provides: umount.nfs4 = %{epoch}:%{version}-%{release}
+
 License: GPL
 Buildroot: %{_tmppath}/%{name}-%{version}-root
 Requires: portmap >= 4.0, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
-BuildPrereq: nfs-utils-lib-devel libevent-devel libgssapi-devel
+BuildRequires: nfs-utils-lib-devel libevent-devel libgssapi-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
-BuildRequires: nfs-utils-lib-devel >= 1.0.8-2
 BuildRequires: automake, libtool
 BuildRequires: tcp_wrappers-devel, e2fsprogs-devel, krb5-devel
-PreReq: shadow-utils >= 4.0.3-25
-PreReq: /sbin/chkconfig /sbin/nologin
-PreReq: nfs-utils-lib >= 1.0.8-2 libevent libgssapi
+Requires(pre): shadow-utils >= 4.0.3-25
+Requires(pre): /sbin/chkconfig /sbin/nologin
+Requires(pre): nfs-utils-lib libevent libgssapi
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
@@ -138,11 +144,10 @@ sh -x autogen.sh
 
 CFLAGS="`echo $RPM_OPT_FLAGS $ARCH_OPT_FLAGS $PIE`"
 %configure \
-	CFLAGS="$CFLAGS" \
-	CPPFLAGS="$DEFINES" \
-	LDFLAGS="-pie" \
-	--prefix=$RPM_BUILD_ROOT \
-	$ENABLEMOUNT
+    CFLAGS="$CFLAGS" \
+    CPPFLAGS="$DEFINES" \
+    LDFLAGS="-pie" \
+    $ENABLEMOUNT
 
 make all
 
@@ -160,7 +165,7 @@ install -m 755 %{SOURCE13} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcgssd
 install -m 755 %{SOURCE14} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcsvcgssd
 
 install -m 644 utils/idmapd/idmapd.conf \
-	$RPM_BUILD_ROOT/etc/idmapd.conf
+    $RPM_BUILD_ROOT/etc/idmapd.conf
 
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/rpc_pipefs
 
@@ -185,9 +190,9 @@ rm -rf $RPM_BUILD_ROOT
 %pre
 # move files so the running service will have this applied as well
 for x in gssd svcgssd idmapd ; do
-	if [ -f /var/lock/subsys/rpc.$x ]; then
-		mv /var/lock/subsys/rpc.$x /var/lock/subsys/rpc$x
-	fi
+    if [ -f /var/lock/subsys/rpc.$x ]; then
+        mv /var/lock/subsys/rpc.$x /var/lock/subsys/rpc$x
+    fi
 done
 
 /usr/sbin/useradd -l -c "RPC Service User" -r \
@@ -202,8 +207,8 @@ done
 # If UID 65534 (or 4294967294 64bit archs) is unassigned, create user "nfsnobody"
 cat /etc/passwd | cut -d':' -f 3 | grep --quiet %{nfsnobody_uid} 2>/dev/null
 if [ "$?" -eq 1 ]; then
-	/usr/sbin/useradd -l -c "Anonymous NFS User" -r \
-		-s /sbin/nologin -u %{nfsnobody_uid} -d /var/lib/nfs nfsnobody 2>/dev/null || :
+    /usr/sbin/useradd -l -c "Anonymous NFS User" -r \
+        -s /sbin/nologin -u %{nfsnobody_uid} -d /var/lib/nfs nfsnobody 2>/dev/null || :
 fi
 
 %post
@@ -216,8 +221,8 @@ fi
 %preun
 if [ "$1" = "0" ]; then
     /etc/rc.d/init.d/nfs condstop
-	/etc/rc.d/init.d/rpcgssd condstop
-	/etc/rc.d/init.d/rpcidmapd condstop
+    /etc/rc.d/init.d/rpcgssd condstop
+    /etc/rc.d/init.d/rpcidmapd condstop
     /etc/rc.d/init.d/nfslock condstop
     /sbin/chkconfig --del rpcidmapd
     /sbin/chkconfig --del rpcgssd
@@ -227,15 +232,15 @@ if [ "$1" = "0" ]; then
     /usr/sbin/userdel rpcuser 2>/dev/null || :
     /usr/sbin/groupdel rpcuser 2>/dev/null || :
     /usr/sbin/userdel nfsnobody 2>/dev/null || :
-	rm -rf /var/lib/nfs/statd
-	rm -rf /var/lib/nfs/v4recovery
+    rm -rf /var/lib/nfs/statd
+    rm -rf /var/lib/nfs/v4recovery
 fi
 
 %postun
 if [ "$1" -ge 1 ]; then
-	/etc/rc.d/init.d/rpcidmapd condrestart > /dev/null
-	/etc/rc.d/init.d/rpcgssd condrestart > /dev/null
-	/etc/rc.d/init.d/nfs condrestart > /dev/null
+    /etc/rc.d/init.d/rpcidmapd condrestart > /dev/null
+    /etc/rc.d/init.d/rpcgssd condrestart > /dev/null
+    /etc/rc.d/init.d/nfs condrestart > /dev/null
 fi
 
 %triggerpostun -- nfs-server
@@ -287,6 +292,9 @@ fi
 %endif
 
 %changelog
+* Mon Mar 12 2007 Steve Dickson <steved@redhat.com> 1.0.12-3
+- Incorporated Merge Review comments (bz 226198)
+
 * Fri Mar  9 2007 Steve Dickson <steved@redhat.com> 1.0.12-2
 - Added condstop to all the initscripts (bz 196934)
 - Made no_subtree_check a default export option (bz 212218)
@@ -717,7 +725,7 @@ the mountd man page.
 - nfs init script shouldn't fail if /etc/exports doesn't exist (#46432)
 
 * Fri Jul 13 2001 Bob Matthews <bmatthews@redhat.com>
-- Make %pre useradd consistent with other Red Hat packages.
+- Make %%pre useradd consistent with other Red Hat packages.
 
 * Tue Jul 03 2001 Michael K. Johnson <johnsonm@redhat.com>
 - Added sh-utils dependency for uname -r in nfs init script
@@ -809,7 +817,7 @@ the mountd man page.
 - run statd chrooted and as non-root
 - add prereqs
 
-* Tue Jul 18 2000 Trond Eivind Glomsrød <teg@redhat.com>
+* Tue Jul 18 2000 Trond Eivind GlomsrÃ¸d <teg@redhat.com>
 - use "License", not "Copyright"
 - use %%{_tmppath} and %%{_mandir}
 
