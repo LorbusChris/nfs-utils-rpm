@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.0.12
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -74,7 +74,7 @@ Provides: umount.nfs4 = %{epoch}:%{version}-%{release}
 
 License: GPL
 Buildroot: %{_tmppath}/%{name}-%{version}-root
-Requires: portmap >= 4.0, sed, gawk, sh-utils, fileutils, textutils, grep
+Requires: rpcbind, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
 BuildRequires: nfs-utils-lib-devel libevent-devel libgssapi-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
@@ -292,6 +292,9 @@ fi
 %endif
 
 %changelog
+* Tue Apr  3 2007 Steve Dickson <steved@redhat.com> 1.0.12-4
+- Replace portmap dependency with an rpcbind dependency (bz 228894)
+
 * Mon Mar 12 2007 Steve Dickson <steved@redhat.com> 1.0.12-3
 - Incorporated Merge Review comments (bz 226198)
 
