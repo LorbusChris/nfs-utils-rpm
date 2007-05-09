@@ -47,6 +47,7 @@ Patch79: nfs-utils-1.0.10-v4-umounts.patch
 Patch80: nfs-utils-1.0.9-mount-quotes.patch
 Patch81: nfs-utils-1.0.10-mount-fake.patch
 Patch82: nfs-utils-1.0.12-mount-v4-errors.patch
+Patch83: nfs-utils-1.0.12-rmtab-ipaddr-manupdate.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.0.9-mount-fsc.patch
@@ -119,6 +120,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch80 -p1
 %patch81 -p1
 %patch82 -p1
+%patch83 -p1
 %if %{enablefscache}
 %patch90 -p1
 %endif
@@ -296,6 +298,7 @@ fi
 %changelog
 * Wed May  9 2007 Steve Dickson <steved@redhat.com> 1.0.10-18
 - Fix mount.nfs4 to display correct error message (bz 227212)
+- Updated mountd and showmount reverse lookup flags (bz 220772)
 
 * Tue Apr  3 2007 Steve Dickson <steved@redhat.com> 1.0.12-4
 - Replace portmap dependency with an rpcbind dependency (bz 228894)
