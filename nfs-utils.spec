@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.0.12
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -46,6 +46,7 @@ Patch78: nfs-utils-1.0.10-udp-no-connect.patch
 Patch79: nfs-utils-1.0.10-v4-umounts.patch
 Patch80: nfs-utils-1.0.9-mount-quotes.patch
 Patch81: nfs-utils-1.0.10-mount-fake.patch
+Patch82: nfs-utils-1.0.12-mount-v4-errors.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.0.9-mount-fsc.patch
@@ -117,6 +118,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch79 -p1
 %patch80 -p1
 %patch81 -p1
+%patch82 -p1
 %if %{enablefscache}
 %patch90 -p1
 %endif
@@ -292,6 +294,9 @@ fi
 %endif
 
 %changelog
+* Wed May  9 2007 Steve Dickson <steved@redhat.com> 1.0.10-18
+- Fix mount.nfs4 to display correct error message (bz 227212)
+
 * Tue Apr  3 2007 Steve Dickson <steved@redhat.com> 1.0.12-4
 - Replace portmap dependency with an rpcbind dependency (bz 228894)
 
