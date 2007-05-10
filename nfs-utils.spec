@@ -50,6 +50,7 @@ Patch82: nfs-utils-1.0.12-mount-v4-errors.patch
 Patch83: nfs-utils-1.0.12-rmtab-ipaddr-manupdate.patch
 Patch84: nfs-utils-1.0.12-mountd-memleak.patch
 Patch85: nfs-utils-1.0.12-nfsd-macargs.patch
+Patch86: nfs-utils-1.0.12-mtab-mis-unlock.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.0.9-mount-fsc.patch
@@ -125,6 +126,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch83 -p1
 %patch84 -p1
 %patch85 -p1
+%patch86 -p1
 %if %{enablefscache}
 %patch90 -p1
 %endif
@@ -317,6 +319,7 @@ fi
 - Make sure statd uses correct uid/gid by chowning
   the /var/lib/nfs/statd with the rpcuser id. (bz 235216)
 - Correct some sanity checking in rpc.nfsd. (bz 220887) 
+- Added missing unlock_mtab() call in moutnd
 
 * Tue Apr  3 2007 Steve Dickson <steved@redhat.com> 1.0.12-4
 - Replace portmap dependency with an rpcbind dependency (bz 228894)
