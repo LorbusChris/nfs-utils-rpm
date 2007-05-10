@@ -1,0 +1,23 @@
+commit 12749181ceaa0711cc857b7639c0a559d5e65197
+Author: Steve Dickson <steved@redhat.com>
+Date:   Thu May 10 11:54:59 2007 -0400
+
+    Close memory leak in mountd
+    
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff --git a/support/export/client.c b/support/export/client.c
+index 33dfdb0..5ffba63 100644
+--- a/support/export/client.c
++++ b/support/export/client.c
+@@ -262,6 +262,10 @@ client_compose(struct in_addr addr)
+ 			name = add_name(name, clp->m_hostname);
+ 		}
+ 	}
++
++	if (he != NULL)
++		free(he);
++
+ 	return name;
+ }
+ 
