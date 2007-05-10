@@ -223,6 +223,14 @@ fi
 /sbin/chkconfig --add rpcidmapd
 /sbin/chkconfig --add rpcgssd
 /sbin/chkconfig --add rpcsvcgssd
+# Make sure statd used the correct uid/gid.
+if [ -f /var/lock/subsys/nfslock ]; then
+	/etc/rc.d/init.d/nfslock stop > /dev/null
+	chown -R rpcuser:rpcuser /var/lib/nfs/statd
+	/etc/rc.d/init.d/nfslock start > /dev/null
+else
+	chown -R rpcuser:rpcuser /var/lib/nfs/statd
+fi
 
 %preun
 if [ "$1" = "0" ]; then
@@ -247,6 +255,7 @@ if [ "$1" -ge 1 ]; then
     /etc/rc.d/init.d/rpcidmapd condrestart > /dev/null
     /etc/rc.d/init.d/rpcgssd condrestart > /dev/null
     /etc/rc.d/init.d/nfs condrestart > /dev/null
+	/etc/rc.d/init.d/nfslock condrestart > /dev/null
 fi
 
 %triggerpostun -- nfs-server
@@ -303,6 +312,8 @@ fi
 - Updated mountd and showmount reverse lookup flags (bz 220772)
 - Eliminate timeout on nfsd shutdowns (bz 222001)
 - Eliminate memory leak in mountd (bz 239536)
+- Make sure statd uses correct uid/gid by chowning
+  the /var/lib/nfs/statd with the rpcuser id. (bz 235216)
 
 * Tue Apr  3 2007 Steve Dickson <steved@redhat.com> 1.0.12-4
 - Replace portmap dependency with an rpcbind dependency (bz 228894)
