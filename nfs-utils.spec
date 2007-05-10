@@ -49,6 +49,7 @@ Patch81: nfs-utils-1.0.10-mount-fake.patch
 Patch82: nfs-utils-1.0.12-mount-v4-errors.patch
 Patch83: nfs-utils-1.0.12-rmtab-ipaddr-manupdate.patch
 Patch84: nfs-utils-1.0.12-mountd-memleak.patch
+Patch85: nfs-utils-1.0.12-nfsd-macargs.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.0.9-mount-fsc.patch
@@ -123,6 +124,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch82 -p1
 %patch83 -p1
 %patch84 -p1
+%patch85 -p1
 %if %{enablefscache}
 %patch90 -p1
 %endif
@@ -307,13 +309,14 @@ fi
 %endif
 
 %changelog
-* Wed May  9 2007 Steve Dickson <steved@redhat.com> 1.0.12-18
+* Wed May 10 2007 Steve Dickson <steved@redhat.com> 1.0.12-5
 - Fix mount.nfs4 to display correct error message (bz 227212)
 - Updated mountd and showmount reverse lookup flags (bz 220772)
 - Eliminate timeout on nfsd shutdowns (bz 222001)
 - Eliminate memory leak in mountd (bz 239536)
 - Make sure statd uses correct uid/gid by chowning
   the /var/lib/nfs/statd with the rpcuser id. (bz 235216)
+- Correct some sanity checking in rpc.nfsd. (bz 220887) 
 
 * Tue Apr  3 2007 Steve Dickson <steved@redhat.com> 1.0.12-4
 - Replace portmap dependency with an rpcbind dependency (bz 228894)
