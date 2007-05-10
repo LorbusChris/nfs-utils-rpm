@@ -105,7 +105,7 @@ case "$1" in
 	killproc rpc.mountd
 	echo
 	echo -n $"Shutting down NFS daemon: "
-	killproc nfsd
+	killproc nfsd -2
 	echo
 	if [ -n "$RQUOTAD" -a "$RQUOTAD" != "no" ]; then
 		echo -n $"Shutting down NFS quotas: "

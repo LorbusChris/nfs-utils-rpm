@@ -296,9 +296,10 @@ fi
 %endif
 
 %changelog
-* Wed May  9 2007 Steve Dickson <steved@redhat.com> 1.0.10-18
+* Wed May  9 2007 Steve Dickson <steved@redhat.com> 1.0.12-18
 - Fix mount.nfs4 to display correct error message (bz 227212)
 - Updated mountd and showmount reverse lookup flags (bz 220772)
+- Eliminate timeout on nfsd shutdowns (bz 222001)
 
 * Tue Apr  3 2007 Steve Dickson <steved@redhat.com> 1.0.12-4
 - Replace portmap dependency with an rpcbind dependency (bz 228894)
