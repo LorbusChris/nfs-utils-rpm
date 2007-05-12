@@ -176,7 +176,7 @@ install -m 755 %{SOURCE11} $RPM_BUILD_ROOT/etc/rc.d/init.d/nfslock
 install -m 755 %{SOURCE12} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcidmapd
 install -m 755 %{SOURCE13} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcgssd
 install -m 755 %{SOURCE14} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcsvcgssd
-install -m 755 %{SOURCE15} $RPM_BUILD_ROOT/etc/sysconfig/nfs
+install -m 644 %{SOURCE15} $RPM_BUILD_ROOT/etc/sysconfig/nfs
 
 install -m 644 utils/idmapd/idmapd.conf \
     $RPM_BUILD_ROOT/etc/idmapd.conf
