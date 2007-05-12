@@ -25,6 +25,7 @@ Source11: nfslock.init
 Source12: rpcidmapd.init
 Source13: rpcgssd.init
 Source14: rpcsvcgssd.init
+Source15: nfs.sysconfig
 
 Patch50: nfs-utils-1.0.5-statdpath.patch
 Patch51: nfs-utils-1.0.6-mountd.patch
@@ -167,7 +168,7 @@ make all
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT{/sbin,/usr/sbin}
 mkdir -p ${RPM_BUILD_ROOT}%{_mandir}/{man5,man8}
-mkdir -p $RPM_BUILD_ROOT/etc/rc.d/init.d
+mkdir -p $RPM_BUILD_ROOT{/etc/rc.d/init.d,/etc/sysconfig}
 make DESTDIR=$RPM_BUILD_ROOT install
 install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT/usr/sbin
 install -m 755 %{SOURCE10} $RPM_BUILD_ROOT/etc/rc.d/init.d/nfs
@@ -175,6 +176,7 @@ install -m 755 %{SOURCE11} $RPM_BUILD_ROOT/etc/rc.d/init.d/nfslock
 install -m 755 %{SOURCE12} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcidmapd
 install -m 755 %{SOURCE13} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcgssd
 install -m 755 %{SOURCE14} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcsvcgssd
+install -m 755 %{SOURCE15} $RPM_BUILD_ROOT/etc/sysconfig/nfs
 
 install -m 644 utils/idmapd/idmapd.conf \
     $RPM_BUILD_ROOT/etc/idmapd.conf
@@ -279,6 +281,7 @@ fi
 %config /etc/rc.d/init.d/rpcidmapd
 %config /etc/rc.d/init.d/rpcgssd
 %config /etc/rc.d/init.d/rpcsvcgssd
+%config /etc/sysconfig/nfs
 %config(noreplace) /etc/idmapd.conf
 %dir /var/lib/nfs/v4recovery
 %dir /var/lib/nfs/rpc_pipefs
@@ -323,6 +326,7 @@ fi
 - Correct some sanity checking in rpc.nfsd. (bz 220887) 
 - Added missing unlock_mtab() call in moutnd
 - Have mountd hold open etab file to force inode number to change (bz 236823)
+- Create a /etc/sysconfig/nfs with all the possible variables (bz 234543)
 
 * Tue Apr  3 2007 Steve Dickson <steved@redhat.com> 1.0.12-4
 - Replace portmap dependency with an rpcbind dependency (bz 228894)
