@@ -328,6 +328,7 @@ fi
 - Have mountd hold open etab file to force inode number to change (bz 236823)
 - Create a /etc/sysconfig/nfs with all the possible init script
   variables (bz 234543)
+- Changed nfs initscript to exit with correct value (bz 221874)
 
 * Tue Apr  3 2007 Steve Dickson <steved@redhat.com> 1.0.12-4
 - Replace portmap dependency with an rpcbind dependency (bz 228894)
