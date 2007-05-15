@@ -85,7 +85,7 @@ Requires: rpcbind, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
 BuildRequires: nfs-utils-lib-devel libevent-devel libgssapi-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
-BuildRequires: automake, libtool
+BuildRequires: automake, libtool, keyutils-libs-devel
 BuildRequires: tcp_wrappers-devel, e2fsprogs-devel, krb5-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
