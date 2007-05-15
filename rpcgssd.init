@@ -31,7 +31,6 @@ fi
 
 
 # Try to use machine credentials by default
-OPTIONS="-M"
 RETVAL=0
 LOCKFILE=/var/lock/subsys/rpcgssd
 prog="rpc.gssd"
@@ -68,7 +67,7 @@ case "$1" in
 	}	
 
 	# Start daemon.
-	daemon $prog ${OPTIONS}
+	daemon $prog ${RPCGSSDARGS}
 	RETVAL=$?
 	echo
 	[ $RETVAL -eq 0 ] && touch $LOCKFILE

@@ -29,7 +29,6 @@ fi
 # List of kernel modules to load
 [ -z "${SECURE_NFS_MODS}" ] && SECURE_NFS_MODS="des rpcsec_gss_krb5"
 
-OPTIONS=""
 RETVAL=0
 LOCKFILE=/var/lock/subsys/rpcsvcgssd
 prog="rpc.svcgssd"
@@ -67,7 +66,7 @@ case "$1" in
 	}	
 
 	# Start daemon.
-	daemon $prog ${OPTIONS}
+	daemon $prog ${RPCSVCGSSDARGS}
 	RETVAL=$?
 	echo
 	[ $RETVAL -eq 0 ] && touch $LOCKFILE

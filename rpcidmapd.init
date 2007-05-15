@@ -22,7 +22,9 @@ fi
 
 [ ! -x /usr/sbin/rpc.idmapd ] && exit 0
 
-OPTIONS=""
+# Check for and source configuration file otherwise set defaults
+[ -f /etc/sysconfig/nfs ] && . /etc/sysconfig/nfs
+
 RETVAL=0
 LOCKFILE=/var/lock/subsys/rpcidmapd
 prog="rpc.idmapd"
@@ -54,7 +56,7 @@ case "$1" in
 	}	
 
 	# Start daemon.
-	daemon $prog ${OPTIONS}
+	daemon $prog ${RPCIDMAPDARGS}
 	RETVAL=$?
 	echo
 	[ $RETVAL -eq 0 ] && touch $LOCKFILE
