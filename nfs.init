@@ -44,6 +44,8 @@ fi
 # Remote quota server
 [ -z "$RQUOTAD" ] && RQUOTAD=`type -path rpc.rquotad`
 
+RETVAL=0
+
 # See how we were called.
 case "$1" in
   start)
@@ -65,11 +67,14 @@ case "$1" in
 		[ -n "$RQUOTAD_PORT" ] \
 			&& RPCRQUOTADOPTS="$RPCRQUOTADOPTS -p $RQUOTAD_PORT"
 	    daemon rpc.rquotad $RPCRQUOTADOPTS
+		RETVAL=$?
 	    echo
 	fi
 	echo -n $"Starting NFS daemon: "
 	daemon rpc.nfsd $RPCNFSDARGS $RPCNFSDCOUNT
+	RETVAL=$?
 	echo
+	[ $RETVAL -ne 0 ] && exit $RETVAL
 
 	[ -n "$MOUNTD_PORT" ] \
 	&& RPCMOUNTDOPTS="$RPCMOUNTDOPTS -p $MOUNTD_PORT"
@@ -91,6 +96,7 @@ case "$1" in
 
 	echo -n $"Starting NFS mountd: "
 	daemon rpc.mountd $RPCMOUNTDOPTS
+	RETVAL=$?
 	echo
 	touch /var/lock/subsys/nfs
 
@@ -121,7 +127,12 @@ case "$1" in
 	fi
 	# Do it the last so that clients can still access the server
 	# when the server is running.
-	action $"Shutting down NFS services: " /usr/sbin/exportfs -au
+	cnt=`/usr/sbin/exportfs -v | /usr/bin/wc -l`	
+	if [ $cnt -gt 0 ]; then 
+		action $"Shutting down NFS services: " /usr/sbin/exportfs -au
+	else
+		action $"Shutting down NFS services: " /bin/false
+	fi
 	rm -f /var/lock/subsys/nfs
 	;;
   status)
@@ -131,6 +142,7 @@ case "$1" in
 	if [ -n "$RQUOTAD" -a "$RQUOTAD" != "no" ]; then
 		status rpc.rquotad
 	fi
+	RETVAL=$?
 	;;
   restart)
 	$0 stop

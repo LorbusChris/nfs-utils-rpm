@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.0.12
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -316,6 +316,9 @@ fi
 %endif
 
 %changelog
+* Wed May 16 2007 Steve Dickson <steved@redhat.com> 1.0.10-16
+- Make sure the condrestarts exit with a zero value (bz 240225)
+
 * Wed May 10 2007 Steve Dickson <steved@redhat.com> 1.0.12-5
 - Fix mount.nfs4 to display correct error message (bz 227212)
 - Updated mountd and showmount reverse lookup flags (bz 220772)

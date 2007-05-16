@@ -95,9 +95,9 @@ stop() {
 
 	echo -n $"Stopping NFS statd: "
 	killproc rpc.statd
-	RETVAL=0
+	RETVAL=$?
 	echo
-	[ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/nfslock
+	rm -f /var/lock/subsys/nfslock
 	return $RETVAL
 }
 
@@ -149,4 +149,4 @@ case "$1" in
 	exit 1
 esac
 
-exit $?
+exit $RETVAL
