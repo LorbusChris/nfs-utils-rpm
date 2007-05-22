@@ -2,20 +2,15 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.0.12
-Release: 7%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon
 
-# Create mount.nfs and umount.nfs binaries that will be
-# used by the system mount command to mount (and umount)
-# both NFS and NFS4 filesystems.
-%define enablemount 1
-
 # Enable the ability to set the 'fsc' mount flag which
 # will allow NFS to use FS-Cache.
-%define enablefscache 1
+%define enablefscache 0
 
 Source0: http://www.kernel.org/pub/linux/utils/nfs/%{name}-%{version}.tar.bz2
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
@@ -27,37 +22,34 @@ Source13: rpcgssd.init
 Source14: rpcsvcgssd.init
 Source15: nfs.sysconfig
 
-Patch50: nfs-utils-1.0.5-statdpath.patch
-Patch51: nfs-utils-1.0.6-mountd.patch
-Patch52: nfs-utils-1.0.6-idmap.conf.patch
-Patch53: nfs-utils-1.0.6-gssd_mixed_case.patch
-Patch54: nfs-utils-1.0.8-privports.patch
-Patch55: nfs-utils-1.0.12-export-nosubtree.patch
-
-%if %{enablemount}
-Patch70: nfs-utils-1.0.9-mount-options-v3.patch
-Patch71: nfs-utils-1.0.9-lazy-umount.patch
-Patch72: nfs-utils-1.0.9-mount-sloppy.patch
-Patch73: nfs-utils-1.0.9-mount-man-nfs.patch
-Patch74: nfs-utils-1.0.9-return-mount-error.patch
-Patch75: nfs-utils-1.0.9-nfsmount-authnone.patch
-Patch76: nfs-utils-1.0.9-mount-remount.patch
-Patch77: nfs-utils-1.0.10-mount-nfsvers.patch
-Patch78: nfs-utils-1.0.10-udp-no-connect.patch
-Patch79: nfs-utils-1.0.10-v4-umounts.patch
-Patch80: nfs-utils-1.0.9-mount-quotes.patch
-Patch81: nfs-utils-1.0.10-mount-fake.patch
-Patch82: nfs-utils-1.0.12-mount-v4-errors.patch
-Patch83: nfs-utils-1.0.12-rmtab-ipaddr-manupdate.patch
-Patch84: nfs-utils-1.0.12-mountd-memleak.patch
-Patch85: nfs-utils-1.0.12-nfsd-macargs.patch
-Patch86: nfs-utils-1.0.12-mtab-mis-unlock.patch
-Patch87: nfs-utils-1.0.12-mountd-etab.patch
+Patch00: nfs-utils-1.0.5-statdpath.patch
+Patch01: nfs-utils-1.0.6-mountd.patch
+Patch02: nfs-utils-1.0.6-idmap.conf.patch
+Patch03: nfs-utils-1.0.6-gssd_mixed_case.patch
+Patch04: nfs-utils-1.0.8-privports.patch
+Patch05: nfs-utils-1.0.12-export-nosubtree.patch
+Patch06: nfs-utils-1.0.9-mount-options-v3.patch
+Patch07: nfs-utils-1.0.9-lazy-umount.patch
+Patch08: nfs-utils-1.0.9-mount-sloppy.patch
+Patch09: nfs-utils-1.0.9-mount-man-nfs.patch
+Patch10: nfs-utils-1.0.9-return-mount-error.patch
+Patch11: nfs-utils-1.0.9-nfsmount-authnone.patch
+Patch12: nfs-utils-1.0.9-mount-remount.patch
+Patch13: nfs-utils-1.0.10-mount-nfsvers.patch
+Patch14: nfs-utils-1.0.10-udp-no-connect.patch
+Patch15: nfs-utils-1.0.10-v4-umounts.patch
+Patch16: nfs-utils-1.0.9-mount-quotes.patch
+Patch17: nfs-utils-1.0.10-mount-fake.patch
+Patch18: nfs-utils-1.0.12-mount-v4-errors.patch
+Patch19: nfs-utils-1.0.12-rmtab-ipaddr-manupdate.patch
+Patch20: nfs-utils-1.0.12-mountd-memleak.patch
+Patch21: nfs-utils-1.0.12-nfsd-macargs.patch
+Patch22: nfs-utils-1.0.12-mtab-mis-unlock.patch
+Patch23: nfs-utils-1.0.12-mountd-etab.patch
+Patch24: nfs-utils-1.0.10-mount-nordirplus.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.0.9-mount-fsc.patch
-%endif
-
 %endif
 
 Patch100: nfs-utils-1.0.9-compile.patch
@@ -105,34 +97,34 @@ This package also contains the mount.nfs and umount.nfs program.
 
 %prep
 %setup -q
-%patch50 -p1
-%patch51 -p1
-%patch52 -p1
-%patch53 -p1
-%patch54 -p1
-%patch55 -p1
-%if %{enablemount}
-%patch70 -p1
-%patch71 -p1
-%patch72 -p1
-%patch73 -p1
-%patch74 -p1
-%patch75 -p1
-%patch76 -p1
-%patch77 -p1
-%patch78 -p1
-%patch79 -p1
-%patch80 -p1
-%patch81 -p1
-%patch82 -p1
-%patch83 -p1
-%patch84 -p1
-%patch85 -p1
-%patch86 -p1
-%patch87 -p1
+%patch00 -p1
+%patch01 -p1
+%patch02 -p1
+%patch03 -p1
+%patch04 -p1
+%patch05 -p1
+%patch06 -p1
+%patch07 -p1
+%patch08 -p1
+%patch09 -p1
+%patch10 -p1
+%patch11 -p1
+%patch12 -p1
+%patch13 -p1
+%patch14 -p1
+%patch15 -p1
+%patch16 -p1
+%patch17 -p1
+%patch18 -p1
+%patch19 -p1
+%patch20 -p1
+%patch21 -p1
+%patch22 -p1
+%patch23 -p1
+%patch24 -p1
+
 %if %{enablefscache}
 %patch90 -p1
-%endif
 %endif
 
 # Do the magic to get things to compile
@@ -142,9 +134,6 @@ This package also contains the mount.nfs and umount.nfs program.
 find . -name "*.orig" | xargs rm -f
 
 %build
-%if %{enablemount}
-ENABLEMOUNT="--enable-mount"
-%endif
 
 %ifarch s390 s390x
 PIE="-fPIE"
@@ -160,7 +149,7 @@ CFLAGS="`echo $RPM_OPT_FLAGS $ARCH_OPT_FLAGS $PIE`"
     CFLAGS="$CFLAGS" \
     CPPFLAGS="$DEFINES" \
     LDFLAGS="-pie" \
-    $ENABLEMOUNT
+    --enable-mount
 
 make all
 
@@ -185,10 +174,7 @@ mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/rpc_pipefs
 
 touch $RPM_BUILD_ROOT/var/lib/nfs/rmtab
 mv $RPM_BUILD_ROOT/usr/sbin/{rpc.lockd,rpc.statd} $RPM_BUILD_ROOT/sbin
-
-%if %{enablemount}
 mv $RPM_BUILD_ROOT/usr/sbin/{mount.*,umount.*} $RPM_BUILD_ROOT/sbin
-%endif
 
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/statd
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/v4recovery
@@ -308,19 +294,17 @@ fi
 %{_mandir}/*/*
 %config /etc/rc.d/init.d/nfslock
 
-%if %{enablemount}
 %attr(4755,root,root)   /sbin/mount.nfs
 %attr(4755,root,root)   /sbin/mount.nfs4
 %attr(4755,root,root)   /sbin/umount.nfs
 %attr(4755,root,root)   /sbin/umount.nfs4
-%endif
 
 %changelog
-* Tue May 22 2007 Steve Dickson <steved@redhat.com> 1.0.10-7
-- Stopped /etc/sysconfig/nfs from being overwritten on updates (bz 234543)
-
-* Wed May 16 2007 Steve Dickson <steved@redhat.com> 1.0.10-6
+* Tue May 22 2007 Steve Dickson <steved@redhat.com> 1.0.10-6
 - Make sure the condrestarts exit with a zero value (bz 240225)
+- Stopped /etc/sysconfig/nfs from being overwritten on updates (bz 234543)
+- Added -o nordirplus mount option to disable READDIRPLUS (bz 240357)
+- Disabled the FSCache patch, for now... 
 
 * Wed May 10 2007 Steve Dickson <steved@redhat.com> 1.0.12-5
 - Fix mount.nfs4 to display correct error message (bz 227212)
