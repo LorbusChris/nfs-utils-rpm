@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.0.12
-Release: 6%{?dist}
+Release: 7%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -281,7 +281,7 @@ fi
 %config /etc/rc.d/init.d/rpcidmapd
 %config /etc/rc.d/init.d/rpcgssd
 %config /etc/rc.d/init.d/rpcsvcgssd
-%config /etc/sysconfig/nfs
+%config(noreplace) /etc/sysconfig/nfs
 %config(noreplace) /etc/idmapd.conf
 %dir /var/lib/nfs/v4recovery
 %dir /var/lib/nfs/rpc_pipefs
@@ -316,7 +316,10 @@ fi
 %endif
 
 %changelog
-* Wed May 16 2007 Steve Dickson <steved@redhat.com> 1.0.10-16
+* Tue May 22 2007 Steve Dickson <steved@redhat.com> 1.0.10-7
+- Stopped /etc/sysconfig/nfs from being overwritten on updates (bz 234543)
+
+* Wed May 16 2007 Steve Dickson <steved@redhat.com> 1.0.10-6
 - Make sure the condrestarts exit with a zero value (bz 240225)
 
 * Wed May 10 2007 Steve Dickson <steved@redhat.com> 1.0.12-5
