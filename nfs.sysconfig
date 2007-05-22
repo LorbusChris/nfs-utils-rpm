@@ -49,7 +49,7 @@
 #RPCIDMAPDARGS=""
 #
 # Set to turn on Secure NFS mounts. 
-#SECURE_NFS=""
+#SECURE_NFS="yes"
 # Optional arguments passed to rpc.gssd. See rpc.gssd(8)
 #RPCGSSDARGS=""
 # Optional arguments passed to rpc.svcgssd. See rpc.svcgssd(8)
