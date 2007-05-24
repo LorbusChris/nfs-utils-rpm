@@ -42,7 +42,7 @@ Date:   Wed May 9 13:14:26 2007 -0400
  			fprintf(stderr, "%s: %s\n", progname, strerror(errno));
  	}
  }
-+static int chk_mountpoint(mount_point)
++static int chk_mountpoint(char *mount_point)
 +{
 +	struct stat sb;
 +
