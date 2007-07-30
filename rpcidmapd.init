@@ -4,7 +4,7 @@
 #
 # Authors:	Chuck Lever <cel@netapp.com>
 #
-# chkconfig: 345 18 68
+# chkconfig: 345 18 85
 # description: Starts user-level daemon for NFSv4 that maps user \
 #              names to UID and GID numbers.
 
@@ -13,14 +13,14 @@
 
 # Source networking configuration.
 if [ ! -f /etc/sysconfig/network ]; then
-    exit 0
+    exit 6
 fi
 . /etc/sysconfig/network
 
 # Check that networking is up.
-[ "${NETWORKING}" = "no" ] && exit 0
+[ "${NETWORKING}" = "no" ] && exit 6
 
-[ ! -x /usr/sbin/rpc.idmapd ] && exit 0
+[ ! -x /usr/sbin/rpc.idmapd ] && exit 5
 
 # Check for and source configuration file otherwise set defaults
 [ -f /etc/sysconfig/nfs ] && . /etc/sysconfig/nfs
@@ -40,20 +40,26 @@ case "$1" in
 
 	echo -n $"Starting RPC idmapd: "
 
-	# Load sunrpc which mounts the rpc_pipes fs.
-	[ -x /sbin/lsmod -a -x /sbin/modprobe ] && {
-		if ! /sbin/lsmod | grep sunrpc > /dev/null ; then
-			 /sbin/modprobe sunrpc || exit 1
-		fi
+	# Make sure the rpc_pipefs filesystem is available
+	[ "${RPCMTAB}" != "noload" ] && {
+		RPCMTAB=`grep -v '^#' /proc/mounts | \
+			awk '{ if ($3 ~ /^rpc_pipefs$/ ) print $2}'`
+		[ -z "${RPCMTAB}" ] && {
+			[ -x /sbin/lsmod -a -x /sbin/modprobe ] && {
+				if ! /sbin/lsmod | grep sunrpc > /dev/null ; then
+				 	/sbin/modprobe sunrpc
+				fi
+			}
+			RPCMTAB=`grep -v '^#' /proc/mounts | \
+				awk '{ if ($3 ~ /^rpc_pipefs$/ ) print $2}'`
+			[ -z "${RPCMTAB}" ] && { \
+				echo "Error: RPC MTAB does not exist."
+				exit 6
+			}
+		}
 	}
 
 	# Make sure the mount worked.
-	[ -z "${RPCMTAB}" ] && RPCMTAB=`grep -v '^#' /proc/mounts | \
-		awk '{ if ($3 ~ /^rpc_pipefs$/ ) print $2}'`
-	[ -z "${RPCMTAB}" ] && {
-		echo "Error: RPC MTAB does not exist."
-		exit 1
-	}	
 
 	# Start daemon.
 	daemon $prog ${RPCIDMAPDARGS}
@@ -63,7 +69,7 @@ case "$1" in
 	;;
   stop)
 	# Stop daemon.
-	echo -n $"Shutting down RPC idmapd: "
+	echo -n $"Stopping RPC idmapd: "
 	killproc $prog
 	RETVAL=$?
 	echo
@@ -84,15 +90,10 @@ case "$1" in
 		RETVAL=$?
 	fi
 	;;
-  condstop)
-	if [ -f $LOCKFILE ]; then
-		$0 stop
-		RETVAL=$?
-	fi
-	;;
   *)
-	echo $"Usage: $0 {start|stop|restart|condstart|condrestart|condstop|status}"
-	exit 1
+	echo $"Usage: $0 {start|stop|restart|condstart|condrestart|status}"
+	RETVAL=3
+	;;
 esac
 
 exit $RETVAL

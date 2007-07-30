@@ -1,8 +1,8 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
-Version: 1.0.12
-Release: 7%{?dist}
+Version: 1.1.0
+Release: 1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -24,35 +24,19 @@ Source15: nfs.sysconfig
 
 Patch00: nfs-utils-1.0.5-statdpath.patch
 Patch01: nfs-utils-1.0.6-mountd.patch
-Patch02: nfs-utils-1.0.6-idmap.conf.patch
-Patch03: nfs-utils-1.0.6-gssd_mixed_case.patch
-Patch04: nfs-utils-1.0.8-privports.patch
-Patch05: nfs-utils-1.0.12-export-nosubtree.patch
-Patch06: nfs-utils-1.0.9-mount-options-v3.patch
-Patch07: nfs-utils-1.0.9-lazy-umount.patch
-Patch08: nfs-utils-1.0.9-mount-sloppy.patch
-Patch09: nfs-utils-1.0.9-mount-man-nfs.patch
-Patch10: nfs-utils-1.0.9-return-mount-error.patch
-Patch11: nfs-utils-1.0.9-nfsmount-authnone.patch
-Patch12: nfs-utils-1.0.9-mount-remount.patch
-Patch13: nfs-utils-1.0.10-mount-nfsvers.patch
-Patch14: nfs-utils-1.0.10-udp-no-connect.patch
-Patch15: nfs-utils-1.0.10-v4-umounts.patch
-Patch16: nfs-utils-1.0.9-mount-quotes.patch
-Patch17: nfs-utils-1.0.10-mount-fake.patch
-Patch18: nfs-utils-1.0.12-mount-v4-errors.patch
-Patch19: nfs-utils-1.0.12-rmtab-ipaddr-manupdate.patch
-Patch20: nfs-utils-1.0.12-mountd-memleak.patch
-Patch21: nfs-utils-1.0.12-nfsd-macargs.patch
-Patch22: nfs-utils-1.0.12-mtab-mis-unlock.patch
-Patch23: nfs-utils-1.0.12-mountd-etab.patch
-Patch24: nfs-utils-1.0.10-mount-nordirplus.patch
+Patch02: nfs-utils-1.0.6-gssd_mixed_case.patch
+Patch03: nfs-utils-1.0.12-mountd-memleak.patch
+Patch04: nfs-utils-1.0.12-nfsd-macargs.patch
+Patch05: nfs-utils-1.0.12-mtab-mis-unlock.patch
+Patch06: nfs-utils-1.1.0-exp-subtree-warn-off.patch
+Patch07: nfs-utils-1.1.0-showmount-rpcerror.patch
+Patch08: nfs-utils-1.1.0-mount-v4-errors.patch
 
 %if %{enablefscache}
-Patch90: nfs-utils-1.0.9-mount-fsc.patch
+Patch90: nfs-utils-1.1.0-mount-fsc.patch
 %endif
 
-Patch100: nfs-utils-1.0.9-compile.patch
+#Patch100: nfs-utils-1.0.9-compile.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -63,25 +47,27 @@ Provides: rpc.idmapd  = %{epoch}:%{version}-%{release}
 Provides: rpc.mountd  = %{epoch}:%{version}-%{release}
 Provides: rpc.nfsd    = %{epoch}:%{version}-%{release}
 Provides: rpc.statd   = %{epoch}:%{version}-%{release}
-Provides: rpc.lockd   = %{epoch}:%{version}-%{release}
 Provides: rpc.gssd    = %{epoch}:%{version}-%{release}
 Provides: rpc.svcgssd = %{epoch}:%{version}-%{release}
 Provides: mount.nfs   = %{epoch}:%{version}-%{release}
 Provides: mount.nfs4  = %{epoch}:%{version}-%{release}
 Provides: umount.nfs  = %{epoch}:%{version}-%{release}
 Provides: umount.nfs4 = %{epoch}:%{version}-%{release}
+Provides: sm-notify   = %{epoch}:%{version}-%{release}
+Provides: start-statd = %{epoch}:%{version}-%{release}
 
 License: GPL
 Buildroot: %{_tmppath}/%{name}-%{version}-root
 Requires: rpcbind, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
-BuildRequires: nfs-utils-lib-devel libevent-devel libgssapi-devel
+BuildRequires: libgssapi-devel >= 0.11 libevent-devel >= 1.3b
+BuildRequires: nfs-utils-lib-devel >= 1.1.0
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
-BuildRequires: automake, libtool, keyutils-libs-devel
-BuildRequires: tcp_wrappers-devel, e2fsprogs-devel, krb5-devel
+BuildRequires: automake, libtool
+BuildRequires: e2fsprogs-devel, krb5-devel, tcp_wrappers-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
-Requires(pre): nfs-utils-lib libevent libgssapi
+Requires: nfs-utils-lib >= 1.1.0 libgssapi >= 0.11 libevent >= 1.3b
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
@@ -106,29 +92,13 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch06 -p1
 %patch07 -p1
 %patch08 -p1
-%patch09 -p1
-%patch10 -p1
-%patch11 -p1
-%patch12 -p1
-%patch13 -p1
-%patch14 -p1
-%patch15 -p1
-%patch16 -p1
-%patch17 -p1
-%patch18 -p1
-%patch19 -p1
-%patch20 -p1
-%patch21 -p1
-%patch22 -p1
-%patch23 -p1
-%patch24 -p1
 
 %if %{enablefscache}
 %patch90 -p1
 %endif
 
 # Do the magic to get things to compile
-%patch100 -p1
+#%patch100 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -167,22 +137,13 @@ install -m 755 %{SOURCE13} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcgssd
 install -m 755 %{SOURCE14} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcsvcgssd
 install -m 644 %{SOURCE15} $RPM_BUILD_ROOT/etc/sysconfig/nfs
 
-install -m 644 utils/idmapd/idmapd.conf \
-    $RPM_BUILD_ROOT/etc/idmapd.conf
-
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/rpc_pipefs
 
 touch $RPM_BUILD_ROOT/var/lib/nfs/rmtab
-mv $RPM_BUILD_ROOT/usr/sbin/{rpc.lockd,rpc.statd} $RPM_BUILD_ROOT/sbin
-mv $RPM_BUILD_ROOT/usr/sbin/{mount.*,umount.*} $RPM_BUILD_ROOT/sbin
+mv $RPM_BUILD_ROOT/usr/sbin/rpc.statd $RPM_BUILD_ROOT/sbin
 
-mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/statd
+mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/statd/sm
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/v4recovery
-
-# we are using quotad from quota utils
-rm %{buildroot}/%{_mandir}/man8/rquotad*
-rm %{buildroot}/%{_mandir}/man8/rpc.rquotad*
-rm %{buildroot}/%{_sbindir}/rpc.rquotad
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -268,17 +229,16 @@ fi
 %config /etc/rc.d/init.d/rpcgssd
 %config /etc/rc.d/init.d/rpcsvcgssd
 %config(noreplace) /etc/sysconfig/nfs
-%config(noreplace) /etc/idmapd.conf
 %dir /var/lib/nfs/v4recovery
 %dir /var/lib/nfs/rpc_pipefs
 %dir /var/lib/nfs
 %dir %attr(700,rpcuser,rpcuser) /var/lib/nfs/statd
+%dir %attr(700,rpcuser,rpcuser) /var/lib/nfs/statd/sm
 %config(noreplace) /var/lib/nfs/xtab
 %config(noreplace) /var/lib/nfs/etab
 %config(noreplace) /var/lib/nfs/rmtab
 %config(noreplace) /var/lib/nfs/state
 %doc linux-nfs/*
-/sbin/rpc.lockd
 /sbin/rpc.statd
 /usr/sbin/exportfs
 /usr/sbin/nfsstat
@@ -291,6 +251,8 @@ fi
 /usr/sbin/rpc.svcgssd
 /usr/sbin/gss_clnt_send_err
 /usr/sbin/gss_destroy_creds
+/usr/sbin/sm-notify
+/usr/sbin/start-statd
 %{_mandir}/*/*
 %config /etc/rc.d/init.d/nfslock
 
@@ -300,6 +262,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Sat Jul 28 2007 Steve Dickson <steved@redhat.com>  1.1.0-1
+- Upgraded to the latest upstream version (nfs-utils-1.1.0)
+
 * Thu May 24 2007 Steve Dickson <steved@redhat.com> 1.0.10-7
 - Fixed typo in mount.nfs4 that causes a segfault during
   error processing (bz 241190)

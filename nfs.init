@@ -15,17 +15,17 @@
 
 # Source networking configuration.
 if [ ! -f /etc/sysconfig/network ]; then
-    exit 0
+    exit 6
 fi
 
 . /etc/sysconfig/network
 
 # Check that networking is up.
-[ "${NETWORKING}" = "no" ] && exit 0
+[ "${NETWORKING}" = "no" ] && exit 6
 
-[ -x /usr/sbin/rpc.nfsd ] || exit 0
-[ -x /usr/sbin/rpc.mountd ] || exit 0
-[ -x /usr/sbin/exportfs ] || exit 0
+[ -x /usr/sbin/rpc.nfsd ] || exit 5
+[ -x /usr/sbin/rpc.mountd ] || exit 5
+[ -x /usr/sbin/exportfs ] || exit 5
 
 # Don't fail if /etc/exports doesn't exist; create a bare-bones version and continue.
 [ -r /etc/exports ] || \
@@ -106,7 +106,6 @@ case "$1" in
 	;;
   stop)
 	# Stop daemons.
-	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd stop
 	echo -n $"Shutting down NFS mountd: "
 	killproc rpc.mountd
 	echo
@@ -116,6 +115,7 @@ case "$1" in
 	if [ -n "$RQUOTAD" -a "$RQUOTAD" != "no" ]; then
 		echo -n $"Shutting down NFS quotas: "
 		killproc rpc.rquotad
+		RETVAL=$?
 		echo
 	fi
 	# Reset the lockd ports if they were set
@@ -133,6 +133,7 @@ case "$1" in
 	else
 		action $"Shutting down NFS services: " /bin/false
 	fi
+	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd stop
 	rm -f /var/lock/subsys/nfs
 	;;
   status)
@@ -172,15 +173,10 @@ case "$1" in
 		$0 start
 	}
 	;;
-  condstop)
-	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd condstop
-  	[ -f /var/lock/subsys/nfs ] && {
-		$0 stop
-	}
-	;;
   *)
-	echo $"Usage: nfs {start|stop|status|restart|reload|condrestart|condstop}"
-	exit 1
+	echo $"Usage: nfs {start|stop|status|restart|reload|condrestart}"
+	RETVAL=3
+	;;
 esac
 
-exit $?
+exit $RETVAL

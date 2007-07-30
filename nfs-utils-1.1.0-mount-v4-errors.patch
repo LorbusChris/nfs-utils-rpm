@@ -1,46 +1,37 @@
-commit 99defadcebf3bf892871f5541bfe762685faccbd
-Author: Steve Dickson <steved@redhat.com>
-Date:   Wed May 9 13:14:26 2007 -0400
-
-    When nfs4 mount fail because the exported directory does
-    not exist, the mount command claims the local mount point
-    does not exist which is wrong. This patch fixes that problem
-    as well as  makes the v4 mount failures look like v3/v2 failures.
-    
-    Signed-off-by: Steve Dickson <steved@redhat.com>
-
---- nfs-utils-1.0.12/utils/mount/mount.c.orig	2007-05-09 14:06:23.574929000 -0400
-+++ nfs-utils-1.0.12/utils/mount/mount.c	2007-05-09 14:07:34.368247000 -0400
-@@ -348,22 +348,49 @@
- 	return 0;
+--- nfs-utils-1.1.0/utils/mount/mount.c.orig	2007-07-18 16:26:01.000000000 -0400
++++ nfs-utils-1.1.0/utils/mount/mount.c	2007-07-18 16:37:34.000000000 -0400
+@@ -286,17 +286,24 @@ static void parse_opts (const char *opti
+ 	}
  }
  
 -static void mount_error(char *node)
-+static void mount_error(char *mntpnt, char *node)
++static void mount_error(char *mount_point, char *node)
  {
  	switch(errno) {
  		case ENOTDIR:
 -			fprintf(stderr, "%s: mount point %s is not a directory\n", progname, node);
 +			fprintf(stderr, "%s: mount point %s is not a directory\n", 
-+				progname, mntpnt);
++				progname, mount_point);
  			break;
  		case EBUSY:
 -			fprintf(stderr, "%s: %s is already mounted or busy\n", progname, node);
-+			fprintf(stderr, "%s: %s is already mounted or busy\n", 
-+				progname, mntpnt);
++			fprintf(stderr, "%s: %s is already mounted or busy\n", progname, 
++				mount_point);
  			break;
  		case ENOENT:
 -			fprintf(stderr, "%s: mount point %s does not exist\n", progname, node);
-+			if (node) {
++			if (node) 
 +				fprintf(stderr, "%s: %s failed, reason given by server: %s\n",
 +					progname, node, strerror(errno));
-+			} else
-+				fprintf(stderr, "%s: mount point %s does not exist\n", 
-+					progname, mntpnt);
++			else
++				fprintf(stderr, "%s: mount point %s does not exist\n", progname, 
++					mount_point);
  			break;
  		default:
  			fprintf(stderr, "%s: %s\n", progname, strerror(errno));
- 	}
+@@ -352,6 +359,26 @@ static int start_statd()
+ #endif
+ 	return 0;
  }
 +static int chk_mountpoint(char *mount_point)
 +{
@@ -62,21 +53,21 @@ Date:   Wed May 9 13:14:26 2007 -0400
 +
 +	return 0;
 +}
- #define NFS_MOUNT_VERS_DEFAULT 3
  
  int main(int argc, char *argv[])
-@@ -493,6 +520,9 @@
- 		}
+ {
+@@ -509,6 +536,9 @@ int main(int argc, char *argv[])
+ 	    }
  	}
  
 +	if (chk_mountpoint(mount_point))
-+		exit(EX_FAIL);
++		exit(1);
 +
- 	if (nfs_mount_vers == 4) {
- 		mnt_err = nfs4mount(spec, mount_point, &flags, 
- 			&extra_opts, &mount_opts, 0);
-@@ -512,7 +542,7 @@
- 				flags, mount_opts);
+ 	if (nfs_mount_vers == 4)
+ 		mnt_err = nfs4mount(spec, mount_point, &flags, &extra_opts, &mount_opts, 0);
+ 	else {
+@@ -539,7 +569,7 @@ int main(int argc, char *argv[])
+ 					   mount_opts);
  
  		if (mnt_err) {
 -			mount_error(mount_point);

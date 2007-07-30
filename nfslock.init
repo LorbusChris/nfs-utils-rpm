@@ -14,7 +14,7 @@
 
 # Source networking configuration.
 if [ ! -f /etc/sysconfig/network ]; then
-    exit 0
+    exit 6
 fi
 
 # Check for and source configuration file
@@ -23,7 +23,7 @@ fi
 . /etc/sysconfig/network
 
 # Check that networking is up.
-[ "${NETWORKING}" = "no" ] && exit 0
+[ "${NETWORKING}" = "no" ] && exit 6
 
 # Start lockd from userland only if kernel <= 2.2.18
 OS_RELEASE=`uname --release`
@@ -38,10 +38,10 @@ else
 fi
 
 if [ "$USERLAND_LOCKD" ] ; then
-    [ -x /sbin/rpc.lockd ] || exit 0
+    [ -x /sbin/rpc.lockd ] || exit 5
 fi
 
-[ -x /sbin/rpc.statd ] || exit 0 
+[ -x /sbin/rpc.statd ] || exit 5 
 
 RETVAL=0
 if [ -n "${STATD_HOSTNAME}" ]; then
@@ -139,14 +139,10 @@ case "$1" in
 		start
 	}
 	;;
-  condstop)
-  	[ -f /var/lock/subsys/nfslock ] && {
-		stop
-	}
-	;;
   *)
-	echo $"Usage: $0 {start|stop|status|restart|probe|condrestart|condstop}"
-	exit 1
+	echo $"Usage: $0 {start|stop|status|restart|probe|condrestart}"
+	RETVAL=3
+	;;
 esac
 
 exit $RETVAL
