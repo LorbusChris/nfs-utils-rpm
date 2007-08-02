@@ -88,7 +88,7 @@ case "$1" in
 	killproc $prog
 	RETVAL=$?
 	echo
-	[ $RETVAL -eq 0 ] && rm -f $LOCKFILE
+	rm -f $LOCKFILE
 	;;
   status)
 	status rpc.gssd
