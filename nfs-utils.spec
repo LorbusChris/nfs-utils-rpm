@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.0
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -31,6 +31,7 @@ Patch05: nfs-utils-1.0.12-mtab-mis-unlock.patch
 Patch06: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 Patch07: nfs-utils-1.1.0-showmount-rpcerror.patch
 Patch08: nfs-utils-1.1.0-mount-v4-errors.patch
+Patch09: nfs-utils-1.1.0-mount-nosharecache.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -92,6 +93,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch06 -p1
 %patch07 -p1
 %patch08 -p1
+%patch09 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -262,6 +264,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Aug 13 2007 Steve Dickson <steved@redhat.com>  1.1.0-3
+- Added nosharecache mount option which re-enables
+  rw/ro mounts to the same server (bz 243913).
+
 * Thu Aug  2 2007 Steve Dickson <steved@redhat.com>  1.1.0-2
 - Make sure the gss and idmap daemons remove thier lock
   files when they are stopped.
