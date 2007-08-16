@@ -32,6 +32,7 @@ Patch06: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 Patch07: nfs-utils-1.1.0-showmount-rpcerror.patch
 Patch08: nfs-utils-1.1.0-mount-v4-errors.patch
 Patch09: nfs-utils-1.1.0-mount-nosharecache.patch
+Patch10: nfs-utils-1.1.0-exportfs-open.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -94,6 +95,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch07 -p1
 %patch08 -p1
 %patch09 -p1
+%patch10 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -264,6 +266,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Aug 15 2007 Steve Dickson <steved@redhat.com>  1.1.0-4
+- Make sure the open() system calling in exportfs uses
+  mode bits when creating the etab file.
+
 * Mon Aug 13 2007 Steve Dickson <steved@redhat.com>  1.1.0-3
 - Added nosharecache mount option which re-enables
   rw/ro mounts to the same server (bz 243913).
