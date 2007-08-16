@@ -268,7 +268,7 @@ fi
 %changelog
 * Wed Aug 15 2007 Steve Dickson <steved@redhat.com>  1.1.0-4
 - Make sure the open() system calling in exportfs uses
-  mode bits when creating the etab file.
+  mode bits when creating the etab file (bz 252440).
 
 * Mon Aug 13 2007 Steve Dickson <steved@redhat.com>  1.1.0-3
 - Added nosharecache mount option which re-enables
