@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.0
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -33,6 +33,7 @@ Patch07: nfs-utils-1.1.0-showmount-rpcerror.patch
 Patch08: nfs-utils-1.1.0-mount-v4-errors.patch
 Patch09: nfs-utils-1.1.0-mount-nosharecache.patch
 Patch10: nfs-utils-1.1.0-exportfs-open.patch
+Patch11: nfs-utils-1.1.0-smnotify-path.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -65,7 +66,7 @@ Requires: modutils >= 2.4.26-9
 BuildRequires: libgssapi-devel >= 0.11 libevent-devel >= 1.3b
 BuildRequires: nfs-utils-lib-devel >= 1.1.0
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
-BuildRequires: automake, libtool
+BuildRequires: automake, libtool, glibc-headers
 BuildRequires: e2fsprogs-devel, krb5-devel, tcp_wrappers-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
@@ -96,6 +97,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch08 -p1
 %patch09 -p1
 %patch10 -p1
+%patch11 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -266,6 +268,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Fri Sep 14 2007 Steve Dickson <steved@redhat.com>  1.1.0-5
+- Changed the default paths in sm-notify to 
+  /var/lib/nfs/statd (bz 258461)
+
 * Wed Aug 15 2007 Steve Dickson <steved@redhat.com>  1.1.0-4
 - Make sure the open() system calling in exportfs uses
   mode bits when creating the etab file (bz 252440).
