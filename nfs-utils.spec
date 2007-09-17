@@ -34,6 +34,7 @@ Patch08: nfs-utils-1.1.0-mount-v4-errors.patch
 Patch09: nfs-utils-1.1.0-mount-nosharecache.patch
 Patch10: nfs-utils-1.1.0-exportfs-open.patch
 Patch11: nfs-utils-1.1.0-smnotify-path.patch
+Patch12: nfs-utils-1.1.0-exportfs-man-update.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -98,6 +99,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch09 -p1
 %patch10 -p1
 %patch11 -p1
+%patch12 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -271,6 +273,7 @@ fi
 * Fri Sep 14 2007 Steve Dickson <steved@redhat.com>  1.1.0-5
 - Changed the default paths in sm-notify to 
   /var/lib/nfs/statd (bz 258461)
+- Updated exportfs manpage (bz 262861)
 
 * Wed Aug 15 2007 Steve Dickson <steved@redhat.com>  1.1.0-4
 - Make sure the open() system calling in exportfs uses
