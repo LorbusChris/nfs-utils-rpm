@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.0
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -35,6 +35,7 @@ Patch09: nfs-utils-1.1.0-mount-nosharecache.patch
 Patch10: nfs-utils-1.1.0-exportfs-open.patch
 Patch11: nfs-utils-1.1.0-smnotify-path.patch
 Patch12: nfs-utils-1.1.0-exportfs-man-update.patch
+Patch13: nfs-utils-1.1.0-gssglue.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -64,14 +65,14 @@ License: GPL
 Buildroot: %{_tmppath}/%{name}-%{version}-root
 Requires: rpcbind, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
-BuildRequires: libgssapi-devel >= 0.11 libevent-devel >= 1.3b
-BuildRequires: nfs-utils-lib-devel >= 1.1.0
+BuildRequires: libgssglue-devel libevent-devel >= 1.3b
+BuildRequires: nfs-utils-lib-devel >= 1.1.0-3
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, glibc-headers
 BuildRequires: e2fsprogs-devel, krb5-devel, tcp_wrappers-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
-Requires: nfs-utils-lib >= 1.1.0 libgssapi >= 0.11 libevent >= 1.3b
+Requires: nfs-utils-lib >= 1.1.0-3 libgssglue libevent >= 1.3b
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
@@ -100,6 +101,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch10 -p1
 %patch11 -p1
 %patch12 -p1
+%patch13 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -270,6 +272,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Oct 17 2007 Steve Dickson <steved@redhat.com>  1.1.0-6
+- Switch the libgssapi dependency to libgssglue
+
 * Fri Sep 14 2007 Steve Dickson <steved@redhat.com>  1.1.0-5
 - Changed the default paths in sm-notify to 
   /var/lib/nfs/statd (bz 258461)
