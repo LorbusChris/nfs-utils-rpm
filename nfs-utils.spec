@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.0
-Release: 6%{?dist}
+Release: 7%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -272,6 +272,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Dec 04 2007 Release Engineering <rel-eng at fedoraproject dot org> - 1.1.0-7
+ - Rebuild for openldap bump
+
 * Wed Oct 17 2007 Steve Dickson <steved@redhat.com>  1.1.0-6
 - Switch the libgssapi dependency to libgssglue
 
