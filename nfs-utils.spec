@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.0
-Release: 7%{?dist}
+Release: 8%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -36,6 +36,7 @@ Patch10: nfs-utils-1.1.0-exportfs-open.patch
 Patch11: nfs-utils-1.1.0-smnotify-path.patch
 Patch12: nfs-utils-1.1.0-exportfs-man-update.patch
 Patch13: nfs-utils-1.1.0-gssglue.patch
+Patch14: nfs-utils-1.1.0-nfs-man.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -102,6 +103,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch11 -p1
 %patch12 -p1
 %patch13 -p1
+%patch14 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -272,6 +274,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Fri Jan  4 2008 Steve Dickson <steved@redhat.com>  1.1.0-8
+- Updated nfs(5) manual page.
+
 * Tue Dec 04 2007 Release Engineering <rel-eng at fedoraproject dot org> - 1.1.0-7
  - Rebuild for openldap bump
 
