@@ -1,7 +1,7 @@
-diff -up nfs-utils-1.1.0/support/nfs/xio.c.orig nfs-utils-1.1.0/support/nfs/xio.c
---- nfs-utils-1.1.0/support/nfs/xio.c.orig	2007-05-10 23:40:57.000000000 -0400
-+++ nfs-utils-1.1.0/support/nfs/xio.c	2007-08-15 22:23:13.000000000 -0400
-@@ -54,13 +54,20 @@ xflock(char *fname, char *type)
+diff -up nfs-utils-1.1.1/support/nfs/xio.c.save nfs-utils-1.1.1/support/nfs/xio.c
+--- nfs-utils-1.1.1/support/nfs/xio.c.save	2007-10-18 23:07:28.000000000 -0400
++++ nfs-utils-1.1.1/support/nfs/xio.c	2008-01-05 08:27:35.000000000 -0500
+@@ -54,13 +54,19 @@ xflock(char *fname, char *type)
  {
  	struct sigaction sa, oldsa;
  	int		readonly = !strcmp(type, "r");
@@ -9,15 +9,13 @@ diff -up nfs-utils-1.1.0/support/nfs/xio.c.orig nfs-utils-1.1.0/support/nfs/xio.
  	struct flock	fl = { readonly? F_RDLCK : F_WRLCK, SEEK_SET, 0, 0, 0 };
  	int		fd;
  
--	if ((fd = open(fname, readonly? O_RDONLY : (O_RDWR|O_CREAT))) < 0) {
--		xlog(L_WARNING, "could not open %s for locking", fname);
-+	if (readonly) 
+-	if ((fd = open(fname, readonly? O_RDONLY : (O_RDWR|O_CREAT), 0644)) < 0) {
++	if (readonly)
 +		fd = open(fname, O_RDONLY);
 +	else
 +		fd = open(fname, (O_RDWR|O_CREAT), mode);
 +	if (fd < 0) {
-+		xlog(L_WARNING, "could not %s %s for locking", 
-+			(readonly ? "open" : "create"), fname);
+ 		xlog(L_WARNING, "could not open %s for locking", fname);
  		return -1;
  	}
 +

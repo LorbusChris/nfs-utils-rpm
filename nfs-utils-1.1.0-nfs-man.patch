@@ -4,15 +4,15 @@ Date:   Fri Jan 4 09:27:35 2008 -0500
 
     Incorporated Chuck Lever's and Don Domingo's changes to the
     nfs(5) manual page.
-    
+
     Signed-off-by: Chuck Lever <chuck.lever@oracle.com>
     Signed-off-by: Don Domingo <ddomingo@redhat.com>
     Signed-off-by: Steve Dickson <steved@redhat.com>
 
-diff -up nfs-utils-1.1.0/utils/mount/nfs.man.orig nfs-utils-1.1.0/utils/mount/nfs.man
---- nfs-utils-1.1.0/utils/mount/nfs.man.orig	2007-12-17 08:16:15.000000000 -0500
-+++ nfs-utils-1.1.0/utils/mount/nfs.man	2008-01-04 10:02:33.000000000 -0500
-@@ -1,498 +1,1233 @@
+diff -up nfs-utils-1.1.1/utils/mount/nfs.man.save nfs-utils-1.1.1/utils/mount/nfs.man
+--- nfs-utils-1.1.1/utils/mount/nfs.man.save	2007-10-18 23:07:28.000000000 -0400
++++ nfs-utils-1.1.1/utils/mount/nfs.man	2008-01-05 08:34:22.000000000 -0500
+@@ -1,510 +1,1233 @@
 -.\" nfs.5 "Rick Sladkey" <jrs@world.std.com>
 -.\" Wed Feb  8 12:52:42 1995, faith@cs.unc.edu: updates for Ross Biro's
 -.\" patches. "
@@ -853,77 +853,13 @@ diff -up nfs-utils-1.1.0/utils/mount/nfs.man.orig nfs-utils-1.1.0/utils/mount/nf
 +and chooses an appropriate transport for each service.
 +Refer to the TRANSPORT METHODS section for more details.
  .TP 1.5i
--.I clientaddr=n
--On a multi-homed client, this
--causes the client to use a specific callback address when
--communicating with an NFS version 4 server.
--This option is currently ignored.
--.TP 1.5i
--.I sec=mode
--Same as \f3sec=mode\f1 for the nfs filesystem type (see above).
--.TP 1.5i
--.I bg
--If an NFS mount attempt times out, retry the mount
--in the background.
--After a mount operation is backgrounded, all subsequent mounts
--on the same NFS server will be backgrounded immediately, without
--first attempting the mount.
--A missing mount point is treated as a timeout,
--to allow for nested NFS mounts.
--.TP 1.5i
--.I fg
--If the first NFS mount attempt times out, retry the mount
--in the foreground.
--This is the complement of the
--.I bg
--option, and also the default behavior.
--.TP 1.5i
--.I soft
--If an NFS file operation has a major timeout then report an I/O error to
--the calling program.
--The default is to continue retrying NFS file operations indefinitely.
--.TP 1.5i
--.I hard
--If an NFS file operation has a major timeout then report
--"server not responding" on the console and continue retrying indefinitely.
--This is the default.
--.TP 1.5i
--.I intr
--If an NFS file operation has a major timeout and it is hard mounted,
--then allow signals to interupt the file operation and cause it to
--return EINTR to the calling program.  The default is to not
--allow file operations to be interrupted.
--.TP 1.5i
--.I nocto
--Suppress the retrieval of new attributes when creating a file.
--.TP 1.5i
--.I noac
--Disable attribute caching, and force synchronous writes.
--This extracts a
--server performance penalty but it allows two different NFS clients
--to get reasonable good results when both clients are actively
--writing to common filesystem on the server.
--.TP 1.5i
--.I nosharecache
--As of kernel 2.6.18, it is no longer possible to mount the same
--same filesystem with different mount options to a new mountpoint.
--It was deemed unsafe to do so, since cached data cannot be shared
--between the two mountpoints. In consequence, files or directories
--that were common to both mountpoint subtrees could often be seen to
--be out of sync following an update.
--.br
--This option allows administrators to select the pre-2.6.18 behaviour,
--permitting the same filesystem to be mounted with different mount
--options.
--.br
--.B Beware:
--Use of this option is not recommended unless you are certain that there
--are no hard links or subtrees of this mountpoint that are mounted
--elsewhere.
--.P
--All of the non-value options have corresponding nooption forms.
--For example, nointr means don't allow file operations to be
--interrupted.
+-.I clientaddr=n.n.n.n
+-Specifies a single IPv4 address in dotted-quad form that
+-the NFS client advertises to allow servers to perform
+-NFSv4 callback requests against files on this mount point.
+-If the server is not able to establish callback connections
+-to clients, performance may degrade, or accesses to
+-files may temporarily hang.
 +.B udp
 +The
 +.B udp
@@ -963,14 +899,16 @@ diff -up nfs-utils-1.1.0/utils/mount/nfs.man.orig nfs-utils-1.1.0/utils/mount/nf
 +The mount request fails if the server's rpcbind service is not available,
 +the server's mountd service is not registered with its rpcbind service,
 +or the server's mountd service is not available on the advertised port.
-+.IP
+ .IP
 +This option can be used when mounting an NFS server
 +through a firewall that blocks the rpcbind protocol.
 +.TP 1.5i
 +.BI mounthost= name
 +The hostname of the host running mountd.
-+If this option is not specified, the
-+.BR mount (8)
+ If this option is not specified, the
+ .BR mount (8)
+-command attempts to discover an appropriate callback
+-address automatically.
 +command assumes that the mountd service runs
 +on the same host as the NFS service.
 +.TP 1.5i
@@ -1170,7 +1108,77 @@ diff -up nfs-utils-1.1.0/utils/mount/nfs.man.orig nfs-utils-1.1.0/utils/mount/nf
 +If this option is not specified, the
 +.BR mount (8)
 +command attempts to discover an appropriate callback address automatically.
-+The automatic discovery process is not perfect, however.
+ The automatic discovery process is not perfect, however.
+-In the presence of multiple client network interfaces, special
+-routing policies, or atypical network topologies, the exact
+-address to use for callbacks may be nontrivial to determine,
+-and should be explicitly set using this mount option.
+-.TP 1.5i
+-.I sec=mode
+-Same as \f3sec=mode\f1 for the nfs filesystem type (see above).
+-.TP 1.5i
+-.I bg
+-If an NFS mount attempt times out, retry the mount
+-in the background.
+-After a mount operation is backgrounded, all subsequent mounts
+-on the same NFS server will be backgrounded immediately, without
+-first attempting the mount.
+-A missing mount point is treated as a timeout,
+-to allow for nested NFS mounts.
+-.TP 1.5i
+-.I fg
+-If the first NFS mount attempt times out, retry the mount
+-in the foreground.
+-This is the complement of the
+-.I bg
+-option, and also the default behavior.
+-.TP 1.5i
+-.I soft
+-If an NFS file operation has a major timeout then report an I/O error to
+-the calling program.
+-The default is to continue retrying NFS file operations indefinitely.
+-.TP 1.5i
+-.I hard
+-If an NFS file operation has a major timeout then report
+-"server not responding" on the console and continue retrying indefinitely.
+-This is the default.
+-.TP 1.5i
+-.I intr
+-If an NFS file operation has a major timeout and it is hard mounted,
+-then allow signals to interupt the file operation and cause it to
+-return EINTR to the calling program.  The default is to not
+-allow file operations to be interrupted.
+-.TP 1.5i
+-.I nocto
+-Suppress the retrieval of new attributes when creating a file.
+-.TP 1.5i
+-.I noac
+-Disable attribute caching, and force synchronous writes.
+-This extracts a
+-server performance penalty but it allows two different NFS clients
+-to get reasonable good results when both clients are actively
+-writing to common filesystem on the server.
+-.TP 1.5i
+-.I nosharecache
+-As of kernel 2.6.18, it is no longer possible to mount the same
+-same filesystem with different mount options to a new mountpoint.
+-It was deemed unsafe to do so, since cached data cannot be shared
+-between the two mountpoints. In consequence, files or directories
+-that were common to both mountpoint subtrees could often be seen to
+-be out of sync following an update.
+-.br
+-This option allows administrators to select the pre-2.6.18 behaviour,
+-permitting the same filesystem to be mounted with different mount
+-options.
+-.br
+-.B Beware:
+-Use of this option is not recommended unless you are certain that there
+-are no hard links or subtrees of this mountpoint that are mounted
+-elsewhere.
+-.P
+-All of the non-value options have corresponding nooption forms.
+-For example, nointr means don't allow file operations to be
+-interrupted.
 +In the presence of multiple client network interfaces,
 +special routing policies,
 +or atypical network topologies,

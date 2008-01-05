@@ -55,6 +55,9 @@ start() {
     if [ ! -f /var/lock/subsys/nfslock ]; then
 	# Start daemons.
 	if [ "$USERLAND_LOCKD" ]; then
+	  # Make sure locks are recovered
+	  rm -f /var/run/sm-notify.pid
+
 	  echo -n $"Starting NFS locking: "
 	  daemon rpc.lockd
 	  echo
@@ -98,6 +101,7 @@ stop() {
 	RETVAL=$?
 	echo
 	rm -f /var/lock/subsys/nfslock
+	rm -f /var/run/sm-notify.pid
 	return $RETVAL
 }
 

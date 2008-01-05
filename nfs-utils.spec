@@ -1,8 +1,8 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
-Version: 1.1.0
-Release: 8%{?dist}
+Version: 1.1.1
+Release: 1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -25,18 +25,11 @@ Source15: nfs.sysconfig
 Patch00: nfs-utils-1.0.5-statdpath.patch
 Patch01: nfs-utils-1.0.6-mountd.patch
 Patch02: nfs-utils-1.0.6-gssd_mixed_case.patch
-Patch03: nfs-utils-1.0.12-mountd-memleak.patch
-Patch04: nfs-utils-1.0.12-nfsd-macargs.patch
-Patch05: nfs-utils-1.0.12-mtab-mis-unlock.patch
-Patch06: nfs-utils-1.1.0-exp-subtree-warn-off.patch
-Patch07: nfs-utils-1.1.0-showmount-rpcerror.patch
-Patch08: nfs-utils-1.1.0-mount-v4-errors.patch
-Patch09: nfs-utils-1.1.0-mount-nosharecache.patch
-Patch10: nfs-utils-1.1.0-exportfs-open.patch
-Patch11: nfs-utils-1.1.0-smnotify-path.patch
-Patch12: nfs-utils-1.1.0-exportfs-man-update.patch
-Patch13: nfs-utils-1.1.0-gssglue.patch
-Patch14: nfs-utils-1.1.0-nfs-man.patch
+Patch03: nfs-utils-1.1.0-showmount-rpcerror.patch
+Patch04: nfs-utils-1.1.0-exp-subtree-warn-off.patch
+Patch05: nfs-utils-1.1.0-exportfs-open.patch
+Patch06: nfs-utils-1.1.0-exportfs-man-update.patch
+Patch07: nfs-utils-1.1.0-nfs-man.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -97,13 +90,6 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch05 -p1
 %patch06 -p1
 %patch07 -p1
-%patch08 -p1
-%patch09 -p1
-%patch10 -p1
-%patch11 -p1
-%patch12 -p1
-%patch13 -p1
-%patch14 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -201,10 +187,10 @@ fi
 
 %preun
 if [ "$1" = "0" ]; then
-    /etc/rc.d/init.d/nfs condstop
-    /etc/rc.d/init.d/rpcgssd condstop
-    /etc/rc.d/init.d/rpcidmapd condstop
-    /etc/rc.d/init.d/nfslock condstop
+    /etc/rc.d/init.d/nfs condrestart
+    /etc/rc.d/init.d/rpcgssd condrestart
+    /etc/rc.d/init.d/rpcidmapd condrestart
+    /etc/rc.d/init.d/nfslock condrestart
     /sbin/chkconfig --del rpcidmapd
     /sbin/chkconfig --del rpcgssd
     /sbin/chkconfig --del rpcsvcgssd
@@ -274,8 +260,11 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
-* Fri Jan  4 2008 Steve Dickson <steved@redhat.com>  1.1.0-8
-- Updated nfs(5) manual page.
+* Sat Jan  5 2008 Steve Dickson <steved@redhat.com>  1.1.1-1
+- Updated to latest upstream release, nfs-utils-1.1.1
+- Added the removal of sm-notify.pid to nfslock init script.
+- Changed spec file to use condrestart instead of condstop
+  when calling init scripts.
 
 * Tue Dec 04 2007 Release Engineering <rel-eng at fedoraproject dot org> - 1.1.0-7
  - Rebuild for openldap bump
