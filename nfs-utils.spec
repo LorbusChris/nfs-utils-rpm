@@ -31,6 +31,7 @@ Patch05: nfs-utils-1.1.0-exportfs-open.patch
 Patch06: nfs-utils-1.1.0-exportfs-man-update.patch
 Patch07: nfs-utils-1.1.0-nfs-man.patch
 Patch08: nfs-utils-1.1.1-mountd-man.patch
+Patch09: nfs-utils-1.1.1-fsloc-nohide.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -92,6 +93,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch06 -p1
 %patch07 -p1
 %patch08 -p1
+%patch09 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -268,6 +270,7 @@ fi
 - Changed spec file to use condrestart instead of condstop
   when calling init scripts.
 - Fixed typo in rpc.mountd man page 
+- Turn on 'nohide' automatically for all refer exports (bz 313561)
 
 * Tue Dec 04 2007 Release Engineering <rel-eng at fedoraproject dot org> - 1.1.0-7
  - Rebuild for openldap bump
