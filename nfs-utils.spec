@@ -30,6 +30,7 @@ Patch04: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 Patch05: nfs-utils-1.1.0-exportfs-open.patch
 Patch06: nfs-utils-1.1.0-exportfs-man-update.patch
 Patch07: nfs-utils-1.1.0-nfs-man.patch
+Patch08: nfs-utils-1.1.1-mountd-man.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -90,6 +91,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch05 -p1
 %patch06 -p1
 %patch07 -p1
+%patch08 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -265,6 +267,7 @@ fi
 - Added the removal of sm-notify.pid to nfslock init script.
 - Changed spec file to use condrestart instead of condstop
   when calling init scripts.
+- Fixed typo in rpc.mountd man page 
 
 * Tue Dec 04 2007 Release Engineering <rel-eng at fedoraproject dot org> - 1.1.0-7
  - Rebuild for openldap bump
