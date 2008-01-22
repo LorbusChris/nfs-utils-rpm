@@ -1,0 +1,42 @@
+commit 399cc3dad0cdfe8dca4a0ae9035a0554d7223eb2
+Author: Steve Dickson <steved@dickson.boston.devel.redhat.com>
+Date:   Thu Jan 17 11:25:37 2008 -0500
+
+    Stop segfaults on amd64 during warnings messages by creating
+    a second va_list in xlog_backend() and then use that va_list
+    to print messages on stderr.
+    
+    Signed-off-by: Steinar H. Gunderson <sesse@debian.org>
+    Signed-off-by: Steve Langasek <vorlon@debian.org>
+    Signed-off-by: Steve Dickson <steved@dickson.boston.devel.redhat.com>
+
+diff -up nfs-utils-1.1.1/support/nfs/xlog.c.orig nfs-utils-1.1.1/support/nfs/xlog.c
+--- nfs-utils-1.1.1/support/nfs/xlog.c.orig	2007-10-18 23:07:28.000000000 -0400
++++ nfs-utils-1.1.1/support/nfs/xlog.c	2008-01-22 14:13:36.000000000 -0500
+@@ -133,9 +133,14 @@ xlog_enabled(int fac)
+ void
+ xlog_backend(int kind, const char *fmt, va_list args)
+ {
++	va_list args2;
++
+ 	if (!(kind & (L_ALL)) && !(logging && (kind & logmask)))
+ 		return;
+ 
++	if (log_stderr)
++		va_copy(args2, args);
++
+ 	if (log_syslog) {
+ 		switch (kind) {
+ 		case L_FATAL:
+@@ -171,9 +176,9 @@ xlog_backend(int kind, const char *fmt, 
+ #else
+ 		fprintf(stderr, "%s: ", log_name);
+ #endif
+-
+-		vfprintf(stderr, fmt, args);
++		vfprintf(stderr, fmt, args2);
+ 		fprintf(stderr, "\n");
++		va_end(args2);
+ 	}
+ 
+ 	if (kind == L_FATAL)

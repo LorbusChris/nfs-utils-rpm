@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.1
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -37,7 +37,12 @@ Patch09: nfs-utils-1.1.1-fsloc-nohide.patch
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
 %endif
 
-#Patch100: nfs-utils-1.0.9-compile.patch
+Patch100: nfs-utils-1.1.1-nfsstat-manpage.patch
+Patch101: nfs-utils-1.1.1-export-manpage.patch
+Patch102: nfs-utils-1.1.1-mount-rm-nfsprog.patch
+Patch103: nfs-utils-1.1.1-mount-rm-mountprog.patch
+Patch104: nfs-utils-1.1.1-xlog-valist.patch
+Patch105: nfs-utils-1.1.1-mountd-crossmnt.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -99,8 +104,12 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch90 -p1
 %endif
 
-# Do the magic to get things to compile
-#%patch100 -p1
+%patch100 -p1
+%patch101 -p1
+%patch102 -p1
+%patch103 -p1
+%patch104 -p1
+%patch105 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -264,6 +273,15 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Jan 22 2008 Steve Dickson <steved@redhat.com>  1.1.1-2
+- Added -S/--since to the nfsstat(1) manpage
+- The wording in the exportfs man page can be a bit confusing, implying
+  that "exportfs -u :/foo" will unexport /foo from all hosts, which it won't
+- Removed nfsprog option since the kernel no longer supports it.
+- Removed mountprog option since the kernel no longer supports it.
+- Stop segfaults on amd64 during warnings messages.
+- Fix bug when both crossmnt and fsid are set.
+
 * Sat Jan  5 2008 Steve Dickson <steved@redhat.com>  1.1.1-1
 - Updated to latest upstream release, nfs-utils-1.1.1
 - Added the removal of sm-notify.pid to nfslock init script.

@@ -1,0 +1,23 @@
+commit 72bc295da78bafff92762b8afbb298ac16d1ff43
+Author: Steve Dickson <steved@redhat.com>
+Date:   Wed Jan 16 12:00:32 2008 -0500
+
+    The kernel hasn't supported the underlying parts needed for changing the
+    NFS program number for a very long time.
+    
+    Signed-off-by: Chuck Lever <chuck.lever@oracle.com>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff -up nfs-utils-1.1.1/utils/mount/stropts.c.orig nfs-utils-1.1.1/utils/mount/stropts.c
+--- nfs-utils-1.1.1/utils/mount/stropts.c.orig	2007-10-18 23:07:28.000000000 -0400
++++ nfs-utils-1.1.1/utils/mount/stropts.c	2008-01-22 14:02:51.000000000 -0500
+@@ -317,9 +317,6 @@ static struct mount_options *rewrite_mou
+ 		po_remove_all(options, "port");
+ 	}
+ 	nfs_server.pmap.pm_prog = NFS_PROGRAM;
+-	option = po_get(options, "nfsprog");
+-	if (option)
+-		nfs_server.pmap.pm_prog = atoi(option);
+ 
+ 	option = po_get(options, "nfsvers");
+ 	if (option) {

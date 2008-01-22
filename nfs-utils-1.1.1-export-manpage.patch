@@ -1,0 +1,53 @@
+commit efbda485ff5b3d5916971e1af656d2c21307af30
+Author: Steve Dickson <steved@redhat.com>
+Date:   Sat Nov 3 09:14:57 2007 -0400
+
+    The wording in the exportfs man page can be a bit confusing, implying
+    that "exportfs -u :/foo" will unexport /foo from all hosts, which it won't.
+    
+    This patch cleans that wording up and adds a couple examples on how to
+    unexport directories
+    
+    Signed-off-by: Steinar H. Gunderson <sesse@debian.org>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff -up nfs-utils-1.1.1/utils/exportfs/exportfs.man.orig nfs-utils-1.1.1/utils/exportfs/exportfs.man
+--- nfs-utils-1.1.1/utils/exportfs/exportfs.man.orig	2008-01-22 13:02:18.000000000 -0500
++++ nfs-utils-1.1.1/utils/exportfs/exportfs.man	2008-01-22 13:11:52.000000000 -0500
+@@ -167,11 +167,13 @@ all entries listed in
+ are removed from the kernel export tables, and the file is cleared. This
+ effectively shuts down all NFS activity.
+ .P
+-To remove individual export entries, one can specify a
++To remove individual export entries, specify a
+ .I host:/path
+ pair. This deletes the specified entry from
+ .B etab
+ and removes the corresponding kernel entry (if any).
++To remove one or more exports to several hosts, use
++.BR "exportfs -ua" .
+ .P
+ .\" -------------------- Dumping the Export Table -----------------
+ .SS Dumping the Export Table 
+@@ -202,6 +204,21 @@ allowing asynchronous writes, one would 
+ .nf
+ .B "# exportfs -o async django:/usr/tmp
+ .fi
++.P
++To unexport the
++.B /usr/tmp
++directory:
++.P
++.nf
++.B "# exportfs -u django:/usr/tmp
++.fi
++.P
++To unexport all the directories listed in
++.B /etc/exports:
++.P
++.nf
++.B "# exportfs -au
++.fi
+ .\" -------------------- DEPENDENCIES -----------------------------
+ .SH DEPENDENCIES
+ Exporting to IP networks, DNS and NIS domains does not enable clients

@@ -1,0 +1,23 @@
+commit 72ada109b86622db8009e774ebc96a7a92094e8a
+Author: Steve Dickson <steved@redhat.com>
+Date:   Wed Jan 16 12:01:13 2008 -0500
+
+    The kernel doesn't support the underlying parts needed for changing the
+    MNT program number.
+    
+    Signed-off-by: Chuck Lever <chuck.lever@oracle.com>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff -up nfs-utils-1.1.1/utils/mount/stropts.c.orig nfs-utils-1.1.1/utils/mount/stropts.c
+--- nfs-utils-1.1.1/utils/mount/stropts.c.orig	2008-01-22 14:04:16.000000000 -0500
++++ nfs-utils-1.1.1/utils/mount/stropts.c	2008-01-22 14:09:54.000000000 -0500
+@@ -304,9 +304,6 @@ static struct mount_options *rewrite_mou
+ 	if (option)
+ 		mnt_server.pmap.pm_port = atoi(option);
+ 	mnt_server.pmap.pm_prog = MOUNTPROG;
+-	option = po_get(options, "mountprog");
+-	if (option)
+-		mnt_server.pmap.pm_prog = atoi(option);
+ 	option = po_get(options, "mountvers");
+ 	if (option)
+ 		mnt_server.pmap.pm_vers = atoi(option);
