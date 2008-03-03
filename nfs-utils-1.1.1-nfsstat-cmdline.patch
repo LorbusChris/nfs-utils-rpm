@@ -1,0 +1,21 @@
+commit acf95d32a44fd8357c24e8a04ec53fc6900bfc58
+Author: Peng Haitao <penght@cn.fujitsu.com>
+Date:   Tue Feb 26 13:52:18 2008 -0500
+
+    Fixed typo in the nfsstat command line arugments.
+    
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff --git a/utils/nfsstat/nfsstat.c b/utils/nfsstat/nfsstat.c
+index 828119b..ed8cfc8 100644
+--- a/utils/nfsstat/nfsstat.c
++++ b/utils/nfsstat/nfsstat.c
+@@ -237,7 +237,7 @@ static struct option longopts[] =
+ 	{ "all", 0, 0, 'v' },
+ 	{ "auto", 0, 0, '\3' },
+ 	{ "client", 0, 0, 'c' },
+-	{ "mounts", 0, 0, 'm' },
++	{ "mounted", 0, 0, 'm' },
+ 	{ "nfs", 0, 0, 'n' },
+ 	{ "rpc", 0, 0, 'r' },
+ 	{ "server", 0, 0, 's' },

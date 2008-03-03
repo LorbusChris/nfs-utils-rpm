@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.1
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -45,6 +45,10 @@ Patch104: nfs-utils-1.1.1-xlog-valist.patch
 Patch105: nfs-utils-1.1.1-mountd-crossmnt.patch
 Patch106: nfs-utils-1.1.1-mount-relatime.patch
 Patch107: nfs-utils-1.1.1-mountd-crossmnt-cleanup.patch
+Patch108: nfs-utils-1.1.1-mountd-exportlist.patch
+Patch109: nfs-utils-1.1.1-gssd-mcred.patch
+Patch110: nfs-utils-1.1.1-nfsstat-cmdline.patch
+Patch111: nfs-utils-1.1.1-idmapd-validasc.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -114,6 +118,10 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch105 -p1
 %patch106 -p1
 %patch107 -p1
+%patch108 -p1
+%patch109 -p1
+%patch110 -p1
+%patch111 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -277,6 +285,16 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Mar  3 2008 Steve Dickson <steved@redhat.com>  1.1.1-5
+- Stopped mountd from incorrectly logging an error
+  (commit 9dd9b68c4c44f0d9102eb85ee2fa36a8b7f638e3)
+- Stop gssd from ignoring the machine credential caches
+  (commit 46d439b17f22216ce8f9257a982c6ade5d1c5931)
+- Fixed typo in the nfsstat command line arugments.
+  (commit acf95d32a44fd8357c24e8a04ec53fc6900bfc58)
+- Added test to stop buffer overflow in idmapd
+  (commit bcd0fcaf0966c546da5043be700587f73174ae25)
+
 * Sat Feb  9 2008 Steve Dickson <steved@redhat.com>  1.1.1-4
 - Cleaned up some typos that were found in the various
   places in the mountd code
