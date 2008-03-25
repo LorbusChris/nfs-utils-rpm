@@ -1,6 +1,6 @@
-commit 0647ed30739b9867a4657bd69467925c868640b3
+commit fa29d7a9a3d8a72b79924d28813eef7e55a25bc9
 Author: Steve Dickson <steved@redhat.com>
-Date:   Fri Sep 14 13:21:08 2007 -0400
+Date:   Tue Mar 18 09:33:44 2008 -0400
 
     Updated exportfs man to talk about /var/lib/nfs/etab
     instead of /var/lib/nfs/xtab
@@ -8,7 +8,7 @@ Date:   Fri Sep 14 13:21:08 2007 -0400
     Signed-off-by: Steve Dickson <steved@redhat.com>
 
 diff --git a/utils/exportfs/exportfs.man b/utils/exportfs/exportfs.man
-index 2bd8e31..9cfe7b8 100644
+index 59789cc..a8fdb05 100644
 --- a/utils/exportfs/exportfs.man
 +++ b/utils/exportfs/exportfs.man
 @@ -22,14 +22,14 @@ The
@@ -84,20 +84,11 @@ index 2bd8e31..9cfe7b8 100644
  are removed from the kernel export tables, and the file is cleared. This
  effectively shuts down all NFS activity.
  .P
- To remove individual export entries, one can specify a
+ To remove an export to a host, specify a
  .I host:/path
  pair. This deletes the specified entry from
 -.B xtab
 +.B etab
  and removes the corresponding kernel entry (if any).
- .P
- .\" -------------------- Dumping the Export Table -----------------
-@@ -186,7 +186,7 @@ option, the list of flags pertaining to each export are shown in addition.
- The following adds all directories listed in
- .B /etc/exports
- to
--.B /var/lib/nfs/xtab
-+.B /var/lib/nfs/etab
- and pushes the resulting export entries into the kernel:
- .P
- .nf
+ To remove one or more exports to several hosts, use
+ .BR "exportfs -ua" .

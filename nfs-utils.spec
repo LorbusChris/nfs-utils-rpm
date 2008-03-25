@@ -1,8 +1,8 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
-Version: 1.1.1
-Release: 5%{?dist}
+Version: 1.1.2
+Release: 1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -29,26 +29,11 @@ Patch03: nfs-utils-1.1.0-showmount-rpcerror.patch
 Patch04: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 Patch05: nfs-utils-1.1.0-exportfs-open.patch
 Patch06: nfs-utils-1.1.0-exportfs-man-update.patch
-Patch07: nfs-utils-1.1.0-nfs-man.patch
-Patch08: nfs-utils-1.1.1-mountd-man.patch
-Patch09: nfs-utils-1.1.1-fsloc-nohide.patch
+Patch07: nfs-utils-1.1.2-multi-auth-flavours.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
 %endif
-
-Patch100: nfs-utils-1.1.1-nfsstat-manpage.patch
-Patch101: nfs-utils-1.1.1-export-manpage.patch
-Patch102: nfs-utils-1.1.1-mount-rm-nfsprog.patch
-Patch103: nfs-utils-1.1.1-mount-rm-mountprog.patch
-Patch104: nfs-utils-1.1.1-xlog-valist.patch
-Patch105: nfs-utils-1.1.1-mountd-crossmnt.patch
-Patch106: nfs-utils-1.1.1-mount-relatime.patch
-Patch107: nfs-utils-1.1.1-mountd-crossmnt-cleanup.patch
-Patch108: nfs-utils-1.1.1-mountd-exportlist.patch
-Patch109: nfs-utils-1.1.1-gssd-mcred.patch
-Patch110: nfs-utils-1.1.1-nfsstat-cmdline.patch
-Patch111: nfs-utils-1.1.1-idmapd-validasc.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -103,25 +88,10 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch05 -p1
 %patch06 -p1
 %patch07 -p1
-%patch08 -p1
-%patch09 -p1
 
 %if %{enablefscache}
 %patch90 -p1
 %endif
-
-%patch100 -p1
-%patch101 -p1
-%patch102 -p1
-%patch103 -p1
-%patch104 -p1
-%patch105 -p1
-%patch106 -p1
-%patch107 -p1
-%patch108 -p1
-%patch109 -p1
-%patch110 -p1
-%patch111 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -285,6 +255,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Mar 25 2008 Steve Dickson <steved@redhat.com>  1.1.2-1
+- Upgrade to nfs-utils-1.1.2
+
 * Mon Mar  3 2008 Steve Dickson <steved@redhat.com>  1.1.1-5
 - Stopped mountd from incorrectly logging an error
   (commit 9dd9b68c4c44f0d9102eb85ee2fa36a8b7f638e3)
