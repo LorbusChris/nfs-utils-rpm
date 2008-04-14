@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.2
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -30,6 +30,7 @@ Patch04: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 Patch05: nfs-utils-1.1.0-exportfs-open.patch
 Patch06: nfs-utils-1.1.0-exportfs-man-update.patch
 Patch07: nfs-utils-1.1.2-multi-auth-flavours.patch
+Patch08: nfs-utils-1.1.2-mount-eacces.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -88,6 +89,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch05 -p1
 %patch06 -p1
 %patch07 -p1
+%patch08 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -255,6 +257,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Apr 14 2008 Steve Dickson <steved@redhat.com>  1.1.2-2
+- Make EACCES a non fatal error (bz 439807)
+
 * Tue Mar 25 2008 Steve Dickson <steved@redhat.com>  1.1.2-1
 - Upgrade to nfs-utils-1.1.2
 
