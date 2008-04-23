@@ -258,7 +258,7 @@ fi
 
 %changelog
 * Wed Apr 23 2008 Steve Dickson <steved@redhat.com>  1.1.2-3
-- Documented out to turn off/on protocol support for
+- Documented how to turn off/on protocol support for
   rpc.nfsd in /etc/sysconfig/nfs (bz443625)
 
 * Mon Apr 14 2008 Steve Dickson <steved@redhat.com>  1.1.2-2
