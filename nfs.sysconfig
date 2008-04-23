@@ -22,7 +22,10 @@
 #
 #
 # Optional arguments passed to rpc.nfsd. See rpc.nfsd(8)
-#RPCNFSDARGS
+# Turn off v2 and v3 protocol support
+#RPCNFSDARGS="-N 2 -N 3"
+# Turn off v4 protocol support
+#RPCNFSDARGS="-N 4"
 # Number of nfs server processes to be started.
 # The default is 8. 
 #RPCNFSDCOUNT=8
