@@ -257,9 +257,11 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
-* Wed Apr 23 2008 Steve Dickson <steved@redhat.com>  1.1.2-3
+* Fri Apr 25 2008 Steve Dickson <steved@redhat.com>  1.1.2-3
 - Documented how to turn off/on protocol support for
   rpc.nfsd in /etc/sysconfig/nfs (bz443625)
+- Corrected the nfslock initscript 'status' return code (bz 441605)
+- Removed obsolete code from the nfslock initscript (bz 441604)
 
 * Mon Apr 14 2008 Steve Dickson <steved@redhat.com>  1.1.2-2
 - Make EACCES a non fatal error (bz 439807)
