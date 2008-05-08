@@ -2,11 +2,11 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.2
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
-%define all_32bit_archs i386 i686 athlon
+%define all_32bit_archs i386 i686 athlon ppc
 
 # Enable the ability to set the 'fsc' mount flag which
 # will allow NFS to use FS-Cache.
@@ -257,7 +257,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
-* Fri Apr 25 2008 Steve Dickson <steved@redhat.com>  1.1.2-3
+* Wed May  7 2008 Steve Dickson <steved@redhat.com>  1.1.2-4
+- Added ppc arch to the all_32bit_archs list (bz 442847)
+
+* Wed Apr 23 2008 Steve Dickson <steved@redhat.com>  1.1.2-3
 - Documented how to turn off/on protocol support for
   rpc.nfsd in /etc/sysconfig/nfs (bz443625)
 - Corrected the nfslock initscript 'status' return code (bz 441605)
