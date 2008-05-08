@@ -1,0 +1,28 @@
+commit ad1fc3feae447685a8ec8c7db0ad913fe3c4de5c
+Author: Sten Spans <sten@blinkenlights.nl>
+Date:   Mon May 5 14:04:58 2008 -0400
+
+    Fixed arguments to the hosts_ctl() call in the good_client() routine
+    used in the tcpwrapper support.
+    
+    Signe-off-by: Steve Dickson <steved@redhat.com>
+
+diff --git a/support/misc/tcpwrapper.c b/support/misc/tcpwrapper.c
+index 0cc9335..e4f453b 100644
+--- a/support/misc/tcpwrapper.c
++++ b/support/misc/tcpwrapper.c
+@@ -125,12 +125,12 @@ struct sockaddr_in *addr;
+ 	   return 0;
+ 
+    /* Check the official name first. */
+-   if (hosts_ctl(daemon, "", hp->h_name, ""))
++   if (hosts_ctl(daemon, hp->h_name, "", ""))
+ 	return 1;
+ 
+    /* Check aliases. */
+    for (sp = hp->h_aliases; *sp ; sp++) {
+-	if (hosts_ctl(daemon, "", *sp, ""))
++	if (hosts_ctl(daemon, *sp, "", ""))
+ 	    return 1;
+    }
+ 

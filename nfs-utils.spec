@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.2
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -31,6 +31,17 @@ Patch05: nfs-utils-1.1.0-exportfs-open.patch
 Patch06: nfs-utils-1.1.0-exportfs-man-update.patch
 Patch07: nfs-utils-1.1.2-multi-auth-flavours.patch
 Patch08: nfs-utils-1.1.2-mount-eacces.patch
+
+Patch101: nfs-utils-1.1.2-tcpwrapper-fix.patch
+Patch102: nfs-utils-1.1.2-mount-retry.patch
+Patch103: nfs-utils-1.1.2-mount-bg-fix.patch
+Patch104: nfs-utils-1.1.2-mount-remove-bg-host.patch
+Patch105: nfs-utils-1.1.2-gssd-getport.patch
+Patch106: nfs-utils-1.1.2-gssd-des-types.patch
+Patch107: nfs-utils-1.1.2-gssd-getverbose.patch
+Patch108: nfs-utils-1.1.2-gssd-creds.patch
+Patch109: nfs-utils-1.1.2-mount-chk-setuid.patch
+Patch110: nfs-utils-1.1.2-exportfs-man-typo.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -90,6 +101,17 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch06 -p1
 %patch07 -p1
 %patch08 -p1
+
+%patch101 -p1
+%patch102 -p1
+%patch103 -p1
+%patch104 -p1
+%patch105 -p1
+%patch106 -p1
+%patch107 -p1
+%patch108 -p1
+%patch109 -p1
+%patch110 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -257,6 +279,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Thu May  8 2008 Steve Dickson <steved@redhat.com>  1.1.2-5
+- Added 10 (101 thru 110) upstream patches that fixed
+  things mostly in the mount and gssd code.
+
 * Wed May  7 2008 Steve Dickson <steved@redhat.com>  1.1.2-4
 - Added ppc arch to the all_32bit_archs list (bz 442847)
 

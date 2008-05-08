@@ -1,0 +1,30 @@
+commit 0930b25ee3a1eb28b957cdc70c9a1958812d895f
+Author: NeilBrown <neilb@suse.de>
+Date:   Thu May 8 05:18:25 2008 -0400
+
+    If mount.nfs is not installed setuid, an attempt to perform a "user"
+    or "users" mount will fail with a fairly obscure error message,
+    typically about getting "permission denied" from the server.
+    
+    This patch gives a more helpful message in that case.
+    
+    Signed-off-by: NeilBrown <neilb@suse.de>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff --git a/utils/mount/mount.c b/utils/mount/mount.c
+index 5076468..d7271a1 100644
+--- a/utils/mount/mount.c
++++ b/utils/mount/mount.c
+@@ -539,6 +539,12 @@ int main(int argc, char *argv[])
+ 			mnt_err = EX_USAGE;
+ 			goto out;
+ 		}
++
++		if (geteuid() != 0) {
++			nfs_error(_("%s: not installed setuid - "
++				    "\"user\" NFS mounts not supported."), progname);
++			exit(EX_FAIL);
++		}
+ 	}
+ 
+ 	if (chk_mountpoint(mount_point)) {
