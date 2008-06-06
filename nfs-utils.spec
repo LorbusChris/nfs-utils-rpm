@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.2
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -42,6 +42,13 @@ Patch107: nfs-utils-1.1.2-gssd-getverbose.patch
 Patch108: nfs-utils-1.1.2-gssd-creds.patch
 Patch109: nfs-utils-1.1.2-mount-chk-setuid.patch
 Patch110: nfs-utils-1.1.2-exportfs-man-typo.patch
+Patch111: nfs-utils-1.1.2-warnings.patch
+Patch112: nfs-utils-1.1.2-mount-statd-chk.patch
+Patch113: nfs-utils-1.1.2-mount-cleanup.patch
+Patch114: nfs-utils-1.1.2-mount-error-reporting.patch
+Patch115: nfs-utils-1.1.2-nfsstat-m-arg.patch
+
+
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -112,6 +119,11 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch108 -p1
 %patch109 -p1
 %patch110 -p1
+%patch111 -p1
+%patch112 -p1
+%patch113 -p1
+%patch114 -p1
+%patch115 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -279,6 +291,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Fri Jun  6 2008 Steve Dickson <steved@redhat.com>  1.1.2-6
+- Added 5 (111 thru 115) upstream patches that fixed
+  things mostly in the text mounting code.
+
 * Thu May  8 2008 Steve Dickson <steved@redhat.com>  1.1.2-5
 - Added 10 (101 thru 110) upstream patches that fixed
   things mostly in the mount and gssd code.

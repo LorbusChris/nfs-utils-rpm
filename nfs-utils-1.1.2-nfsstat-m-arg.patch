@@ -1,0 +1,26 @@
+commit d03090be4f440d70328988e9f792f3bd0ebd956b
+Author: Neil Brown <neilb@suse.de>
+Date:   Fri Jun 6 15:17:55 2008 -0400
+
+    nfsstat -m lists all current nfs mounts, with the mount options.
+    It does this by reading /proc/mounts and looking for mounts of type
+    "nfs".  It really should check for "nfs4" as well.
+    
+    For simplicity, just check the first 3 characters of the type.
+    
+    Signed-off-by: NeilBrown <neilb@suse.de>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff --git a/utils/nfsstat/nfsstat.c b/utils/nfsstat/nfsstat.c
+index aa6c961..d2cca8d 100644
+--- a/utils/nfsstat/nfsstat.c
++++ b/utils/nfsstat/nfsstat.c
+@@ -716,7 +716,7 @@ mounts(const char *name)
+ 		if (!(type = strtok(NULL, " \t")))
+ 			continue;
+ 
+-		if (strcmp(type, "nfs")) {
++		if (strcmp(type, "nfs") && strcmp(type,"nfs4")) {
+ 		    continue;
+ 		}
+ 

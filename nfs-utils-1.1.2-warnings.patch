@@ -1,0 +1,47 @@
+commit fd54675db0806e81c17ee7e7eec0abfcd33f1f23
+Author: Steve Dickson <steved@redhat.com>
+Date:   Fri Jun 6 14:44:48 2008 -0400
+
+    Cleaned up warnings in rmtab.c and xlog.c
+    
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff --git a/support/export/rmtab.c b/support/export/rmtab.c
+index 8f392a7..0ce3682 100644
+--- a/support/export/rmtab.c
++++ b/support/export/rmtab.c
+@@ -23,7 +23,7 @@ int
+ rmtab_read(void)
+ {
+ 	struct rmtabent		*rep;
+-	nfs_export		*exp;
++	nfs_export		*exp = NULL;
+ 
+ 	setrmtabent("r");
+ 	while ((rep = getrmtabent(1, NULL)) != NULL) {
+@@ -31,10 +31,10 @@ rmtab_read(void)
+ 		int			htype;
+ 		
+ 		htype = client_gettype(rep->r_client);
+-		if (htype == MCL_FQDN || htype == MCL_SUBNETWORK
++		if (htype == MCL_FQDN || (htype == MCL_SUBNETWORK
+ 		    && (hp = gethostbyname (rep->r_client))
+ 		    && (hp = hostent_dup (hp),
+-			exp = export_allowed (hp, rep->r_path))) {
++			(exp = export_allowed (hp, rep->r_path))))) {
+ 			/* see if the entry already exists, otherwise this was an instantiated
+ 			 * wild card, and we must add it
+ 			 */
+diff --git a/support/nfs/xlog.c b/support/nfs/xlog.c
+index 6820346..5ac9ba0 100644
+--- a/support/nfs/xlog.c
++++ b/support/nfs/xlog.c
+@@ -133,7 +133,7 @@ xlog_enabled(int fac)
+ void
+ xlog_backend(int kind, const char *fmt, va_list args)
+ {
+-	va_list args2;
++	va_list args2 = NULL;
+ 
+ 	if (!(kind & (L_ALL)) && !(logging && (kind & logmask)))
+ 		return;
