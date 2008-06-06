@@ -32,16 +32,3 @@ index 8f392a7..0ce3682 100644
  			/* see if the entry already exists, otherwise this was an instantiated
  			 * wild card, and we must add it
  			 */
-diff --git a/support/nfs/xlog.c b/support/nfs/xlog.c
-index 6820346..5ac9ba0 100644
---- a/support/nfs/xlog.c
-+++ b/support/nfs/xlog.c
-@@ -133,7 +133,7 @@ xlog_enabled(int fac)
- void
- xlog_backend(int kind, const char *fmt, va_list args)
- {
--	va_list args2;
-+	va_list args2 = (va_list)NULL;
- 
- 	if (!(kind & (L_ALL)) && !(logging && (kind & logmask)))
- 		return;
