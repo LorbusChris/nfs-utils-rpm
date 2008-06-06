@@ -41,7 +41,7 @@ index 6820346..5ac9ba0 100644
  xlog_backend(int kind, const char *fmt, va_list args)
  {
 -	va_list args2;
-+	va_list args2 = NULL;
++	va_list args2 = (va_list)NULL;
  
  	if (!(kind & (L_ALL)) && !(logging && (kind & logmask)))
  		return;
