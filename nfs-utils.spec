@@ -47,8 +47,11 @@ Patch112: nfs-utils-1.1.2-mount-statd-chk.patch
 Patch113: nfs-utils-1.1.2-mount-cleanup.patch
 Patch114: nfs-utils-1.1.2-mount-error-reporting.patch
 Patch115: nfs-utils-1.1.2-nfsstat-m-arg.patch
-
-
+Patch116: nfs-utils-1.1.2-nfsstat-counters.patch
+Patch117: nfs-utils-1.1.2-mountstats.patch
+Patch118: nfs-utils-1.1.2-mountstats-rdma.patch
+Patch119: nfs-utils-1.1.2-nfs-iostat.patch
+Patch120: nfs-utils-1.1.2-nfs-iostat-rdma.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -124,6 +127,11 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch113 -p1
 %patch114 -p1
 %patch115 -p1
+%patch116 -p1
+%patch117 -p1
+%patch118 -p1
+%patch119 -p1
+%patch120 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -143,7 +151,7 @@ export PIE
 
 sh -x autogen.sh
 
-CFLAGS="`echo $RPM_OPT_FLAGS $ARCH_OPT_FLAGS $PIE`"
+CFLAGS="`echo $RPM_OPT_FLAGS $ARCH_OPT_FLAGS $PIE -D_FILE_OFFSET_BITS=64`"
 %configure \
     CFLAGS="$CFLAGS" \
     CPPFLAGS="$DEFINES" \
@@ -291,6 +299,12 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Jun 23 2008 Steve Dickson <steved@redhat.com>  1.1.2-7
+- Added -D_FILE_OFFSET_BITS=64 to CFLAGS
+- make nfsstat read and print stats as unsigned integers
+- Added (but not installed) the mountstats and nfs-iostat
+  python scripts.
+
 * Fri Jun  6 2008 Steve Dickson <steved@redhat.com>  1.1.2-6
 - Added 5 (111 thru 115) upstream patches that fixed
   things mostly in the text mounting code.
