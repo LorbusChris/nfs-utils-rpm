@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.2
-Release: 6%{?dist}
+Release: 8%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -52,6 +52,7 @@ Patch117: nfs-utils-1.1.2-mountstats.patch
 Patch118: nfs-utils-1.1.2-mountstats-rdma.patch
 Patch119: nfs-utils-1.1.2-nfs-iostat.patch
 Patch120: nfs-utils-1.1.2-nfs-iostat-rdma.patch
+Patch121: nfs-utils-1.1.2-rmtab-fqdn.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -132,6 +133,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch118 -p1
 %patch119 -p1
 %patch120 -p1
+%patch121 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -299,6 +301,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Jun 25 2008 Steve Dickson <steved@redhat.com>  1.1.2-8
+- FQDNs in the rmtab causes exportfs to seg fault (bz 444275)
+
 * Mon Jun 23 2008 Steve Dickson <steved@redhat.com>  1.1.2-7
 - Added -D_FILE_OFFSET_BITS=64 to CFLAGS
 - make nfsstat read and print stats as unsigned integers
