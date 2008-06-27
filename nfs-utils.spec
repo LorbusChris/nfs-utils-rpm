@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.2
-Release: 8%{?dist}
+Release: 9%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -218,13 +218,7 @@ fi
 /sbin/chkconfig --add rpcgssd
 /sbin/chkconfig --add rpcsvcgssd
 # Make sure statd used the correct uid/gid.
-if [ -f /var/lock/subsys/nfslock ]; then
-	/etc/rc.d/init.d/nfslock stop > /dev/null
-	chown -R rpcuser:rpcuser /var/lib/nfs/statd
-	/etc/rc.d/init.d/nfslock start > /dev/null
-else
-	chown -R rpcuser:rpcuser /var/lib/nfs/statd
-fi
+chown -R rpcuser:rpcuser /var/lib/nfs/statd
 
 %preun
 if [ "$1" = "0" ]; then
@@ -301,6 +295,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Fri Jun 27 2008 Steve Dickson <steved@redhat.com>  1.1.2-9
+- Removed the nfslock service start/stop from %%post section 
+  (bz 453046)
+
 * Wed Jun 25 2008 Steve Dickson <steved@redhat.com>  1.1.2-8
 - FQDNs in the rmtab causes exportfs to seg fault (bz 444275)
 
