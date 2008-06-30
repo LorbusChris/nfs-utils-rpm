@@ -2,11 +2,11 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.2
-Release: 10%{?dist}
+Release: 11%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
-%define all_32bit_archs i386 i686 athlon ppc
+%define all_32bit_archs i386 i686 athlon ppc sparcv9
 
 # Enable the ability to set the 'fsc' mount flag which
 # will allow NFS to use FS-Cache.
@@ -144,7 +144,7 @@ find . -name "*.orig" | xargs rm -f
 
 %build
 
-%ifarch s390 s390x
+%ifarch s390 s390x sparcv9 sparc64
 PIE="-fPIE"
 %else
 PIE="-fpie"
@@ -295,6 +295,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Jun 30 2008 Dennis Gilmore <dennis@ausil.us> 1.1.2-11
+- add sparc arch handling 
+
 * Mon Jun 30 2008 Steve Dickson <steved@redhat.com>  1.1.2-10
 - Rebuild for the updated libevent lib.
 
