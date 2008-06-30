@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.2
-Release: 9%{?dist}
+Release: 10%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -80,14 +80,14 @@ License: GPL
 Buildroot: %{_tmppath}/%{name}-%{version}-root
 Requires: rpcbind, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
-BuildRequires: libgssglue-devel libevent-devel >= 1.3b
+BuildRequires: libgssglue-devel libevent-devel >= 1.4.4
 BuildRequires: nfs-utils-lib-devel >= 1.1.0-3
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, glibc-headers
 BuildRequires: e2fsprogs-devel, krb5-devel, tcp_wrappers-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
-Requires: nfs-utils-lib >= 1.1.0-3 libgssglue libevent >= 1.3b
+Requires: nfs-utils-lib >= 1.1.0-3 libgssglue libevent >= 1.4.4
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
@@ -295,6 +295,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Jun 30 2008 Steve Dickson <steved@redhat.com>  1.1.2-10
+- Rebuild for the updated libevent lib.
+
 * Fri Jun 27 2008 Steve Dickson <steved@redhat.com>  1.1.2-9
 - Removed the nfslock service start/stop from %%post section 
   (bz 453046)
