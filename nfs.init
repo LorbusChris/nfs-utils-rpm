@@ -171,10 +171,18 @@ case "$1" in
   	[ -f /var/lock/subsys/nfs ] && {
 		$0 stop
 		$0 start
+		RETVAL=$?
+	}
+	;;
+  condstop)
+	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd condstop
+  	[ -f /var/lock/subsys/nfs ] && {
+		$0 stop
+		RETVAL=$?
 	}
 	;;
   *)
-	echo $"Usage: nfs {start|stop|status|restart|reload|condrestart}"
+	echo $"Usage: nfs {start|stop|status|restart|reload|condrestart|condstop}"
 	RETVAL=3
 	;;
 esac

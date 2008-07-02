@@ -105,8 +105,14 @@ case "$1" in
 		RETVAL=$?
 	fi
 	;;
+  condstop)
+	if [ -f $LOCKFILE ]; then
+		$0 stop
+		RETVAL=$?
+	fi
+	;;
   *)
-	echo $"Usage: $0 {start|stop|restart|condstart|condrestart|status}"
+	echo $"Usage: $0 {start|stop|restart|condstart|condrestart|status|condstop}"
 	RETVAL=3
 	;;
 esac

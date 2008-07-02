@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.2
-Release: 11%{?dist}
+Release: 12%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -31,6 +31,7 @@ Patch05: nfs-utils-1.1.0-exportfs-open.patch
 Patch06: nfs-utils-1.1.0-exportfs-man-update.patch
 Patch07: nfs-utils-1.1.2-multi-auth-flavours.patch
 Patch08: nfs-utils-1.1.2-mount-eacces.patch
+Patch09: nfs-utils-1.1.2-smnotifypath.patch
 
 Patch101: nfs-utils-1.1.2-tcpwrapper-fix.patch
 Patch102: nfs-utils-1.1.2-mount-retry.patch
@@ -80,14 +81,14 @@ License: GPL
 Buildroot: %{_tmppath}/%{name}-%{version}-root
 Requires: rpcbind, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
-BuildRequires: libgssglue-devel libevent-devel >= 1.4.4
+BuildRequires: libgssglue-devel libevent-devel
 BuildRequires: nfs-utils-lib-devel >= 1.1.0-3
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, glibc-headers
 BuildRequires: e2fsprogs-devel, krb5-devel, tcp_wrappers-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
-Requires: nfs-utils-lib >= 1.1.0-3 libgssglue libevent >= 1.4.4
+Requires: nfs-utils-lib >= 1.1.0-3 libgssglue libevent
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
@@ -112,6 +113,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch06 -p1
 %patch07 -p1
 %patch08 -p1
+%patch09 -p1
 
 %patch101 -p1
 %patch102 -p1
@@ -182,6 +184,7 @@ touch $RPM_BUILD_ROOT/var/lib/nfs/rmtab
 mv $RPM_BUILD_ROOT/usr/sbin/rpc.statd $RPM_BUILD_ROOT/sbin
 
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/statd/sm
+mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/statd/sm.bak
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/v4recovery
 
 %clean
@@ -222,10 +225,10 @@ chown -R rpcuser:rpcuser /var/lib/nfs/statd
 
 %preun
 if [ "$1" = "0" ]; then
-    /etc/rc.d/init.d/nfs condrestart
-    /etc/rc.d/init.d/rpcgssd condrestart
-    /etc/rc.d/init.d/rpcidmapd condrestart
-    /etc/rc.d/init.d/nfslock condrestart
+    /etc/rc.d/init.d/nfs condstop > /dev/null
+    /etc/rc.d/init.d/rpcgssd condstop > /dev/null
+    /etc/rc.d/init.d/rpcidmapd condstop > /dev/null
+    /etc/rc.d/init.d/nfslock condstop > /dev/null
     /sbin/chkconfig --del rpcidmapd
     /sbin/chkconfig --del rpcgssd
     /sbin/chkconfig --del rpcsvcgssd
@@ -267,10 +270,11 @@ fi
 %dir /var/lib/nfs
 %dir %attr(700,rpcuser,rpcuser) /var/lib/nfs/statd
 %dir %attr(700,rpcuser,rpcuser) /var/lib/nfs/statd/sm
+%dir %attr(700,rpcuser,rpcuser) /var/lib/nfs/statd/sm.bak
+%config(noreplace) %attr(644,rpcuser,rpcuser) /var/lib/nfs/state
 %config(noreplace) /var/lib/nfs/xtab
 %config(noreplace) /var/lib/nfs/etab
 %config(noreplace) /var/lib/nfs/rmtab
-%config(noreplace) /var/lib/nfs/state
 %doc linux-nfs/*
 /sbin/rpc.statd
 /usr/sbin/exportfs
@@ -295,6 +299,11 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Jul  2 2008 Steve Dickson <steved@redhat.com> 1.1.2-12
+- Changed the default directories for sm-notify (bz 435480)
+- Added 'condstop' to init scripts so service are not
+  started when nfs-utils is removed.
+
 * Mon Jun 30 2008 Dennis Gilmore <dennis@ausil.us> 1.1.2-11
 - add sparc arch handling 
 
