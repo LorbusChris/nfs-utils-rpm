@@ -31,7 +31,7 @@ Patch05: nfs-utils-1.1.0-exportfs-open.patch
 Patch06: nfs-utils-1.1.0-exportfs-man-update.patch
 Patch07: nfs-utils-1.1.2-multi-auth-flavours.patch
 Patch08: nfs-utils-1.1.2-mount-eacces.patch
-Patch09: nfs-utils-1.1.2-smnotifypath.patch
+Patch09: nfs-utils-1.1.0-smnotify-path.patch
 
 Patch101: nfs-utils-1.1.2-tcpwrapper-fix.patch
 Patch102: nfs-utils-1.1.2-mount-retry.patch

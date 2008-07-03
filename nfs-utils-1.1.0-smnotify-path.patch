@@ -1,24 +1,37 @@
-diff -up nfs-utils-1.1.2/utils/statd/sm-notify.c.orig nfs-utils-1.1.2/utils/statd/sm-notify.c
---- nfs-utils-1.1.2/utils/statd/sm-notify.c.orig	2008-03-14 11:46:29.000000000 -0400
-+++ nfs-utils-1.1.2/utils/statd/sm-notify.c	2008-07-02 18:34:24.000000000 -0400
-@@ -24,11 +24,12 @@
+commit 02968aa55972b680fa00273188da281d7612ca3e
+Author: Steve Dickson <steved@redhat.com>
+Date:   Fri Sep 14 14:19:50 2007 -0400
+
+    Changed the default paths in sm-notify to
+    /var/lib/nfs/statd which is where the locking
+    state is kept in Red Hat distros.
+    
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff --git a/utils/statd/sm-notify.c b/utils/statd/sm-notify.c
+index 98c03f9..862889f 100644
+--- a/utils/statd/sm-notify.c
++++ b/utils/statd/sm-notify.c
+@@ -24,11 +24,13 @@
  #include <errno.h>
  #include <grp.h>
  
 +#define STATD_PATH_XTN "statd/"
++
  #ifndef BASEDIR
  # ifdef NFS_STATEDIR
 -#  define BASEDIR		NFS_STATEDIR
 +#  define BASEDIR		NFS_STATEDIR "/" STATD_PATH_XTN
  # else
 -#  define BASEDIR		"/var/lib/nfs"
-+#  define BASEDIR		"/var/lib/nfs/" STATD_PATH_XTN
++#  define BASEDIR		"/var/lib/nfs" "/" STATD_PATH_XTN
  # endif
  #endif
  
-diff -up nfs-utils-1.1.2/utils/statd/sm-notify.man.orig nfs-utils-1.1.2/utils/statd/sm-notify.man
---- nfs-utils-1.1.2/utils/statd/sm-notify.man.orig	2008-03-14 11:46:29.000000000 -0400
-+++ nfs-utils-1.1.2/utils/statd/sm-notify.man	2008-07-02 18:34:13.000000000 -0400
+diff --git a/utils/statd/sm-notify.man b/utils/statd/sm-notify.man
+index dd03b8d..69b7059 100644
+--- a/utils/statd/sm-notify.man
++++ b/utils/statd/sm-notify.man
 @@ -33,7 +33,7 @@ but this is configurable.
  For each NFS client or server machine to be monitored,
  .B rpc.statd
