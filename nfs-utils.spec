@@ -23,7 +23,7 @@ Source14: rpcsvcgssd.init
 Source15: nfs.sysconfig
 
 Patch00: nfs-utils-1.0.5-statdpath.patch
-Patch01: nfs-utils-1.1.2-smnotifypath.patch
+Patch01: nfs-utils-1.1.0-smnotify-path.patch
 Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 
 %if %{enablefscache}
