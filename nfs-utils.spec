@@ -1,8 +1,8 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
-Version: 1.1.2
-Release: 12%{?dist}
+Version: 1.1.3
+Release: 1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -23,37 +23,8 @@ Source14: rpcsvcgssd.init
 Source15: nfs.sysconfig
 
 Patch00: nfs-utils-1.0.5-statdpath.patch
-Patch01: nfs-utils-1.0.6-mountd.patch
-Patch02: nfs-utils-1.0.6-gssd_mixed_case.patch
-Patch03: nfs-utils-1.1.0-showmount-rpcerror.patch
-Patch04: nfs-utils-1.1.0-exp-subtree-warn-off.patch
-Patch05: nfs-utils-1.1.0-exportfs-open.patch
-Patch06: nfs-utils-1.1.0-exportfs-man-update.patch
-Patch07: nfs-utils-1.1.2-multi-auth-flavours.patch
-Patch08: nfs-utils-1.1.2-mount-eacces.patch
-Patch09: nfs-utils-1.1.0-smnotify-path.patch
-
-Patch101: nfs-utils-1.1.2-tcpwrapper-fix.patch
-Patch102: nfs-utils-1.1.2-mount-retry.patch
-Patch103: nfs-utils-1.1.2-mount-bg-fix.patch
-Patch104: nfs-utils-1.1.2-mount-remove-bg-host.patch
-Patch105: nfs-utils-1.1.2-gssd-getport.patch
-Patch106: nfs-utils-1.1.2-gssd-des-types.patch
-Patch107: nfs-utils-1.1.2-gssd-getverbose.patch
-Patch108: nfs-utils-1.1.2-gssd-creds.patch
-Patch109: nfs-utils-1.1.2-mount-chk-setuid.patch
-Patch110: nfs-utils-1.1.2-exportfs-man-typo.patch
-Patch111: nfs-utils-1.1.2-warnings.patch
-Patch112: nfs-utils-1.1.2-mount-statd-chk.patch
-Patch113: nfs-utils-1.1.2-mount-cleanup.patch
-Patch114: nfs-utils-1.1.2-mount-error-reporting.patch
-Patch115: nfs-utils-1.1.2-nfsstat-m-arg.patch
-Patch116: nfs-utils-1.1.2-nfsstat-counters.patch
-Patch117: nfs-utils-1.1.2-mountstats.patch
-Patch118: nfs-utils-1.1.2-mountstats-rdma.patch
-Patch119: nfs-utils-1.1.2-nfs-iostat.patch
-Patch120: nfs-utils-1.1.2-nfs-iostat-rdma.patch
-Patch121: nfs-utils-1.1.2-rmtab-fqdn.patch
+Patch01: nfs-utils-1.1.2-smnotifypath.patch
+Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -107,35 +78,6 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch00 -p1
 %patch01 -p1
 %patch02 -p1
-%patch03 -p1
-%patch04 -p1
-%patch05 -p1
-%patch06 -p1
-%patch07 -p1
-%patch08 -p1
-%patch09 -p1
-
-%patch101 -p1
-%patch102 -p1
-%patch103 -p1
-%patch104 -p1
-%patch105 -p1
-%patch106 -p1
-%patch107 -p1
-%patch108 -p1
-%patch109 -p1
-%patch110 -p1
-%patch111 -p1
-%patch112 -p1
-%patch113 -p1
-%patch114 -p1
-%patch115 -p1
-%patch116 -p1
-%patch117 -p1
-%patch118 -p1
-%patch119 -p1
-%patch120 -p1
-%patch121 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -299,6 +241,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Jul 28 2008 Steve Dickson <steved@redhat.com> 1.1.3-1
+- Updated to latest upstream version: 1.1.3
+
 * Wed Jul  2 2008 Steve Dickson <steved@redhat.com> 1.1.2-12
 - Changed the default directories for sm-notify (bz 435480)
 - Added 'condstop' to init scripts so service are not
