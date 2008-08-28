@@ -1,0 +1,29 @@
+commit 86c3a79a108091fe08869a887438cc2d4e1126ed
+Author: Neil Brown <neilb@suse.de>
+Date:   Wed Aug 27 16:30:19 2008 -0400
+
+    mount issue with Mac OSX and --manage-gids, client hangs
+    
+    Make sure are zero len group list is sent down to the
+    kernel when the gids do not exist on the server.
+    
+    Tested-by: Alex Samad <alex@samad.com.au>
+    Signed-off-by: Neil Brown <neilb@suse.de>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff --git a/utils/mountd/cache.c b/utils/mountd/cache.c
+index f555dcc..609c6e3 100644
+--- a/utils/mountd/cache.c
++++ b/utils/mountd/cache.c
+@@ -158,8 +158,10 @@ void auth_unix_gid(FILE *f)
+ 		qword_printint(f, ngroups);
+ 		for (i=0; i<ngroups; i++)
+ 			qword_printint(f, groups[i]);
+-	}
++	} else
++		qword_printint(f, 0);
+ 	qword_eol(f);
++
+ 	if (groups != glist)
+ 		free(groups);
+ }

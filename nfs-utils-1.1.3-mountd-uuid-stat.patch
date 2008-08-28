@@ -1,0 +1,33 @@
+commit 3a340251597a5b0c579c31d8caf9aa3b53a77016
+Author: David Woodhouse <David.Woodhouse@intel.com>
+Date:   Thu Aug 28 11:05:17 2008 -0400
+
+    Use fsid from statfs for UUID if blkid can't cope (or not used)
+    
+    Signed-off-by: David Woodhouse <David.Woodhouse@intel.com>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff --git a/utils/mountd/cache.c b/utils/mountd/cache.c
+index 23e2344..fa15472 100644
+--- a/utils/mountd/cache.c
++++ b/utils/mountd/cache.c
+@@ -215,8 +215,17 @@ int get_uuid(char *path, char *uuid, int uuidlen, char *u)
+ 
+ 	if (path) {
+ 		val = get_uuid_blkdev(path);
+-		if (!val)
+-			return 0;
++		if (!val) {
++			struct statfs64 st;
++
++			if (statfs64(path, &st))
++				return 0;
++			if (!st.f_fsid.__val[0] && !st.f_fsid.__val[1])
++				return 0;
++			snprintf(fsid_val, 17, "%08x%08x",
++				 st.f_fsid.__val[0], st.f_fsid.__val[1]);
++			val = fsid_val;
++		}
+ 	} else {
+ 		val = uuid;
+ 	}
