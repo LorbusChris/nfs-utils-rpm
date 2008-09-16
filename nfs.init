@@ -14,41 +14,44 @@
 . /etc/rc.d/init.d/functions
 
 # Source networking configuration.
-if [ ! -f /etc/sysconfig/network ]; then
-    exit 6
-fi
-
-. /etc/sysconfig/network
-
-# Check that networking is up.
-[ "${NETWORKING}" = "no" ] && exit 6
-
-[ -x /usr/sbin/rpc.nfsd ] || exit 5
-[ -x /usr/sbin/rpc.mountd ] || exit 5
-[ -x /usr/sbin/exportfs ] || exit 5
-
-# Don't fail if /etc/exports doesn't exist; create a bare-bones version and continue.
-[ -r /etc/exports ] || \
-    { touch /etc/exports && chmod u+rw,g+r,o+r /etc/exports ; } || \
-    { echo "/etc/exports does not exist" ; exit 0 ; }
-
-# Check for and source configuration file otherwise set defaults
-[ -f /etc/sysconfig/nfs ] && . /etc/sysconfig/nfs
-
-[ -z "$MOUNTD_NFS_V2" ] && MOUNTD_NFS_V2=default
-[ -z "$MOUNTD_NFS_V3" ] && MOUNTD_NFS_V3=default
-
-# Number of servers to be started by default
-[ -z "$RPCNFSDCOUNT" ] && RPCNFSDCOUNT=8
-
-# Remote quota server
-[ -z "$RQUOTAD" ] && RQUOTAD=`type -path rpc.rquotad`
+[ -f /etc/sysconfig/network ] &&  . /etc/sysconfig/network
 
 RETVAL=0
 
 # See how we were called.
 case "$1" in
   start)
+
+	# Check that networking is up.
+	[ "${NETWORKING}" != "yes" ] && exit 6
+
+	[ -x /usr/sbin/rpc.nfsd ] || exit 5
+	[ -x /usr/sbin/rpc.mountd ] || exit 5
+	[ -x /usr/sbin/exportfs ] || exit 5
+
+	# Make sure the rpc.mountd is not already running.
+	if status rpc.mountd > /dev/null ; then
+		exit 0
+	fi
+
+	# Don't fail if /etc/exports doesn't exist; create a bare-bones 
+	# version and continue.
+	[ -r /etc/exports ] || \
+    	{ touch /etc/exports && chmod u+rw,g+r,o+r /etc/exports ; } || \
+    	{ echo "/etc/exports does not exist" ; exit 0 ; }
+
+	# Check for and source configuration file otherwise set defaults
+	[ -f /etc/sysconfig/nfs ] && . /etc/sysconfig/nfs
+
+	[ -z "$MOUNTD_NFS_V2" ] && MOUNTD_NFS_V2=default
+	[ -z "$MOUNTD_NFS_V3" ] && MOUNTD_NFS_V3=default
+
+	# Number of servers to be started by default
+	[ -z "$RPCNFSDCOUNT" ] && RPCNFSDCOUNT=8
+
+	# Remote quota server
+	[ -z "$RQUOTAD" ] && RQUOTAD=`type -path rpc.rquotad`
+
 	# Start daemons.
 	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd start
 

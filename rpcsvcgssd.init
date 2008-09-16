@@ -12,22 +12,13 @@
 . /etc/init.d/functions
 
 # Source networking configuration.
-if [ ! -f /etc/sysconfig/network ]; then
-    exit 6
-fi
-. /etc/sysconfig/network
-
-# Check that networking is up.
-[ "${NETWORKING}" = "no" ] && exit 6
-
-[ ! -x /usr/sbin/rpc.svcgssd ] && exit 5
+[ -f /etc/sysconfig/network ] && . /etc/sysconfig/network
 
 # Check for and source configuration file otherwise set defaults
 [ -f /etc/sysconfig/nfs ] && . /etc/sysconfig/nfs
-[ "${SECURE_NFS}" != "yes" ] && exit 6
 
-# List of kernel modules to load
-[ -z "${SECURE_NFS_MODS}" ] && SECURE_NFS_MODS="des rpcsec_gss_krb5"
+# See if we are configured to start 
+[ "${SECURE_NFS}" != "yes" ] && exit 6
 
 RETVAL=0
 LOCKFILE=/var/lock/subsys/rpcsvcgssd
@@ -35,6 +26,11 @@ prog="rpc.svcgssd"
 
 case "$1" in
   start|condstart)
+	# Check that networking is up.
+	[ "${NETWORKING}" != "yes" ] && exit 6
+	[ "${SECURE_NFS}" != "yes" ] && exit 6
+	[ ! -x /usr/sbin/rpc.svcgssd ] && exit 5
+
 	# Make sure the daemon is not already running.
 	if status $prog > /dev/null ; then
 		exit 0
@@ -42,6 +38,9 @@ case "$1" in
 	rm -f $LOCKFILE
 
 	echo -n $"Starting RPC svcgssd: "
+	# List of kernel modules to load
+	[ -z "${SECURE_NFS_MODS}" ] && SECURE_NFS_MODS="des rpcsec_gss_krb5"
+
 
 	# Make sure the rpc_pipefs filesystem is available
 	[ "${RPCMTAB}" != "noload" ] && {

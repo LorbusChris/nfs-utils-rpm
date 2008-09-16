@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.3
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -265,6 +265,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Sep 16 2008 Steve Dickson <steved@redhat.com> 1.1.3-5
+- Reworked init scripts so service will be able to
+  stop when some of the checks fail. (bz 462508)
+
 * Thu Aug 28 2008 Steve Dickson <steved@redhat.com> 1.1.3-4
 - Added in a number of up upstream patches (101 thru 110).
 

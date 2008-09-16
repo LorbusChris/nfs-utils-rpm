@@ -12,15 +12,7 @@
 . /etc/init.d/functions
 
 # Source networking configuration.
-if [ ! -f /etc/sysconfig/network ]; then
-    exit 6
-fi
-. /etc/sysconfig/network
-
-# Check that networking is up.
-[ "${NETWORKING}" = "no" ] && exit 6
-
-[ ! -x /usr/sbin/rpc.idmapd ] && exit 5
+[ -f /etc/sysconfig/network ] &&  . /etc/sysconfig/network
 
 # Check for and source configuration file otherwise set defaults
 [ -f /etc/sysconfig/nfs ] && . /etc/sysconfig/nfs
@@ -31,10 +23,20 @@ prog="rpc.idmapd"
 
 case "$1" in
   start|condstart)
+	# Check that networking is up.
+	[ "${NETWORKING}" != "yes" ] && exit 6
+	
+	[ ! -x /usr/sbin/rpc.idmapd ] && exit 5
+
 	# Make sure the daemon is not already running.
 	[ "$1" = "condstart" -a -n "`pidofproc $prog`" ] && {
 		killproc $prog "-SIGHUP" > /dev/null
 		exit 0
+	}
+	[ "$1" = "start" ] && {
+		if status $prog > /dev/null ; then
+			exit 0
+		fi
 	}
 	rm -f $LOCKFILE
 
@@ -58,8 +60,6 @@ case "$1" in
 			}
 		}
 	}
-
-	# Make sure the mount worked.
 
 	# Start daemon.
 	daemon $prog ${RPCIDMAPDARGS}

@@ -12,23 +12,13 @@
 . /etc/init.d/functions
 
 # Source networking configuration.
-if [ ! -f /etc/sysconfig/network ]; then
-    exit 6
-fi
-. /etc/sysconfig/network
-
-# Check that networking is up.
-[ "${NETWORKING}" = "no" ] && exit 6
-
-[ ! -x /usr/sbin/rpc.gssd ] && exit 5
+[ -f /etc/sysconfig/network ]&&  . /etc/sysconfig/network
 
 # Check for and source configuration file otherwise set defaults
 [ -f /etc/sysconfig/nfs ] && . /etc/sysconfig/nfs
+
+# See if we are configured to start
 [ "${SECURE_NFS}" != "yes" ] && exit 6
-
-# List of kernel modules to load
-[ -z "${SECURE_NFS_MODS}" ] && SECURE_NFS_MODS="des rpcsec_gss_krb5"
-
 
 # Try to use machine credentials by default
 RETVAL=0
@@ -37,13 +27,24 @@ prog="rpc.gssd"
 
 case "$1" in
   start|condstart)
+	# Check that networking is up.
+	[ "${NETWORKING}" != "yes" ] && exit 6
+	[ ! -x /usr/sbin/rpc.gssd ] && exit 5
+
 	# Make sure the daemon is not already running.
 	if status $prog > /dev/null ; then
 		exit 0
 	fi
-	rm -f $LOCKFILE
 
+	# During condstart need to check again to see 
+	# if we are configured to start
+	[ "${SECURE_NFS}" != "yes" ] && exit 6
+
+	rm -f $LOCKFILE
 	echo -n $"Starting RPC gssd: "
+
+	# List of kernel modules to load
+	[ -z "${SECURE_NFS_MODS}" ] && SECURE_NFS_MODS="des rpcsec_gss_krb5"
 
 	# Make sure the rpc_pipefs filesystem is available
 	[ "${RPCMTAB}" != "noload" ] && {
