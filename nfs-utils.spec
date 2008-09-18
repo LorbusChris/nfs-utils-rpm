@@ -265,9 +265,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
-* Tue Sep 16 2008 Steve Dickson <steved@redhat.com> 1.1.3-5
+* Thu Sep 18 2008 Steve Dickson <steved@redhat.com> 1.1.3-5
 - Reworked init scripts so service will be able to
   stop when some of the checks fail. (bz 462508)
+- Pre-load nfsd when args to rpc.nfsd are given (bz 441983)
 
 * Thu Aug 28 2008 Steve Dickson <steved@redhat.com> 1.1.3-4
 - Added in a number of up upstream patches (101 thru 110).

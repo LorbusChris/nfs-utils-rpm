@@ -73,6 +73,12 @@ case "$1" in
 		RETVAL=$?
 	    echo
 	fi
+
+	# Load preload module so arguments to rpc.nfsd will take effect
+	[ -n "$RPCNFSDARGS" -a "$NFSD_MODULE" != "noload" ] && {
+		[ -x /sbin/modprobe ] && /sbin/modprobe nfsd
+	}
+
 	echo -n $"Starting NFS daemon: "
 	daemon rpc.nfsd $RPCNFSDARGS $RPCNFSDCOUNT
 	RETVAL=$?
