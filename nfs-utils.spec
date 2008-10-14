@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.3
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -41,6 +41,7 @@ Patch107: nfs-utils-1.1.3-mountd-cleanup.patch
 Patch108: nfs-utils-1.1.3-mountd-pseudoflavor-support.patch
 Patch109: nfs-utils-1.1.3-idmapd-rm-idmapconf.patch
 Patch110: nfs-utils-1.1.3-network-conn-udp-ports.patch
+Patch111: nfs-utils-1.1.3-smnotify-earlyexit.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -106,6 +107,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch108 -p1
 %patch109 -p1
 %patch110 -p1
+%patch111 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -265,6 +267,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Oct 14 2008 Steve Dickson <steved@redhat.com> 1.1.3-6
+- sm-notify exists when there are no hosts to notify
+
 * Thu Sep 18 2008 Steve Dickson <steved@redhat.com> 1.1.3-5
 - Reworked init scripts so service will be able to
   stop when some of the checks fail. (bz 462508)
