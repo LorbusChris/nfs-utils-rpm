@@ -1,9 +1,9 @@
-diff -up nfs-utils-1.1.3/utils/statd/sm-notify.c.orig nfs-utils-1.1.3/utils/statd/sm-notify.c
---- nfs-utils-1.1.3/utils/statd/sm-notify.c.orig	2008-07-27 17:01:45.000000000 -0400
-+++ nfs-utils-1.1.3/utils/statd/sm-notify.c	2008-07-28 04:30:37.000000000 -0400
-@@ -26,11 +26,13 @@
- 
- #include "config.h"
+diff -up nfs-utils-1.1.4/utils/statd/sm-notify.c.orig nfs-utils-1.1.4/utils/statd/sm-notify.c
+--- nfs-utils-1.1.4/utils/statd/sm-notify.c.orig	2008-10-17 10:20:09.000000000 -0400
++++ nfs-utils-1.1.4/utils/statd/sm-notify.c	2008-10-17 11:22:01.000000000 -0400
+@@ -28,11 +28,13 @@
+ #include <errno.h>
+ #include <grp.h>
  
 +#define STATD_PATH_XTN "statd/"
 +
@@ -17,9 +17,9 @@ diff -up nfs-utils-1.1.3/utils/statd/sm-notify.c.orig nfs-utils-1.1.3/utils/stat
  # endif
  #endif
  
-diff -up nfs-utils-1.1.3/utils/statd/sm-notify.man.orig nfs-utils-1.1.3/utils/statd/sm-notify.man
---- nfs-utils-1.1.3/utils/statd/sm-notify.man.orig	2008-07-27 17:01:45.000000000 -0400
-+++ nfs-utils-1.1.3/utils/statd/sm-notify.man	2008-07-28 04:30:37.000000000 -0400
+diff -up nfs-utils-1.1.4/utils/statd/sm-notify.man.orig nfs-utils-1.1.4/utils/statd/sm-notify.man
+--- nfs-utils-1.1.4/utils/statd/sm-notify.man.orig	2008-10-17 10:20:09.000000000 -0400
++++ nfs-utils-1.1.4/utils/statd/sm-notify.man	2008-10-17 11:22:01.000000000 -0400
 @@ -33,7 +33,7 @@ but this is configurable.
  For each NFS client or server machine to be monitored,
  .B rpc.statd

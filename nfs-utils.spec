@@ -1,8 +1,8 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
-Version: 1.1.3
-Release: 6%{?dist}
+Version: 1.1.4
+Release: 1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -29,19 +29,6 @@ Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
 %endif
-
-Patch100: nfs-utils-1.1.3-glibc22.patch
-Patch101: nfs-utils-1.1.3-mountd-gids.patch
-Patch102: nfs-utils-1.1.3-mountd-uuid-explicit.patch
-Patch103: nfs-utils-1.1.3-mountd-uuid-noblkid.patch
-Patch104: nfs-utils-1.1.3-mountd-uuid-stat.patch
-Patch105: nfs-utils-1.1.3-exportfs-uuid-nowarn.patch
-Patch106: nfs-utils-1.1.3-mountd-rm-m_path.patch
-Patch107: nfs-utils-1.1.3-mountd-cleanup.patch
-Patch108: nfs-utils-1.1.3-mountd-pseudoflavor-support.patch
-Patch109: nfs-utils-1.1.3-idmapd-rm-idmapconf.patch
-Patch110: nfs-utils-1.1.3-network-conn-udp-ports.patch
-Patch111: nfs-utils-1.1.3-smnotify-earlyexit.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -95,19 +82,6 @@ This package also contains the mount.nfs and umount.nfs program.
 %if %{enablefscache}
 %patch90 -p1
 %endif
-
-%patch100 -p1
-%patch101 -p1
-%patch102 -p1
-%patch103 -p1
-%patch104 -p1
-%patch105 -p1
-%patch106 -p1
-%patch107 -p1
-%patch108 -p1
-%patch109 -p1
-%patch110 -p1
-%patch111 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -267,6 +241,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Sat Oct 18 2008 Steve Dickson <steved@redhat.com> 1.1.4-1
+- Updated to latest upstream version: 1.1.4
+
 * Tue Oct 14 2008 Steve Dickson <steved@redhat.com> 1.1.3-6
 - sm-notify exists when there are no hosts to notify
 
