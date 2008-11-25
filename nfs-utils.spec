@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.4
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -28,6 +28,7 @@ Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 
 Patch100: nfs-utils-1.1.4-inet6-capable-api.patch
 Patch101: nfs-utils-1.1.4-inet6-rpcbind-util-funcs.patch
+Patch102: nfs-utils-1.1.4-showmount-rpcbind.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -84,6 +85,7 @@ This package also contains the mount.nfs and umount.nfs program.
 
 %patch100 -p1
 %patch101 -p1
+%patch102 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -247,6 +249,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Nov 25 2008 Steve Dickson <steved@redhat.com> 1.1.4-3
+- Give showmount support for querying via rpcbindv3/v4 
+
 * Tue Nov 18 2008 Steve Dickson <steved@redhat.com> 1.1.4-2
 - Add AF_INET6-capable API to acquire an RPC CLIENT
 - Introduce rpcbind client utility functions

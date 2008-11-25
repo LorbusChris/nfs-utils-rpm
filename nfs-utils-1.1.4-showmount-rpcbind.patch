@@ -1,0 +1,349 @@
+commit bb3e50bd5c4f6bf94221ef69d4dc87e73d0e474b
+Author: Chuck Lever <chuck.lever@oracle.com>
+Date:   Tue Nov 25 08:15:51 2008 -0500
+
+    showmount command: call nfs_getport instead of local getport
+    
+    Have the showmount command invoke the shared nfs_getport() function
+    instead of its own local version.  This gives the showmount command
+    immediate support for querying via rpcbindv3/v4 in addition to
+    portmapper, and sets the stage for AF_INET6 support in showmount.
+    
+    Signed-off-by: Chuck Lever <chuck.lever@oracle.com>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+commit e358039c9ffa8a4ead342e8a0cf0ff51a3a21af4
+Author: Chuck Lever <chuck.lever@oracle.com>
+Date:   Tue Nov 25 08:35:10 2008 -0500
+
+    showmount command: Remove unused local getport() implementation
+    
+    Clean up: remove showmount.c's local getport() implementation, now that
+    the showmount command uses the shared one.
+    
+    Signed-off-by: Chuck Lever <chuck.lever@oracle.com>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+commit 1c96846ba3adeb59a61e0cf33cf4c94c0678853f
+Author: Chuck Lever <chuck.lever@oracle.com>
+Date:   Tue Nov 25 08:38:01 2008 -0500
+
+    showmount command: move logic to acquire RPC client	handle out of main()
+    
+    In preparation to support IPv6 in the showmount command, extract the
+    logic that parses/acquires the target hostname and converts it into an RPC
+    client handle to contact the remote mountd service, and move it into its
+    own function.
+    
+    Signed-off-by: Chuck Lever <chuck.lever@oracle.com>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+commit f7020bd5d3ffca280690c6beba5fecdeb4d305f7
+Author: Chuck Lever <chuck.lever@oracle.com>
+Date:   Tue Nov 25 08:39:47 2008 -0500
+
+    showmount command: support querying IPv6 servers
+    
+    Introduce a version of nfs_get_mount_client() that supports AF_INET6 and
+    AF_INET server addresses.  If the TI-RPC library is not available when
+    the showmount command is built, fall back to the legacy RPC user-space
+    API.
+    
+    Signed-off-by: Chuck Lever <chuck.lever@oracle.com>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff -up nfs-utils-1.1.4/utils/showmount/showmount.c.save nfs-utils-1.1.4/utils/showmount/showmount.c
+--- nfs-utils-1.1.4/utils/showmount/showmount.c.save	2008-11-25 11:16:03.000000000 -0500
++++ nfs-utils-1.1.4/utils/showmount/showmount.c	2008-11-25 11:16:28.000000000 -0500
+@@ -37,8 +37,9 @@
+ #include <mount.h>
+ #include <unistd.h>
+ 
++#include "nfsrpc.h"
++
+ #define TIMEOUT_UDP	3
+-#define TIMEOUT_TCP	10
+ #define TOTAL_TIMEOUT	20
+ 
+ static char *	version = "showmount for " VERSION;
+@@ -49,6 +50,13 @@ static int	aflag = 0;
+ static int	dflag = 0;
+ static int	eflag = 0;
+ 
++static const char *nfs_sm_pgmtbl[] = {
++	"showmount",
++	"mount",
++	"mountd",
++	NULL,
++};
++
+ static struct option longopts[] =
+ {
+ 	{ "all", 0, 0, 'a' },
+@@ -77,6 +85,33 @@ static void usage(FILE *fp, int n)
+ 	exit(n);
+ }
+ 
++#ifdef HAVE_CLNT_CREATE
++
++/*
++ * Generate an RPC client handle connected to the mountd service
++ * at @hostname, or die trying.
++ *
++ * Supports both AF_INET and AF_INET6 server addresses.
++ */
++static CLIENT *nfs_get_mount_client(const char *hostname)
++{
++	rpcprog_t program = nfs_getrpcbyname(MOUNTPROG, nfs_sm_pgmtbl);
++	CLIENT *client;
++
++	client = clnt_create(hostname, program, MOUNTVERS, "tcp");
++	if (client)
++		return client;
++
++	client = clnt_create(hostname, program, MOUNTVERS, "udp");
++	if (client)
++		return client;
++
++	clnt_pcreateerror("clnt_create");
++	exit(1);
++}
++
++#else	/* HAVE_CLNT_CREATE */
++
+ /*
+  *  Perform a non-blocking connect on the socket fd.
+  *
+@@ -149,120 +184,77 @@ done:
+ 	return ret;
+ }
+ 
+-static unsigned short getport(struct sockaddr_in *addr,
+-			 unsigned long prog, unsigned long vers, int prot)
++/*
++ * Generate an RPC client handle connected to the mountd service
++ * at @hostname, or die trying.
++ *
++ * Supports only AF_INET server addresses.
++ */
++static CLIENT *nfs_get_mount_client(const char *hostname)
+ {
+-	CLIENT *client;
+-	enum clnt_stat status;
+-	struct pmap parms;
+-	int ret, sock;
+-	struct sockaddr_in laddr, saddr;
+-	struct timeval tout = {0, 0};
+-	socklen_t len;
+-	unsigned int send_sz = 0;
+-	unsigned int recv_sz = 0;
+-	unsigned short port;
+-
+-	memset(&laddr, 0, sizeof(laddr));
+-	memset(&saddr, 0, sizeof(saddr));
+-	memset(&parms, 0, sizeof(parms));
+-
+-	memcpy(&saddr, addr, sizeof(saddr));
+-	saddr.sin_port = htons(PMAPPORT);
++	struct hostent *hp;
++	struct sockaddr_in server_addr;
++	struct timeval pertry_timeout;
++	CLIENT *mclient = NULL;
++	int ret, msock;
+ 
+-	if (prot == IPPROTO_TCP) {
+-		sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+-		if (sock == -1) {
+-			rpc_createerr.cf_stat = RPC_SYSTEMERROR;
+-			rpc_createerr.cf_error.re_errno = errno;
+-			return 0;
++	if (inet_aton(hostname, &server_addr.sin_addr)) {
++		server_addr.sin_family = AF_INET;
++	}
++	else {
++		if ((hp = gethostbyname(hostname)) == NULL) {
++			fprintf(stderr, "%s: can't get address for %s\n",
++				program_name, hostname);
++			exit(1);
+ 		}
++		server_addr.sin_family = AF_INET;
++		memcpy(&server_addr.sin_addr, hp->h_addr, hp->h_length);
++	}
+ 
+-		tout.tv_sec = TIMEOUT_TCP;
+-
+-		ret = connect_nb(sock, &saddr, &tout);
+-		if (ret != 0) {
+-			rpc_createerr.cf_stat = RPC_SYSTEMERROR;
+-			rpc_createerr.cf_error.re_errno = errno;
+-			close(sock);
+-			return 0;
+-		}
+-		client = clnttcp_create(&saddr,
+-					PMAPPROG, PMAPVERS, &sock,
+-					0, 0);
+-	} else {
+-		/*
+-		 * bind to any unused port.  If we left this up to the rpc
+-		 * layer, it would bind to a reserved port, which has been shown
+-		 * to exhaust the reserved port range in some situations.
+-		 */
+-		sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+-		if (sock == -1) {
+-			rpc_createerr.cf_stat = RPC_SYSTEMERROR;
+-			rpc_createerr.cf_error.re_errno = errno;
+-			return 0;
+-		}
+-
+-		laddr.sin_family = AF_INET;
+-		laddr.sin_port = 0;
+-		laddr.sin_addr.s_addr = htonl(INADDR_ANY);
+-
+-		tout.tv_sec = TIMEOUT_UDP;
+-
+-		send_sz = RPCSMALLMSGSIZE;
+-		recv_sz = RPCSMALLMSGSIZE;
+-
+-		len = sizeof(struct sockaddr_in);
+-		if (bind(sock, (struct sockaddr *)&laddr, len) < 0) {
+-			close(sock);
+-			sock = RPC_ANYSOCK;
+-			/* FALLTHROUGH */
+-		}
+-		client = clntudp_bufcreate(&saddr, PMAPPROG, PMAPVERS,
+-					   tout, &sock, send_sz, recv_sz);
+-	}
+-
+-	if (!client) {
+-		close(sock);
+-		rpc_createerr.cf_stat = RPC_RPCBFAILURE;
+-		return 0;
+-	}
+-
+-	clnt_control(client, CLSET_FD_CLOSE, NULL);
+-
+-	parms.pm_prog = prog;
+-	parms.pm_vers = vers;
+-	parms.pm_prot = prot;
+-
+-	status = clnt_call(client, PMAPPROC_GETPORT,
+-			   (xdrproc_t) xdr_pmap, (caddr_t) &parms,
+-			   (xdrproc_t) xdr_u_short, (caddr_t) &port,
+-			   tout);
+-
+-	if (status != RPC_SUCCESS) {
+-		clnt_geterr(client, &rpc_createerr.cf_error);
+-		rpc_createerr.cf_stat = status;
+-		clnt_destroy(client);
+-		return 0;
+-	} else if (port == 0) {
+-		rpc_createerr.cf_stat = RPC_PROGNOTREGISTERED;
++	msock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
++	if (msock != -1) {
++		if (nfs_getport_ping((struct sockaddr *)&server_addr,
++					sizeof(server_addr), MOUNTPROG,
++					MOUNTVERS, IPPROTO_TCP)) {
++			ret = connect_nb(msock, &server_addr, 0);
++			if (ret == 0)
++				mclient = clnttcp_create(&server_addr,
++						MOUNTPROG, MOUNTVERS, &msock,
++						0, 0);
++			else
++				close(msock);
++		} else
++			close(msock);
+ 	}
+ 
+-	clnt_destroy(client);
++	if (!mclient) {
++		if (nfs_getport_ping((struct sockaddr *)&server_addr,
++					sizeof(server_addr), MOUNTPROG,
++					MOUNTVERS, IPPROTO_UDP)) {
++			clnt_pcreateerror("showmount");
++			exit(1);
++		}
++		msock = RPC_ANYSOCK;
++		pertry_timeout.tv_sec = TIMEOUT_UDP;
++		pertry_timeout.tv_usec = 0;
++		if ((mclient = clntudp_create(&server_addr,
++		    MOUNTPROG, MOUNTVERS, pertry_timeout, &msock)) == NULL) {
++			clnt_pcreateerror("mount clntudp_create");
++			exit(1);
++		}
++	}
+ 
+-	return htons(port);
++	return mclient;
+ }
+ 
++#endif	/* HAVE_CLNT_CREATE */
++
+ int main(int argc, char **argv)
+ {
+ 	char hostname_buf[MAXHOSTLEN];
+ 	char *hostname;
+ 	enum clnt_stat clnt_stat;
+-	struct hostent *hp;
+-	struct sockaddr_in server_addr;
+-	int ret, msock;
+ 	struct timeval total_timeout;
+-	struct timeval pertry_timeout;
+ 	int c;
+ 	CLIENT *mclient;
+ 	groups grouplist;
+@@ -334,54 +326,7 @@ int main(int argc, char **argv)
+ 		break;
+ 	}
+ 
+-	if (inet_aton(hostname, &server_addr.sin_addr)) {
+-		server_addr.sin_family = AF_INET;
+-	}
+-	else {
+-		if ((hp = gethostbyname(hostname)) == NULL) {
+-			fprintf(stderr, "%s: can't get address for %s\n",
+-				program_name, hostname);
+-			exit(1);
+-		}
+-		server_addr.sin_family = AF_INET;
+-		memcpy(&server_addr.sin_addr, hp->h_addr, hp->h_length);
+-	}
+-
+-	/* create mount deamon client */
+-
+-	mclient = NULL;
+-	msock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+-	if (msock != -1) {
+-		server_addr.sin_port = getport(&server_addr,
+-					 MOUNTPROG, MOUNTVERS, IPPROTO_TCP);
+-		if (server_addr.sin_port) {
+-			ret = connect_nb(msock, &server_addr, 0);
+-			if (ret == 0) /* success */
+-				mclient = clnttcp_create(&server_addr,
+-						MOUNTPROG, MOUNTVERS, &msock,
+-						0, 0);
+-			else
+-				close(msock);
+-		} else
+-			close(msock);
+-	}
+-
+-	if (!mclient) {
+-		server_addr.sin_port = getport(&server_addr,
+-					 MOUNTPROG, MOUNTVERS, IPPROTO_UDP);
+-		if (!server_addr.sin_port) {
+-			clnt_pcreateerror("showmount");
+-			exit(1);
+-		}
+-		msock = RPC_ANYSOCK;
+-		pertry_timeout.tv_sec = TIMEOUT_UDP;
+-		pertry_timeout.tv_usec = 0;
+-		if ((mclient = clntudp_create(&server_addr,
+-		    MOUNTPROG, MOUNTVERS, pertry_timeout, &msock)) == NULL) {
+-			clnt_pcreateerror("mount clntudp_create");
+-			exit(1);
+-		}
+-	}
++	mclient = nfs_get_mount_client(hostname);
+ 	mclient->cl_auth = authunix_create_default();
+ 	total_timeout.tv_sec = TOTAL_TIMEOUT;
+ 	total_timeout.tv_usec = 0;
