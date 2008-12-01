@@ -256,6 +256,8 @@ fi
 * Mon Dec  1 2008 Steve Dickson <steved@redhat.com> 1.1.4-5
 - Make sure /proc/fs/nfsd exists when the nfs init script
   does the exports (bz 473396)
+- Fixed typo in nfs init script that caused rpc.rquotad daemons
+  to be started but not stoppped (bz 473929)
 
 * Wed Nov 26 2008 Steve Dickson <steved@redhat.com> 1.1.4-4
 - gssd: unblock DNOTIFY_SIGNAL in case it was blocked

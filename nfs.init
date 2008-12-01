@@ -16,6 +16,12 @@
 # Source networking configuration.
 [ -f /etc/sysconfig/network ] &&  . /etc/sysconfig/network
 
+# Check for and source configuration file otherwise set defaults
+[ -f /etc/sysconfig/nfs ] && . /etc/sysconfig/nfs
+
+# Remote quota server
+[ -z "$RQUOTAD" ] && RQUOTAD=`type -path rpc.rquotad`
+
 RETVAL=0
 
 # See how we were called.
@@ -40,17 +46,11 @@ case "$1" in
     	{ touch /etc/exports && chmod u+rw,g+r,o+r /etc/exports ; } || \
     	{ echo "/etc/exports does not exist" ; exit 0 ; }
 
-	# Check for and source configuration file otherwise set defaults
-	[ -f /etc/sysconfig/nfs ] && . /etc/sysconfig/nfs
-
 	[ -z "$MOUNTD_NFS_V2" ] && MOUNTD_NFS_V2=default
 	[ -z "$MOUNTD_NFS_V3" ] && MOUNTD_NFS_V3=default
 
 	# Number of servers to be started by default
 	[ -z "$RPCNFSDCOUNT" ] && RPCNFSDCOUNT=8
-
-	# Remote quota server
-	[ -z "$RQUOTAD" ] && RQUOTAD=`type -path rpc.rquotad`
 
 	# Start daemons.
 	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd start
