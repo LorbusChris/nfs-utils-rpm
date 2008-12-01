@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.4
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -253,6 +253,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Dec  1 2008 Steve Dickson <steved@redhat.com> 1.1.4-5
+- Make sure /proc/fs/nfsd exists when the nfs init script
+  does the exports (bz 473396)
+
 * Wed Nov 26 2008 Steve Dickson <steved@redhat.com> 1.1.4-4
 - gssd: unblock DNOTIFY_SIGNAL in case it was blocked
 - Ensure statd gets started if required when non-root

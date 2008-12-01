@@ -55,6 +55,11 @@ case "$1" in
 	# Start daemons.
 	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd start
 
+	# Load the nfsd module so /proc/fs/nfsd will exist
+	[ "$NFSD_MODULE" != "noload" ] && {
+		[ -x /sbin/modprobe ] && /sbin/modprobe nfsd
+	}
+
 	action $"Starting NFS services: " /usr/sbin/exportfs -r
 
 	# Set the ports lockd should listen on
@@ -73,11 +78,6 @@ case "$1" in
 		RETVAL=$?
 	    echo
 	fi
-
-	# Load preload module so arguments to rpc.nfsd will take effect
-	[ -n "$RPCNFSDARGS" -a "$NFSD_MODULE" != "noload" ] && {
-		[ -x /sbin/modprobe ] && /sbin/modprobe nfsd
-	}
 
 	echo -n $"Starting NFS daemon: "
 	daemon rpc.nfsd $RPCNFSDARGS $RPCNFSDCOUNT
