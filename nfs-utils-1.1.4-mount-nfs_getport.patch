@@ -1,0 +1,276 @@
+commit b8711a0665b9ecff9d59ee36d756f50823242f64
+Author: Chuck Lever <chuck.lever@oracle.com>
+Date:   Tue Dec 2 07:43:54 2008 -0500
+
+    mount command: remove local getport() implementation
+    
+    Eliminate local getport() implementation from utils/mount/network.c, as
+    it is no longer used.
+    
+    Signed-off-by: Chuck Lever <chuck.lever@oracle.com>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+commit cc58ba0c98b2f687810a5af9e6185bcc5e855fb0
+Author: Chuck Lever <chuck.lever@oracle.com>
+Date:   Tue Dec 2 07:43:01 2008 -0500
+
+    mount command: Replace clnt_ping() and getport() calls in   probe_port()
+    
+    Update the mount command's probe_port() function to call the new shared
+    rpcbind query and RPC ping functions.  This provides immediate support
+    for
+    rpcbind v3/v4 queries, and paves the way for supporting AF_INET6 in the
+    probe_bothports() path.
+    
+    Signed-off-by: Chuck Lever <chuck.lever@oracle.com>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+commit 14b0dae49afae3fcf05c19ae84829aeef2f6876e
+Author: Chuck Lever <chuck.lever@oracle.com>
+Date:   Tue Dec 2 07:40:16 2008 -0500
+
+    mount command: Use nfs_error() instead of perror()
+    
+    So we can ensure that error output is directed appropriately, use
+    nfs_error() instead of perror() in start_statd().
+    
+    Signed-off-by: Chuck Lever <chuck.lever@oracle.com>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+commit ea0473feffd8071216c96217df3202a8deed2c65
+Author: Chuck Lever <chuck.lever@oracle.com>
+Date:   Tue Dec 2 07:39:06 2008 -0500
+
+    mount command: Use nfs_pmap_getport() in probe_statd()
+    
+    Repace the getport() and clnt_ping() calls in probe_statd() with their
+    new shared equivalents.
+    
+    Signed-off-by: Chuck Lever <chuck.lever@oracle.com>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff -up nfs-utils-1.1.4/utils/mount/network.c.orig nfs-utils-1.1.4/utils/mount/network.c
+--- nfs-utils-1.1.4/utils/mount/network.c.orig	2008-12-01 09:14:24.000000000 -0500
++++ nfs-utils-1.1.4/utils/mount/network.c	2008-12-02 08:32:00.000000000 -0500
+@@ -47,6 +47,7 @@
+ #include "nls.h"
+ #include "nfs_mount.h"
+ #include "mount_constants.h"
++#include "nfsrpc.h"
+ #include "network.h"
+ 
+ /*
+@@ -79,6 +80,11 @@ extern int nfs_mount_data_version;
+ extern char *progname;
+ extern int verbose;
+ 
++static const char *nfs_ns_pgmtbl[] = {
++	"status",
++	NULL,
++};
++
+ static const unsigned long nfs_to_mnt[] = {
+ 	0,
+ 	0,
+@@ -443,76 +449,25 @@ err_connect:
+ 	return RPC_ANYSOCK;
+ }
+ 
+-/*
+- * getport() is very similar to pmap_getport() with the exception that
+- * this version tries to use an ephemeral port, since reserved ports are
+- * not needed for GETPORT queries.  This conserves the very limited
+- * reserved port space, which helps reduce failed socket binds
+- * during mount storms.
+- *
+- * A side effect of calling this function is that rpccreateerr is set.
+- */
+-static unsigned short getport(struct sockaddr_in *saddr,
+-				unsigned long program,
+-				unsigned long version,
+-				unsigned int proto)
+-{
+-	struct sockaddr_in bind_saddr;
+-	unsigned short port = 0;
+-	int socket;
+-	CLIENT *clnt = NULL;
+-	enum clnt_stat stat;
+- 
+-	bind_saddr = *saddr;
+-	bind_saddr.sin_port = htons(PMAPPORT);
+-
+-	socket = get_socket(&bind_saddr, proto, PMAP_TIMEOUT, FALSE, TRUE);
+-	if (socket == RPC_ANYSOCK) {
+-		if (proto == IPPROTO_TCP &&
+-		    rpc_createerr.cf_error.re_errno == ETIMEDOUT)
+-			rpc_createerr.cf_stat = RPC_TIMEDOUT;
+-		return 0;
+-	}
++static void nfs_pp_debug(const struct sockaddr *sap, const socklen_t salen,
++			 const rpcprog_t program, const rpcvers_t version,
++			 const unsigned short protocol,
++			 const unsigned short port)
++{
++	char buf[NI_MAXHOST];
+ 
+-	switch (proto) {
+-	case IPPROTO_UDP:
+-		clnt = clntudp_bufcreate(&bind_saddr,
+-					 PMAPPROG, PMAPVERS,
+-					 RETRY_TIMEOUT, &socket,
+-					 RPCSMALLMSGSIZE,
+-					 RPCSMALLMSGSIZE);
+-		break;
+-	case IPPROTO_TCP:
+-		clnt = clnttcp_create(&bind_saddr,
+-				      PMAPPROG, PMAPVERS,
+-				      &socket,
+-				      RPCSMALLMSGSIZE, RPCSMALLMSGSIZE);
+-		break;
+-	}
+-	if (clnt != NULL) {
+-		struct pmap parms = {
+-			.pm_prog	= program,
+-			.pm_vers	= version,
+-			.pm_prot	= proto,
+-		};
+-
+-		stat = clnt_call(clnt, PMAPPROC_GETPORT,
+-				 (xdrproc_t)xdr_pmap, (caddr_t)&parms,
+-				 (xdrproc_t)xdr_u_short, (caddr_t)&port,
+-				 TIMEOUT);
+-		if (stat) {
+-			clnt_geterr(clnt, &rpc_createerr.cf_error);
+-			rpc_createerr.cf_stat = stat;
+-		}
+-		clnt_destroy(clnt);
+-		if (stat != RPC_SUCCESS)
+-			port = 0;
+-		else if (port == 0)
+-			rpc_createerr.cf_stat = RPC_PROGNOTREGISTERED;
++	if (!verbose)
++		return;
++
++	if (nfs_present_sockaddr(sap, salen, buf, sizeof(buf)) == 0) {
++		buf[0] = '\0';
++		strcat(buf, "unknown host");
+ 	}
+-	close(socket);
+ 
+-	return port;
++	fprintf(stderr, _("%s: trying %s prog %ld vers %ld prot %s port %d\n"),
++			progname, buf, program, version,
++			(protocol == IPPROTO_UDP ? _("UDP") : _("TCP")),
++			port);
+ }
+ 
+ /*
+@@ -523,7 +478,8 @@ static unsigned short getport(struct soc
+ static int probe_port(clnt_addr_t *server, const unsigned long *versions,
+ 			const unsigned int *protos)
+ {
+-	struct sockaddr_in *saddr = &server->saddr;
++	const struct sockaddr *saddr = (struct sockaddr *)&server->saddr;
++	const socklen_t salen = sizeof(server->saddr);
+ 	struct pmap *pmap = &server->pmap;
+ 	const unsigned long prog = pmap->pm_prog, *p_vers;
+ 	const unsigned int prot = (u_int)pmap->pm_prot, *p_prot;
+@@ -535,21 +491,14 @@ static int probe_port(clnt_addr_t *serve
+ 	p_vers = vers ? &vers : versions;
+ 	rpc_createerr.cf_stat = 0;
+ 	for (;;) {
+-		p_port = getport(saddr, prog, *p_vers, *p_prot);
++		p_port = nfs_getport(saddr, salen, prog, *p_vers, *p_prot);
+ 		if (p_port) {
+ 			if (!port || port == p_port) {
+-				saddr->sin_port = htons(p_port);
+-				if (verbose) {
+-					printf(_("%s: trying %s prog %ld vers "
+-						"%ld prot %s port %d\n"),
+-						progname,
+-						inet_ntoa(saddr->sin_addr),
+-						prog, *p_vers,
+-						*p_prot == IPPROTO_UDP ?
+-							_("UDP") : _("TCP"),
+-						p_port);
+-                                }
+-				if (clnt_ping(saddr, prog, *p_vers, *p_prot, NULL))
++				server->saddr.sin_port = htons(p_port);
++				nfs_pp_debug(saddr, salen, prog, *p_vers,
++						*p_prot, p_port);
++				if (nfs_rpc_ping(saddr, salen, prog,
++							*p_vers, *p_prot, NULL))
+ 					goto out_ok;
+ 			}
+ 		}
+@@ -669,24 +618,16 @@ version_fixed:
+ 	return probe_mntport(mnt_server);
+ }
+ 
+-static int probe_statd(void)
++static int nfs_probe_statd(void)
+ {
+-	struct sockaddr_in addr;
+-	unsigned short port;
+-
+-	memset(&addr, 0, sizeof(addr));
+-	addr.sin_family = AF_INET;
+-	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+-	port = getport(&addr, 100024, 1, IPPROTO_UDP);
+-
+-	if (port == 0)
+-		return 0;
+-	addr.sin_port = htons(port);
+-
+-	if (clnt_ping(&addr, 100024, 1, IPPROTO_UDP, NULL) <= 0)
+-		return 0;
++	struct sockaddr_in addr = {
++		.sin_family		= AF_INET,
++		.sin_addr.s_addr	= htonl(INADDR_LOOPBACK),
++	};
++	rpcprog_t program = nfs_getrpcbyname(NSMPROG, nfs_ns_pgmtbl);
+ 
+-	return 1;
++	return nfs_getport_ping((struct sockaddr *)&addr, sizeof(addr),
++				program, (rpcvers_t)1, IPPROTO_UDP);
+ }
+ 
+ /**
+@@ -700,7 +641,7 @@ int start_statd(void)
+ 	struct stat stb;
+ #endif
+ 
+-	if (probe_statd())
++	if (nfs_probe_statd())
+ 		return 1;
+ 
+ #ifdef START_STATD
+@@ -712,13 +653,14 @@ int start_statd(void)
+ 				execl(START_STATD, START_STATD, NULL);
+ 				exit(1);
+ 			case -1: /* error */
+-				perror("Fork failed");
++				nfs_error(_("fork failed: %s"),
++							strerror(errno));
+ 				break;
+ 			default: /* parent */
+ 				waitpid(pid, NULL,0);
+ 				break;
+ 			}
+-			if (probe_statd())
++			if (nfs_probe_statd())
+ 				return 1;
+ 		}
+ 	}
+@@ -829,9 +771,9 @@ void mnt_closeclnt(CLIENT *clnt, int mso
+  * @prot: target RPC protocol
+  * @caddr: filled in with our network address
+  *
+- * Sigh... getport() doesn't actually check the version number.
++ * Sigh... GETPORT queries don't actually check the version number.
+  * In order to make sure that the server actually supports the service
+- * we're requesting, we open and RPC client, and fire off a NULL
++ * we're requesting, we open an RPC client, and fire off a NULL
+  * RPC call.
+  *
+  * caddr is the network address that the server will use to call us back.

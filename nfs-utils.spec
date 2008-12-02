@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.4
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -31,6 +31,7 @@ Patch101: nfs-utils-1.1.4-inet6-rpcbind-util-funcs.patch
 Patch102: nfs-utils-1.1.4-showmount-rpcbind.patch
 Patch103: nfs-utils-1.1.4-gssd-dnotify.patch
 Patch104: nfs-utils-1.1.4-statd-setuid.patch
+Patch105: nfs-utils-1.1.4-mount-nfs_getport.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -90,6 +91,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch102 -p1
 %patch103 -p1
 %patch104 -p1
+%patch105 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -253,6 +255,12 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Dec  2 2008 Steve Dickson <steved@redhat.com> 1.1.4-6
+- mount command: remove local getport() implementation
+- mount command: Replace clnt_ping() and getport() calls in probe_port()
+- mount command: Use nfs_error() instead of perror()
+- mount command: Use nfs_pmap_getport() in probe_statd()
+
 * Mon Dec  1 2008 Steve Dickson <steved@redhat.com> 1.1.4-5
 - Make sure /proc/fs/nfsd exists when the nfs init script
   does the exports (bz 473396)
