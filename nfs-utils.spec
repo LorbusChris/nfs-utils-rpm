@@ -34,6 +34,7 @@ Patch104: nfs-utils-1.1.4-statd-setuid.patch
 Patch105: nfs-utils-1.1.4-mount-nfs_getport.patch
 Patch106: nfs-utils-1.1.4-sm-notify-typo.patch
 Patch107: nfs-utils-1.1.4-mount-inet6-support.patch
+Patch108: nfs-utils-1.1.4-svcgssd-expiration.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -96,6 +97,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch105 -p1
 %patch106 -p1
 %patch107 -p1
+%patch108 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -263,6 +265,8 @@ fi
 - mount command: AF_INET6 support for probe_bothports()
 - mount command: support AF_INET6 in probe_nfsport() and probe_mntport()
 - mount command: full support for AF_INET6 addresses in probe_port()
+- gssd/svcgssd: add support to retrieve actual context expiration
+- svcgssd: use the actual context expiration for cache
 
 * Sat Dec  6 2008 Steve Dickson <steved@redhat.com> 1.1.4-7
 - sm-notify: always exiting without any notification.
