@@ -1,0 +1,153 @@
+commit b5009d23525181846777349f2fc0e4a72b89d24d
+Author: Chuck Lever <chuck.lever@oracle.com>
+Date:   Wed Dec 17 14:21:10 2008 -0500
+
+    text-based mount command: add function to parse numeric	mount options
+    
+    Introduce a function that is especially for parsing keyword mount options
+    that take a numeric value.
+    
+    Signed-off-by: Chuck Lever <chuck.lever@oracle.com>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff --git a/utils/mount/parse_opt.c b/utils/mount/parse_opt.c
+index cb398bd..f61d0dd 100644
+--- a/utils/mount/parse_opt.c
++++ b/utils/mount/parse_opt.c
+@@ -36,6 +36,10 @@
+  */
+ 
+ 
++#ifdef HAVE_CONFIG_H
++#include <config.h>
++#endif
++
+ #include <ctype.h>
+ #include <unistd.h>
+ #include <stdio.h>
+@@ -366,6 +370,57 @@ char *po_get(struct mount_options *options, char *keyword)
+ }
+ 
+ /**
++ * po_get_numeric - return numeric value of rightmost instance of keyword option
++ * @options: pointer to mount options
++ * @keyword: pointer to a C string containing option keyword for which to search
++ * @value: OUT: set to the value of the keyword
++ *
++ * This is specifically for parsing keyword options that take only a numeric
++ * value.  If multiple instances of the same option are present in a mount
++ * option list, the rightmost instance is always the effective one.
++ *
++ * Returns:
++ *	* PO_FOUND if the keyword was found and the value is numeric; @value is
++ *	  set to the keyword's value
++ *	* PO_NOT_FOUND if the keyword was not found
++ *	* PO_BAD_VALUE if the keyword was found, but the value is not numeric
++ *
++ * These last two are separate in case the caller wants to warn about bad mount
++ * options instead of silently using a default.
++ */
++#ifdef HAVE_STRTOL
++po_found_t po_get_numeric(struct mount_options *options, char *keyword, long *value)
++{
++	char *option, *endptr;
++	long tmp;
++
++	option = po_get(options, keyword);
++	if (option == NULL)
++		return PO_NOT_FOUND;
++
++	errno = 0;
++	tmp = strtol(option, &endptr, 10);
++	if (errno == 0 && endptr != option) {
++		*value = tmp;
++		return PO_FOUND;
++	}
++	return PO_BAD_VALUE;
++}
++#else	/* HAVE_STRTOL */
++po_found_t po_get_numeric(struct mount_options *options, char *keyword, long *value)
++{
++	char *option;
++
++	option = po_get(options, keyword);
++	if (option == NULL)
++		return PO_NOT_FOUND;
++
++	*value = atoi(option);
++	return PO_FOUND;
++}
++#endif	/* HAVE_STRTOL */
++
++/**
+  * po_rightmost - determine the relative position of two options
+  * @options: pointer to mount options
+  * @key1: pointer to a C string containing an option keyword
+diff --git a/utils/mount/parse_opt.h b/utils/mount/parse_opt.h
+index fb003c3..199630f 100644
+--- a/utils/mount/parse_opt.h
++++ b/utils/mount/parse_opt.h
+@@ -32,6 +32,7 @@ typedef enum {
+ typedef enum {
+ 	PO_NOT_FOUND = 0,
+ 	PO_FOUND = 1,
++	PO_BAD_VALUE = 2,
+ } po_found_t;
+ 
+ typedef enum {
+@@ -50,6 +51,8 @@ po_return_t		po_join(struct mount_options *, char **);
+ po_return_t		po_append(struct mount_options *, char *);
+ po_found_t		po_contains(struct mount_options *, char *);
+ char *			po_get(struct mount_options *, char *);
++po_found_t		po_get_numeric(struct mount_options *,
++					char *, long *);
+ po_rightmost_t		po_rightmost(struct mount_options *, char *, char *);
+ po_found_t		po_remove_all(struct mount_options *, char *);
+ void			po_destroy(struct mount_options *);
+commit 3f23f712477df48fd1d57376b65c44bb2a19ec16
+Author: Chuck Lever <chuck.lever@oracle.com>
+Date:   Wed Dec 17 14:23:43 2008 -0500
+
+    text-based mount command: use po_get_numeric() for	handling retry
+    
+    Replace the logic in nfs_parse_retry_option() with a call to the new
+    po_get_numeric() function.
+    
+    Signed-off-by: Chuck Lever <chuck.lever@oracle.com>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff --git a/utils/mount/stropts.c b/utils/mount/stropts.c
+index 09fca86..43791e6 100644
+--- a/utils/mount/stropts.c
++++ b/utils/mount/stropts.c
+@@ -99,19 +99,21 @@ struct nfsmount_info {
+ static time_t nfs_parse_retry_option(struct mount_options *options,
+ 				     unsigned int timeout_minutes)
+ {
+-	char *retry_option, *endptr;
++	long tmp;
+ 
+-	retry_option = po_get(options, "retry");
+-	if (retry_option) {
+-		long tmp;
+-
+-		errno = 0;
+-		tmp = strtol(retry_option, &endptr, 10);
+-		if (errno == 0 && endptr != retry_option && tmp >= 0)
++	switch (po_get_numeric(options, "retry", &tmp)) {
++	case PO_NOT_FOUND:
++		break;
++	case PO_FOUND:
++		if (tmp >= 0) {
+ 			timeout_minutes = tmp;
+-		else if (verbose)
++			break;
++		}
++	case PO_BAD_VALUE:
++		if (verbose)
+ 			nfs_error(_("%s: invalid retry timeout was specified; "
+ 					"using default timeout"), progname);
++		break;
+ 	}
+ 
+ 	return time(NULL) + (time_t)(timeout_minutes * 60);

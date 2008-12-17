@@ -1,0 +1,57 @@
+diff -up nfs-utils-1.1.4/utils/statd/sm-notify.c.orig nfs-utils-1.1.4/utils/statd/sm-notify.c
+--- nfs-utils-1.1.4/utils/statd/sm-notify.c.orig	2008-12-17 15:09:13.000000000 -0500
++++ nfs-utils-1.1.4/utils/statd/sm-notify.c	2008-12-17 15:11:07.000000000 -0500
+@@ -133,6 +133,17 @@ static struct addrinfo *smn_lookup(const
+ 	return ai;
+ }
+ 
++static void smn_forget_host(struct nsm_host *host)
++{
++	unlink(host->path);
++	free(host->path);
++	free(host->name);
++	if (host->ai)
++		freeaddrinfo(host->ai);
++
++	free(host);
++}
++
+ int
+ main(int argc, char **argv)
+ {
+@@ -342,13 +353,8 @@ notify(void)
+ 			hp = hosts;
+ 			hosts = hp->next;
+ 
+-			if (notify_host(sock, hp)){
+-				unlink(hp->path);
+-				free(hp->name);
+-				free(hp->path);
+-				free(hp);
++			if (notify_host(sock, hp))
+ 				continue;
+-			}
+ 
+ 			/* Set the timeout for this call, using an
+ 			   exponential timeout strategy */
+@@ -403,6 +409,7 @@ notify_host(int sock, struct nsm_host *h
+ 			nsm_log(LOG_WARNING,
+ 				"%s doesn't seem to be a valid address,"
+ 				" skipped", host->name);
++			smn_forget_host(host);
+ 			return 1;
+ 		}
+ 	}
+@@ -547,11 +554,7 @@ recv_reply(int sock)
+ 		if (p <= end) {
+ 			nsm_log(LOG_DEBUG, "Host %s notified successfully",
+ 					hp->name);
+-			unlink(hp->path);
+-			free(hp->name);
+-			free(hp->path);
+-			free(hp);
+-			freeaddrinfo(hp->ai);
++			smn_forget_host(hp);
+ 			return;
+ 		}
+ 	}

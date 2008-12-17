@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.4
-Release: 8%{?dist}
+Release: 9%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -35,6 +35,8 @@ Patch105: nfs-utils-1.1.4-mount-nfs_getport.patch
 Patch106: nfs-utils-1.1.4-sm-notify-typo.patch
 Patch107: nfs-utils-1.1.4-mount-inet6-support.patch
 Patch108: nfs-utils-1.1.4-svcgssd-expiration.patch
+Patch109: nfs-utils-1.1.4-mount-po_get_numeric.patch
+Patch110: nfs-utils-1.1.4-sm-notify-freeaddrinfo.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -98,6 +100,8 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch106 -p1
 %patch107 -p1
 %patch108 -p1
+%patch109 -p1
+%patch110 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -261,6 +265,11 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Dec 17 2008 Steve Dickson <steved@redhat.com> 1.1.4-9
+- text-based mount command: add function to parse numeric mount options
+- text-based mount command: use po_get_numeric() for handling retry
+- sm-notify command: fix a use-after-free bug
+
 * Thu Dec 11 2008 Steve Dickson <steved@redhat.com> 1.1.4-8
 - mount command: AF_INET6 support for probe_bothports()
 - mount command: support AF_INET6 in probe_nfsport() and probe_mntport()
