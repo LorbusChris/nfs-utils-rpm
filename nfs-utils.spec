@@ -37,6 +37,7 @@ Patch107: nfs-utils-1.1.4-mount-inet6-support.patch
 Patch108: nfs-utils-1.1.4-svcgssd-expiration.patch
 Patch109: nfs-utils-1.1.4-mount-po_get_numeric.patch
 Patch110: nfs-utils-1.1.4-sm-notify-freeaddrinfo.patch
+Patch111: nfs-utils-1.1.4-statd-xunlink.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -102,6 +103,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch108 -p1
 %patch109 -p1
 %patch110 -p1
+%patch111 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -269,6 +271,7 @@ fi
 - text-based mount command: add function to parse numeric mount options
 - text-based mount command: use po_get_numeric() for handling retry
 - sm-notify command: fix a use-after-free bug
+- statd: not unlinking host files
 
 * Thu Dec 11 2008 Steve Dickson <steved@redhat.com> 1.1.4-8
 - mount command: AF_INET6 support for probe_bothports()
