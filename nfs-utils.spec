@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.4
-Release: 9%{?dist}
+Release: 10%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -38,6 +38,7 @@ Patch108: nfs-utils-1.1.4-svcgssd-expiration.patch
 Patch109: nfs-utils-1.1.4-mount-po_get_numeric.patch
 Patch110: nfs-utils-1.1.4-sm-notify-freeaddrinfo.patch
 Patch111: nfs-utils-1.1.4-statd-xunlink.patch
+Patch112: nfs-utils-1.1.4-tcpwrapper-update.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -104,6 +105,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch109 -p1
 %patch110 -p1
 %patch111 -p1
+%patch112 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -267,6 +269,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Fri Dec 19 2008 Steve Dickson <steved@redhat.com> 1.1.4-10
+- Re-enabled and fixed/enhanced tcp wrappers.
+
 * Wed Dec 17 2008 Steve Dickson <steved@redhat.com> 1.1.4-9
 - text-based mount command: add function to parse numeric mount options
 - text-based mount command: use po_get_numeric() for handling retry

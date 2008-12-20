@@ -1,0 +1,280 @@
+commit 71f9f61517bf301f723b79651d53590ef97c3556
+Author: Steve Dickson <steved@redhat.com>
+Date:   Fri Dec 19 14:20:14 2008 -0500
+
+    To ensure the hash table of clients has valid
+    access rights, check the modification times on
+    both access files. If one of them have change,
+    update the hash entry instead of creating a
+    new entry.
+    
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+commit 58e0a308fec476361dd21f7d3856faceb6e308ee
+Author: Steve Dickson <steved@redhat.com>
+Date:   Fri Dec 19 14:11:09 2008 -0500
+
+    Clients IP address and host names are check on
+    every RPC request, to both mountd and statd
+    when TCP wrappers are enabled. To help this
+    process scale better the access rights are stored
+    in a hash table, which are hashed per IP address,
+    RPC program and procudure numbers.
+    
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+commit e47da19d63ea50a4e15f6ab491535d54097744de
+Author: Steve Dickson <steved@redhat.com>
+Date:   Fri Dec 19 14:09:59 2008 -0500
+
+    When clients are define as IP addresses in /etc/hosts.deny,
+    access is allow due to misinterpreting the return value of
+    hosts_ctl(). This patch reworks that logic which closes
+    that hole.
+    
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff -up nfs-utils-1.1.4/support/misc/tcpwrapper.c.save nfs-utils-1.1.4/support/misc/tcpwrapper.c
+--- nfs-utils-1.1.4/support/misc/tcpwrapper.c.save	2008-12-19 15:44:05.000000000 -0500
++++ nfs-utils-1.1.4/support/misc/tcpwrapper.c	2008-12-19 15:46:15.000000000 -0500
+@@ -44,6 +44,10 @@
+ #include <pwd.h>
+ #include <sys/types.h>
+ #include <sys/signal.h>
++#include <sys/queue.h>
++#include <sys/stat.h>
++#include <unistd.h>
++
+ #ifdef SYSV40
+ #include <netinet/in.h>
+ #include <rpc/rpcent.h>
+@@ -86,6 +90,79 @@ int hosts_ctl(char *daemon, char *name, 
+ #define log_client(addr, proc, prog) \
+   logit(allow_severity, addr, proc, prog, "")
+ 
++#define ALLOW 1
++#define DENY 0
++
++typedef struct _haccess_t {
++	TAILQ_ENTRY(_haccess_t) list;
++	int access;
++    struct in_addr addr;
++} haccess_t;
++
++#define HASH_TABLE_SIZE 1021
++typedef struct _hash_head {
++	TAILQ_HEAD(host_list, _haccess_t) h_head;
++} hash_head;
++hash_head haccess_tbl[HASH_TABLE_SIZE];
++static haccess_t *haccess_lookup(struct sockaddr_in *addr, u_long, u_long);
++static void haccess_add(struct sockaddr_in *addr, u_long, u_long, int);
++
++inline unsigned int strtoint(char *str)
++{
++	unsigned int n = 0;
++	int len = strlen(str);
++	int i;
++
++	for (i=0; i < len; i++)
++		n+=((int)str[i])*i;
++
++	return n;
++}
++inline int hashint(unsigned int num)
++{
++	return num % HASH_TABLE_SIZE;
++}
++#define HASH(_addr, _proc, _prog) \
++	hashint((strtoint((_addr))+(_proc)+(_prog)))
++
++void haccess_add(struct sockaddr_in *addr, u_long proc, 
++	u_long prog, int access)
++{
++	hash_head *head;
++ 	haccess_t *hptr;
++	int hash;
++
++	hptr = (haccess_t *)malloc(sizeof(haccess_t));
++	if (hptr == NULL)
++		return;
++
++	hash = HASH(inet_ntoa(addr->sin_addr), proc, prog);
++	head = &(haccess_tbl[hash]);
++
++	hptr->access = access;
++	hptr->addr.s_addr = addr->sin_addr.s_addr;
++
++	if (TAILQ_EMPTY(&head->h_head))
++		TAILQ_INSERT_HEAD(&head->h_head, hptr, list);
++	else
++		TAILQ_INSERT_TAIL(&head->h_head, hptr, list);
++}
++haccess_t *haccess_lookup(struct sockaddr_in *addr, u_long proc, u_long prog)
++{
++	hash_head *head;
++ 	haccess_t *hptr;
++	int hash;
++
++	hash = HASH(inet_ntoa(addr->sin_addr), proc, prog);
++	head = &(haccess_tbl[hash]);
++
++	TAILQ_FOREACH(hptr, &head->h_head, list) {
++		if (hptr->addr.s_addr == addr->sin_addr.s_addr)
++			return hptr;
++	}
++	return NULL;
++}
++
+ int
+ good_client(daemon, addr)
+ char *daemon;
+@@ -95,47 +172,44 @@ struct sockaddr_in *addr;
+     char **sp;
+     char *tmpname;
+ 
+-    /* Check the IP address first. */
+-    if (hosts_ctl(daemon, "", inet_ntoa(addr->sin_addr), ""))
+-	return 1;
+-
+-    /* Check the hostname. */
+-    hp = gethostbyaddr ((const char *) &(addr->sin_addr),
+-			sizeof (addr->sin_addr), AF_INET);
++	/* First check the address. */
++	if (hosts_ctl(daemon, "", inet_ntoa(addr->sin_addr), "") == DENY)
++		return DENY;
++
++	/* Now do the hostname lookup */
++	hp = gethostbyaddr ((const char *) &(addr->sin_addr),
++		sizeof (addr->sin_addr), AF_INET);
++	if (!hp)
++		return DENY; /* never heard of it. misconfigured DNS? */
++
++	/* Make sure the hostent is authorative. */
++	tmpname = strdup(hp->h_name);
++	if (!tmpname)
++		return DENY;
++	hp = gethostbyname(tmpname);
++	free(tmpname);
++	if (!hp)
++		return DENY; /* never heard of it. misconfigured DNS? */
+ 
+-    if (!hp)
+-	return 0;
+-
+-    /* must make sure the hostent is authorative. */
+-    tmpname = alloca (strlen (hp->h_name) + 1);
+-    strcpy (tmpname, hp->h_name);
+-    hp = gethostbyname(tmpname);
+-    if (hp) {
+-	/* now make sure the "addr->sin_addr" is on the list */
++	/* Now make sure the address is on the list */
+ 	for (sp = hp->h_addr_list ; *sp ; sp++) {
+-	    if (memcmp(*sp, &(addr->sin_addr), hp->h_length)==0)
+-		break;
++	    if (memcmp(*sp, &(addr->sin_addr), hp->h_length) == 0)
++			break;
+ 	}
+ 	if (!*sp)
+-	    /* it was a FAKE. */
+-	    return 0;
+-    }
+-    else
+-	   /* never heard of it. misconfigured DNS? */
+-	   return 0;
+-
+-   /* Check the official name first. */
+-   if (hosts_ctl(daemon, hp->h_name, "", ""))
+-	return 1;
+-
+-   /* Check aliases. */
+-   for (sp = hp->h_aliases; *sp ; sp++) {
+-	if (hosts_ctl(daemon, *sp, "", ""))
+-	    return 1;
+-   }
++	    return DENY; /* it was a FAKE. */
++
++	/* Check the official name and address. */
++	if (hosts_ctl(daemon, hp->h_name, inet_ntoa(addr->sin_addr), "") == DENY)
++		return DENY;
++
++	/* Now check aliases. */
++	for (sp = hp->h_aliases; *sp ; sp++) {
++		if (hosts_ctl(daemon, *sp, inet_ntoa(addr->sin_addr), "") == DENY)
++	    	return DENY;
++	}
+ 
+-   /* No match */
+-   return 0;
++   return ALLOW;
+ }
+ 
+ /* check_startup - additional startup code */
+@@ -175,6 +249,33 @@ void    check_startup(void)
+     (void) signal(SIGINT, toggle_verboselog);
+ }
+ 
++/* check_files - check to see if either access files have changed */
++
++int check_files()
++{
++	static time_t allow_mtime, deny_mtime;
++	struct stat astat, dstat;
++	int changed = 0;
++
++	if (stat("/etc/hosts.allow", &astat) < 0)
++		astat.st_mtime = 0;
++	if (stat("/etc/hosts.deny", &dstat) < 0)
++		dstat.st_mtime = 0;
++
++	if(!astat.st_mtime || !dstat.st_mtime)
++		return changed;
++
++	if (astat.st_mtime != allow_mtime)
++		changed = 1;
++	else if (dstat.st_mtime != deny_mtime)
++		changed = 1;
++
++	allow_mtime = astat.st_mtime;
++	deny_mtime = dstat.st_mtime;
++
++	return changed;
++}
++
+ /* check_default - additional checks for NULL, DUMP, GETPORT and unknown */
+ 
+ int
+@@ -184,12 +285,28 @@ struct sockaddr_in *addr;
+ u_long  proc;
+ u_long  prog;
+ {
+-    if (!(from_local(addr) || good_client(daemon, addr))) {
+-	log_bad_host(addr, proc, prog);
+-	return (FALSE);
+-    }
+-    if (verboselog)
+-	log_client(addr, proc, prog);
++	haccess_t *acc = NULL;
++	int changed = check_files();
++
++	acc = haccess_lookup(addr, proc, prog);
++	if (acc && changed == 0)
++		return (acc->access);
++
++	if (!(from_local(addr) || good_client(daemon, addr))) {
++		log_bad_host(addr, proc, prog);
++		if (acc)
++			acc->access = FALSE;
++		else 
++			haccess_add(addr, proc, prog, FALSE);
++		return (FALSE);
++	}
++	if (verboselog)
++		log_client(addr, proc, prog);
++
++	if (acc)
++		acc->access = TRUE;
++	else 
++		haccess_add(addr, proc, prog, TRUE);
+     return (TRUE);
+ }
+ 
