@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.4
-Release: 10%{?dist}
+Release: 11%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -39,6 +39,7 @@ Patch109: nfs-utils-1.1.4-mount-po_get_numeric.patch
 Patch110: nfs-utils-1.1.4-sm-notify-freeaddrinfo.patch
 Patch111: nfs-utils-1.1.4-statd-xunlink.patch
 Patch112: nfs-utils-1.1.4-tcpwrapper-update.patch
+Patch113: nfs-utils-1.1.4-tcpwrap-warn.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -106,6 +107,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch110 -p1
 %patch111 -p1
 %patch112 -p1
+%patch113 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -269,6 +271,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Sat Jan  3 2009 Steve Dickson <steved@redhat.com> 1.1.4-11
+- Added warnings to tcp wrapper code when mounts are 
+  denied due to misconfigured DNS configurations.
+
 * Fri Dec 19 2008 Steve Dickson <steved@redhat.com> 1.1.4-10
 - Re-enabled and fixed/enhanced tcp wrappers.
 
