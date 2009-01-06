@@ -42,6 +42,7 @@ Patch112: nfs-utils-1.1.4-tcpwrapper-update.patch
 Patch113: nfs-utils-1.1.4-tcpwrap-warn.patch
 Patch114: nfs-utils-1.1.4-gssd-verbosity.patch
 Patch115: nfs-utils-1.1.4-mount-addrconfig.patch
+Patch116: nfs-utils-1.1.4-configure-uuid.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -112,6 +113,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch113 -p1
 %patch114 -p1
 %patch115 -p1
+%patch116 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -283,6 +285,7 @@ fi
 - mount: use gethostbyname(3) when building on old systems
 - mount: getport: don't use getaddrinfo(3) on old systems
 - mount: Random clean up
+- configure: use "--disable-uuid" instead of	"--without-uuid"
 
 * Fri Dec 19 2008 Steve Dickson <steved@redhat.com> 1.1.4-10
 - Re-enabled and fixed/enhanced tcp wrappers.
