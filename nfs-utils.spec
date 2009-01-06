@@ -41,6 +41,7 @@ Patch111: nfs-utils-1.1.4-statd-xunlink.patch
 Patch112: nfs-utils-1.1.4-tcpwrapper-update.patch
 Patch113: nfs-utils-1.1.4-tcpwrap-warn.patch
 Patch114: nfs-utils-1.1.4-gssd-verbosity.patch
+Patch115: nfs-utils-1.1.4-mount-addrconfig.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -110,6 +111,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch112 -p1
 %patch113 -p1
 %patch114 -p1
+%patch115 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -277,6 +279,10 @@ fi
 - Added warnings to tcp wrapper code when mounts are 
   denied due to misconfigured DNS configurations.
 - gssd: By default, don't spam syslog when users' credentials expire
+- mount: revert recent fix for build problems on old systems
+- mount: use gethostbyname(3) when building on old systems
+- mount: getport: don't use getaddrinfo(3) on old systems
+- mount: Random clean up
 
 * Fri Dec 19 2008 Steve Dickson <steved@redhat.com> 1.1.4-10
 - Re-enabled and fixed/enhanced tcp wrappers.

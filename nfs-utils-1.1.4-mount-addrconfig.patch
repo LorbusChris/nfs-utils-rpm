@@ -1,0 +1,227 @@
+--- nfs-utils-1.1.4/support/nfs/getport.c.save	2009-01-06 12:22:33.100864000 -0500
++++ nfs-utils-1.1.4/support/nfs/getport.c	2009-01-06 12:23:04.885428000 -0500
+@@ -73,6 +73,60 @@ static const char *nfs_gp_rpcb_pgmtbl[] 
+ 	NULL,
+ };
+ 
++#ifdef HAVE_DECL_AI_ADDRCONFIG
++/*
++ * getaddrinfo(3) generates a usable loopback address based on how the
++ * local network interfaces are configured.  RFC 3484 requires that the
++ * results are sorted so that the first result has the best likelihood
++ * of working, so we try just that first result.
++ *
++ * Returns TRUE on success.
++ */
++static int nfs_gp_loopback_address(struct sockaddr *sap, socklen_t *salen)
++{
++	struct addrinfo *gai_results;
++	struct addrinfo gai_hint = {
++		.ai_flags	= AI_ADDRCONFIG,
++	};
++	socklen_t len = *salen;
++	int ret = 0;
++
++	if (getaddrinfo(NULL, "sunrpc", &gai_hint, &gai_results))
++		return 0;
++
++	switch (gai_results->ai_addr->sa_family) {
++	case AF_INET:
++	case AF_INET6:
++		if (len >= gai_results->ai_addrlen) {
++			memcpy(sap, gai_results->ai_addr,
++					gai_results->ai_addrlen);
++			*salen = gai_results->ai_addrlen;
++			ret = 1;
++		}
++	}
++
++	freeaddrinfo(gai_results);
++	return ret;
++}
++#else
++/*
++ * Old versions of getaddrinfo(3) don't support AI_ADDRCONFIG, so we
++ * have a fallback for building on legacy systems.
++ */
++static int nfs_gp_loopback_address(struct sockaddr *sap, socklen_t *salen)
++{
++	struct sockaddr_in *sin = (struct sockaddr_in *)sap;
++
++	memset(sin, 0, sizeof(*sin));
++
++	sin->sin_family = AF_INET;
++	sin->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
++	*salen = sizeof(*sin);
++
++	return 1;
++}
++#endif
++
+ /*
+  * Discover the port number that should be used to contact an
+  * rpcbind service.  This will detect if the port has a local
+@@ -780,12 +834,10 @@ unsigned short nfs_getlocalport(const rp
+ 				const rpcvers_t version,
+ 				const unsigned short protocol)
+ {
+-	struct addrinfo *gai_results;
+-	struct addrinfo gai_hint = {
+-		.ai_flags	= AI_ADDRCONFIG,
+-	};
++	struct sockaddr_storage address;
++	struct sockaddr *lb_addr = (struct sockaddr *)&address;
++	socklen_t lb_len = sizeof(lb_addr);
+ 	unsigned short port = 0;
+-	int error;
+ 
+ #ifdef NFS_GP_LOCAL
+ 	const struct sockaddr_un sun = {
+@@ -811,12 +863,9 @@ unsigned short nfs_getlocalport(const rp
+ #endif	/* NFS_GP_LOCAL */
+ 
+ 	if (port == 0) {
+-		error = getaddrinfo(NULL, "sunrpc", &gai_hint, &gai_results);
+-		if (error == 0) {
+-			port = nfs_getport(gai_results->ai_addr,
+-						gai_results->ai_addrlen,
++		if (nfs_gp_loopback_address(lb_addr, &lb_len)) {
++			port = nfs_getport(lb_addr, lb_len,
+ 						program, version, protocol);
+-			freeaddrinfo(gai_results);
+ 		} else
+ 			rpc_createerr.cf_stat = RPC_UNKNOWNADDR;
+ 	}
+--- nfs-utils-1.1.4/utils/mount/network.c.save	2009-01-06 12:22:12.950764000 -0500
++++ nfs-utils-1.1.4/utils/mount/network.c	2009-01-06 12:23:10.432801000 -0500
+@@ -50,24 +50,6 @@
+ #include "nfsrpc.h"
+ #include "network.h"
+ 
+-/*
+- * Earlier versions of glibc's /usr/include/netdb.h exclude these
+- * definitions because it was thought they were not part of a stable
+- * POSIX standard.  However, they are defined by RFC 2553 and 3493
+- * and in POSIX 1003.1-2001, so these definitions were added in later
+- * versions of netdb.h.
+- */
+-#ifndef AI_V4MAPPED
+-#define AI_V4MAPPED     0x0008  /* IPv4-mapped addresses are acceptable.  */
+-#endif	/* AI_V4MAPPED */
+-#ifndef AI_ALL
+-#define AI_ALL          0x0010  /* Return both IPv4 and IPv6 addresses.  */
+-#endif	/* AI_ALL */
+-#ifndef AI_ADDRCONFIG
+-#define AI_ADDRCONFIG   0x0020  /* Use configuration of this host to choose \
+-				   returned address type.  */
+-#endif	/* AI_ADDRCONFIG */
+-
+ #define PMAP_TIMEOUT	(10)
+ #define CONNECT_TIMEOUT	(20)
+ #define MOUNT_TIMEOUT	(30)
+@@ -175,9 +157,11 @@ static void nfs_set_port(struct sockaddr
+ 	}
+ }
+ 
++#ifdef HAVE_DECL_AI_ADDRCONFIG
+ /**
+  * nfs_name_to_address - resolve hostname to an IPv4 or IPv6 socket address
+  * @hostname: pointer to C string containing DNS hostname to resolve
++ * @af_hint: hint to restrict resolution to one address family
+  * @sap: pointer to buffer to fill with socket address
+  * @len: IN: size of buffer to fill; OUT: size of socket address
+  *
+@@ -228,11 +212,66 @@ int nfs_name_to_address(const char *host
+ 	freeaddrinfo(gai_results);
+ 	return ret;
+ }
++#else	/* HAVE_DECL_AI_ADDRCONFIG */
++/**
++ * nfs_name_to_address - resolve hostname to an IPv4 socket address
++ * @hostname: pointer to C string containing DNS hostname to resolve
++ * @af_hint: hint to restrict resolution to one address family
++ * @sap: pointer to buffer to fill with socket address
++ * @len: IN: size of buffer to fill; OUT: size of socket address
++ *
++ * Returns 1 and places a socket address at @sap if successful;
++ * otherwise zero.
++ *
++ * Some older getaddrinfo(3) implementations don't support
++ * AI_ADDRCONFIG or AI_V4MAPPED properly.  For those cases, a DNS
++ * resolver based on the traditional gethostbyname(3) is provided.
++ */
++int nfs_name_to_address(const char *hostname,
++			const sa_family_t af_hint,
++			struct sockaddr *sap, socklen_t *salen)
++{
++	struct sockaddr_in *sin = (struct sockaddr_in *)sap;
++	socklen_t len = *salen;
++	struct hostent *hp;
++
++	*salen = 0;
++
++	if (af_hint != AF_INET) {
++		nfs_error(_("%s: address family not supported by DNS resolver\n"),
++				progname, hostname);
++		return 0;
++	}
++
++	sin->sin_family = AF_INET;
++	if (inet_aton(hostname, &sin->sin_addr)) {
++		*salen = sizeof(*sin);
++		return 1;
++	}
++
++	hp = gethostbyname(hostname);
++	if (hp == NULL) {
++		nfs_error(_("%s: DNS resolution failed for %s: %s"),
++				progname, hostname, hstrerror(h_errno));
++		return 0;
++	}
++
++	if (hp->h_length > len) {
++		nfs_error(_("%s: DNS resolution results too long for buffer\n"),
++				progname);
++		return 0;
++	}
++
++	memcpy(&sin->sin_addr, hp->h_addr, hp->h_length);
++	*salen = hp->h_length;
++	return 1;
++}
++#endif	/* HAVE_DECL_AI_ADDRCONFIG */
+ 
+ /**
+  * nfs_gethostbyname - resolve a hostname to an IPv4 address
+  * @hostname: pointer to a C string containing a DNS hostname
+- * @saddr: returns an IPv4 address 
++ * @sin: returns an IPv4 address 
+  *
+  * Returns 1 if successful, otherwise zero.
+  */
+--- nfs-utils-1.1.4/configure.ac.save	2009-01-06 12:22:41.437331000 -0500
++++ nfs-utils-1.1.4/configure.ac	2009-01-06 12:23:10.424809000 -0500
+@@ -246,6 +246,11 @@ if test "$enable_gss" = yes; then
+ 
+ fi
+ 
++AC_CHECK_DECL([AI_ADDRCONFIG],
++              AC_DEFINE([HAVE_DECL_AI_ADDRCONFIG], 1,
++                         [Define this to 1 if AI_ADDRCONFIG macro is defined]), ,
++              [ #include <netdb.h> ] )
++
+ if test "$enable_ipv6" = yes; then
+   AC_CHECK_FUNC(inet_ntop, , ,
+                AC_MSG_ERROR(Function 'inet_ntop' not found.))
+@@ -254,7 +259,10 @@ if test "$enable_ipv6" = yes; then
+   AC_CHECK_LIB(tirpc, clnt_tli_create, ,
+                AC_MSG_ERROR([libtirpc needed for IPv6 support]))
+   AC_CHECK_HEADERS(tirpc/netconfig.h, ,
+-               AC_MSG_ERROR([libtirpc-devel needed for IPv6 support]))
++               AC_MSG_ERROR([libtirpc headers needed for IPv6 support]))
++  AC_CHECK_DECL([AI_ADDRCONFIG], ,
++               AC_MSG_ERROR([full getaddrinfo(3) implementation needed for IPv6 support]),
++               [ #include <netdb.h> ] )
+ fi
+ 
+ dnl *************************************************************
