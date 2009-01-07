@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.4
-Release: 11%{?dist}
+Release: 12%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -43,6 +43,7 @@ Patch113: nfs-utils-1.1.4-tcpwrap-warn.patch
 Patch114: nfs-utils-1.1.4-gssd-verbosity.patch
 Patch115: nfs-utils-1.1.4-mount-addrconfig.patch
 Patch116: nfs-utils-1.1.4-configure-uuid.patch
+Patch117: nfs-utils-1.1.4-configure-tirpc.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -114,6 +115,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch114 -p1
 %patch115 -p1
 %patch116 -p1
+%patch117 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -277,6 +279,11 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Jan  7 2009 Steve Dickson <steved@redhat.com> 1.1.4-12
+- configure: Remove inet_ntop(3) check from configure.ac
+- configure: Add new build option "--enable-tirpc"
+- showmount command: Quiesce warning when TI-RPC is disabled
+
 * Sat Jan  3 2009 Steve Dickson <steved@redhat.com> 1.1.4-11
 - Added warnings to tcp wrapper code when mounts are 
   denied due to misconfigured DNS configurations.

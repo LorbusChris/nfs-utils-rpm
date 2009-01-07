@@ -1,0 +1,142 @@
+commit aee8b1ab778f8e07b30305f10d4f9427023e314d
+Author: Chuck Lever <chuck.lever@oracle.com>
+Date:   Wed Jan 7 12:06:14 2009 -0500
+
+    configure: Remove inet_ntop(3) check from configure.ac
+    
+    nfs-utils no longer uses inet_ntop(3) so remove checks for it from
+    configure.ac.
+
+commit ba05418f589c2d01f4e7e44c70d4844f43511927
+Author: Chuck Lever <chuck.lever@oracle.com>
+Date:   Wed Jan 7 12:18:11 2009 -0500
+
+    configure: Add new build option "--enable-tirpc"
+    
+    Allow easier testing of nfs-utils in legacy environments by providing
+    a "configure" option to force the build not to use libtirpc, even if
+    it's present on the build system.  This can also be tried as a
+    fallback if problems are found with the new TI-RPC-based nfs-utils
+    code.
+    
+    The new option is:
+    
+      --enable-tirpc          enable use of TI-RPC [default=no]
+    
+    Build option matrix:
+    
+       --disable-tirpc   --disable-ipv6	Default; IPv4 only, glibc RPC
+       --disable-tirpc   --enable-ipv6	'configure' will fail
+       --enable-tirpc    --disable-ipv6	IPv4 only, TI-RPC
+       --enable-tirpc    --enable-ipv6	IPv4 and IPv6, TI-RPC
+    
+commit 29ac873f9024c8fcbca38ab09ba54cda3765b746
+Author: Chuck Lever <chuck.lever@oracle.com>
+Date:   Wed Jan 7 12:33:09 2009 -0500
+
+    showmount command: Quiesce warning when TI-RPC is disabled
+    
+    Make sure nfs_sm_pgmtbl is not compiled if TI-RPC functions are not
+    available.  This quiesces the following compiler warning:
+    
+      showmount.c:53: warning: nfs_sm_pgmtbl defined but not used
+
+diff -up nfs-utils-1.1.4/configure.ac.save nfs-utils-1.1.4/configure.ac
+--- nfs-utils-1.1.4/configure.ac.save	2009-01-07 12:52:29.000000000 -0500
++++ nfs-utils-1.1.4/configure.ac	2009-01-07 12:52:50.000000000 -0500
+@@ -131,6 +131,14 @@ AC_ARG_ENABLE(ipv6,
+ 	AC_SUBST(enable_ipv6)
+ 	AM_CONDITIONAL(CONFIG_IPV6, [test "$enable_ipv6" = "yes"])
+ 
++AC_ARG_ENABLE(tirpc,
++	[AC_HELP_STRING([--enable-tirpc],
++                        [enable use of TI-RPC @<:@default=no@:>@])],
++	enable_tirpc=$enableval,
++	enable_tirpc=no)
++	AC_SUBST(enable_tirpc)
++	AM_CONDITIONAL(CONFIG_TIRPC, [test "$enable_tirpc" = "yes"])
++
+ # Check whether user wants TCP wrappers support
+ AC_TCP_WRAPPERS
+ 
+@@ -251,15 +259,22 @@ AC_CHECK_DECL([AI_ADDRCONFIG],
+                          [Define this to 1 if AI_ADDRCONFIG macro is defined]), ,
+               [ #include <netdb.h> ] )
+ 
++if test "$enable_tirpc" = yes; then
++  AC_CHECK_LIB(tirpc, clnt_tli_create, ,
++           AC_MSG_ERROR([libtirpc not found.]))
++  AC_CHECK_HEADERS(tirpc/netconfig.h, ,
++                   AC_MSG_ERROR([libtirpc headers not found.]))
++  AC_CHECK_FUNCS([bindresvport_sa getnetconfig \
++                  clnt_create clnt_create_timed \
++                  clnt_vc_create clnt_dg_create xdr_rpcb])
++fi
++
+ if test "$enable_ipv6" = yes; then
+-  AC_CHECK_FUNC(inet_ntop, , ,
+-               AC_MSG_ERROR(Function 'inet_ntop' not found.))
++  if test "$enable_tirpc" = no; then
++    AC_MSG_ERROR('--enable-ipv6' requires '--enable-tirpc'.)
++  fi
+   AC_CHECK_FUNC(getnameinfo, , ,
+                AC_MSG_ERROR(Function 'getnameinfo' not found.))
+-  AC_CHECK_LIB(tirpc, clnt_tli_create, ,
+-               AC_MSG_ERROR([libtirpc needed for IPv6 support]))
+-  AC_CHECK_HEADERS(tirpc/netconfig.h, ,
+-               AC_MSG_ERROR([libtirpc headers needed for IPv6 support]))
+   AC_CHECK_DECL([AI_ADDRCONFIG], ,
+                AC_MSG_ERROR([full getaddrinfo(3) implementation needed for IPv6 support]),
+                [ #include <netdb.h> ] )
+@@ -273,7 +288,7 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h li
+                  stdlib.h string.h sys/file.h sys/ioctl.h sys/mount.h \
+                  sys/param.h sys/socket.h sys/time.h sys/vfs.h \
+                  syslog.h unistd.h com_err.h et/com_err.h \
+-                 ifaddrs.h tirpc/netconfig.h])
++                 ifaddrs.h])
+ 
+ dnl *************************************************************
+ dnl Checks for typedefs, structures, and compiler characteristics
+@@ -309,10 +324,7 @@ AC_FUNC_STAT
+ AC_FUNC_VPRINTF
+ AC_CHECK_FUNCS([alarm atexit dup2 fdatasync ftruncate getcwd \
+                gethostbyaddr gethostbyname gethostname getmntent \
+-               inet_ntop getnameinfo getrpcbyname \
+-               bindresvport_sa getnetconfig \
+-               clnt_create clnt_create_timed \
+-               clnt_tli_create clnt_vc_create clnt_dg_create xdr_rpcb \
++               getnameinfo getrpcbyname \
+                gettimeofday hasmntopt inet_ntoa innetgr memset mkdir pathconf \
+                realpath rmdir select socket strcasecmp strchr strdup \
+                strerror strrchr strtol strtoul sigprocmask])
+diff -up nfs-utils-1.1.4/utils/showmount/showmount.c.save nfs-utils-1.1.4/utils/showmount/showmount.c
+--- nfs-utils-1.1.4/utils/showmount/showmount.c.save	2009-01-07 12:53:26.000000000 -0500
++++ nfs-utils-1.1.4/utils/showmount/showmount.c	2009-01-07 12:53:37.000000000 -0500
+@@ -50,13 +50,6 @@ static int	aflag = 0;
+ static int	dflag = 0;
+ static int	eflag = 0;
+ 
+-static const char *nfs_sm_pgmtbl[] = {
+-	"showmount",
+-	"mount",
+-	"mountd",
+-	NULL,
+-};
+-
+ static struct option longopts[] =
+ {
+ 	{ "all", 0, 0, 'a' },
+@@ -87,6 +80,13 @@ static void usage(FILE *fp, int n)
+ 
+ #ifdef HAVE_CLNT_CREATE
+ 
++static const char *nfs_sm_pgmtbl[] = {
++	"showmount",
++	"mount",
++	"mountd",
++	NULL,
++};
++
+ /*
+  * Generate an RPC client handle connected to the mountd service
+  * at @hostname, or die trying.
