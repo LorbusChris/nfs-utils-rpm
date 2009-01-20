@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.4
-Release: 12%{?dist}
+Release: 13%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -44,6 +44,7 @@ Patch114: nfs-utils-1.1.4-gssd-verbosity.patch
 Patch115: nfs-utils-1.1.4-mount-addrconfig.patch
 Patch116: nfs-utils-1.1.4-configure-uuid.patch
 Patch117: nfs-utils-1.1.4-configure-tirpc.patch
+Patch118: nfs-utils-1.1.4-tcpwrap-rulecheck.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -116,6 +117,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch115 -p1
 %patch116 -p1
 %patch117 -p1
+%patch118 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -279,6 +281,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Jan 20 2009 Steve Dickson <steved@redhat.com> 1.1.4-13
+- mountd: Don't do tcp wrapper check when there are no rules (bz 448898)
+
 * Wed Jan  7 2009 Steve Dickson <steved@redhat.com> 1.1.4-12
 - configure: Remove inet_ntop(3) check from configure.ac
 - configure: Add new build option "--enable-tirpc"
