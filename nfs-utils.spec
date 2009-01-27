@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.4
-Release: 13%{?dist}
+Release: 14%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -45,6 +45,7 @@ Patch115: nfs-utils-1.1.4-mount-addrconfig.patch
 Patch116: nfs-utils-1.1.4-configure-uuid.patch
 Patch117: nfs-utils-1.1.4-configure-tirpc.patch
 Patch118: nfs-utils-1.1.4-tcpwrap-rulecheck.patch
+Patch119: nfs-utils-1.1.4-mount-textbased.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -118,6 +119,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch116 -p1
 %patch117 -p1
 %patch118 -p1
+%patch119 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -281,6 +283,13 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Jan 27 2009 Steve Dickson <steved@redhat.com> 1.1.4-14
+- text-based mount command: make po_rightmost() work for N options
+- text-based mount command: Function to stuff "struct pmap" from mount options
+- text-based mount options: Use new pmap stuffer when	rewriting mount options
+- text-based mount command: fix mount option rewriting logic
+- text-based mount command: support AF_INET6 in rewrite_mount_options()
+
 * Tue Jan 20 2009 Steve Dickson <steved@redhat.com> 1.1.4-13
 - mountd: Don't do tcp wrapper check when there are no rules (bz 448898)
 
