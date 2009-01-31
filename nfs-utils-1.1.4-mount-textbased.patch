@@ -61,7 +61,7 @@ index f61d0dd..4934508 100644
 -				return PO_KEY1_RIGHTMOST;
 +			for (i = 0; keys[i] != NULL; i++)
 +				if (strcmp(option->keyword, keys[i]) == 0)
-+					return i;
++					return i+1;
  		}
  	}
  
