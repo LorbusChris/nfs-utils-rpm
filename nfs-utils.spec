@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.4
-Release: 17%{?dist}
+Release: 18%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -50,6 +50,7 @@ Patch120: nfs-utils-1.1.4-tcpwrap-cleanup.patch
 Patch121: nfs-utils-1.1.4-mount-textbased.patch
 Patch122: nfs-utils-1.1.4-mount-nolock.patch
 Patch123: nfs-utils-1.1.4-mount-udponly.patch 
+Patch124: nfs-utils-1.1.4-umount-ipv6.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -128,6 +129,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch121 -p1
 %patch122 -p1
 %patch123 -p1
+%patch124 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -291,6 +293,11 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Feb 17 2009 Steve Dickson <steved@redhat.com> 1.1.4-18
+- umount.nfs command: Add an AF_INET6-capable version of nfs_call_unmount()
+- umount.nfs command: Support AF_INET6 server addresses
+- umount command: remove do_nfs_umount23 function
+
 * Tue Feb 17 2009 Steve Dickson <steved@redhat.com> 1.1.4-17
 - Integrated the upstream fix for bz 483375
 - mount: segmentation faults on UDP mounts (bz 485448)
