@@ -1,0 +1,139 @@
+commit e7ec5e745e851ad10c56d579463ee7e1b85c9c21
+Author: Chuck Lever <chuck.lever@oracle.com>
+Date:   Tue Feb 17 15:19:58 2009 -0500
+
+    text-based mount command: fix return value from po_rightmost()
+    
+    Recently commit 0dcb83a8 changed the po_rightmost() function to
+    distinguish among several possible mount options by taking a table
+    containing the alternatives, and returning the table index of the
+    entry which is rightmost in the mount option string.
+    
+    If it didn't find any mount option that matches an entry from the
+    passed-in table, it returned zero.  This was the same behavior it had
+    before, when it only checked for two options at a time.  It returned
+    PO_NEITHER_FOUND, which was zero.
+    
+    Since this is C, however, zero also happens to be a valid index into
+    the passed-in array of options.
+    
+    Modify the po_rightmost() function to return -1 if the entry wasn't
+    found, and fix up the callers to look for a C-style array index that
+    starts at zero.
+    
+    Thanks to Steve Dickson for troubleshooting the problem.  His solution
+    was merely to bump the return value, as callers already expected an
+    ordinal index instead of a C-style index.
+    
+    I prefer this equivalent but slightly more extensive change because it
+    makes the behavior of po_rightmost() more closely match how humans
+    understand C arrays to work.  Let's address some of the confusion that
+    caused this bug, as well as fixing the run-time behavior.
+    
+    Signed-off-by: Chuck Lever <chuck.lever@oracle.com>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff -up nfs-utils-1.1.4/utils/mount/network.c.orig nfs-utils-1.1.4/utils/mount/network.c
+--- nfs-utils-1.1.4/utils/mount/network.c.orig	2009-02-17 15:51:27.000000000 -0500
++++ nfs-utils-1.1.4/utils/mount/network.c	2009-02-17 15:52:13.000000000 -0500
+@@ -1168,16 +1168,16 @@ static rpcvers_t nfs_nfs_version(struct 
+ 	long tmp;
+ 
+ 	switch (po_rightmost(options, nfs_version_opttbl)) {
+-	case 1:	/* v2 */
++	case 0:	/* v2 */
+ 		return 2;
+-	case 2: /* v3 */
++	case 1: /* v3 */
+ 		return 3;
+-	case 3:	/* vers */
++	case 2:	/* vers */
+ 		if (po_get_numeric(options, "vers", &tmp) == PO_FOUND)
+ 			if (tmp >= 2 && tmp <= 3)
+ 				return tmp;
+ 		break;
+-	case 4: /* nfsvers */
++	case 3: /* nfsvers */
+ 		if (po_get_numeric(options, "nfsvers", &tmp) == PO_FOUND)
+ 			if (tmp >= 2 && tmp <= 3)
+ 				return tmp;
+@@ -1198,11 +1198,9 @@ static unsigned short nfs_nfs_protocol(s
+ 	char *option;
+ 
+ 	switch (po_rightmost(options, nfs_transport_opttbl)) {
+-	case 1:	/* udp */
+-		return IPPROTO_UDP;
+-	case 2: /* tcp */
++	case 1: /* tcp */
+ 		return IPPROTO_TCP;
+-	case 3: /* proto */
++	case 2: /* proto */
+ 		option = po_get(options, "proto");
+ 		if (option) {
+ 			if (strcmp(option, "tcp") == 0)
+@@ -1211,6 +1209,7 @@ static unsigned short nfs_nfs_protocol(s
+ 				return IPPROTO_UDP;
+ 		}
+ 	}
++
+ 	return IPPROTO_UDP;
+ }
+ 
+diff -up nfs-utils-1.1.4/utils/mount/parse_opt.c.orig nfs-utils-1.1.4/utils/mount/parse_opt.c
+--- nfs-utils-1.1.4/utils/mount/parse_opt.c.orig	2009-02-17 15:51:27.000000000 -0500
++++ nfs-utils-1.1.4/utils/mount/parse_opt.c	2009-02-17 15:52:13.000000000 -0500
+@@ -437,9 +437,10 @@ po_found_t po_get_numeric(struct mount_o
+  * as "proto=," "udp" and "tcp."
+  *
+  * Returns the index into @keys of the option that is rightmost.
+- * If none of the options are present, returns zero.
++ * If none of the options listed in @keys is present in @options, or
++ * if @options is NULL, returns -1.
+  */
+-unsigned int po_rightmost(struct mount_options *options, const char *keys[])
++int po_rightmost(struct mount_options *options, const char *keys[])
+ {
+ 	struct mount_option *option;
+ 	unsigned int i;
+@@ -452,7 +453,7 @@ unsigned int po_rightmost(struct mount_o
+ 		}
+ 	}
+ 
+-	return 0;
++	return -1;
+ }
+ 
+ /**
+diff -up nfs-utils-1.1.4/utils/mount/parse_opt.h.orig nfs-utils-1.1.4/utils/mount/parse_opt.h
+--- nfs-utils-1.1.4/utils/mount/parse_opt.h.orig	2009-02-17 15:51:27.000000000 -0500
++++ nfs-utils-1.1.4/utils/mount/parse_opt.h	2009-02-17 15:52:13.000000000 -0500
+@@ -47,7 +47,7 @@ po_found_t		po_contains(struct mount_opt
+ char *			po_get(struct mount_options *, char *);
+ po_found_t		po_get_numeric(struct mount_options *,
+ 					char *, long *);
+-unsigned int		po_rightmost(struct mount_options *,
++int			po_rightmost(struct mount_options *,
+ 					const char *keys[]);
+ po_found_t		po_remove_all(struct mount_options *, char *);
+ void			po_destroy(struct mount_options *);
+diff -up nfs-utils-1.1.4/utils/mount/stropts.c.orig nfs-utils-1.1.4/utils/mount/stropts.c
+--- nfs-utils-1.1.4/utils/mount/stropts.c.orig	2009-02-17 15:51:27.000000000 -0500
++++ nfs-utils-1.1.4/utils/mount/stropts.c	2009-02-17 15:52:13.000000000 -0500
+@@ -232,7 +232,7 @@ static const char *nfs_lock_opttbl[] = {
+ 
+ static int nfs_verify_lock_option(struct mount_options *options)
+ {
+-	if (po_rightmost(options, nfs_lock_opttbl) == 1)
++	if (po_rightmost(options, nfs_lock_opttbl) == 0)
+ 		return 1;
+ 
+ 	if (!start_statd()) {
+@@ -756,7 +756,7 @@ static int nfsmount_start(struct nfsmoun
+ 	if (!nfs_validate_options(mi))
+ 		return EX_FAIL;
+ 
+-	if (po_rightmost(mi->options, nfs_background_opttbl) == 1)
++	if (po_rightmost(mi->options, nfs_background_opttbl) == 0)
+ 		return nfsmount_bg(mi);
+ 	else
+ 		return nfsmount_fg(mi);
