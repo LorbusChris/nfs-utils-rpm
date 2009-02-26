@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.4
-Release: 19%{?dist}
+Release: 20%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -295,6 +295,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Feb 25 2009 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:1.1.4-20
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_11_Mass_Rebuild
+
 * Wed Feb 18 2009 Steve Dickson <steved@redhat.com> 1.1.4-19
 - Exportfs and rpc.mountd optimalization (bz 76643)
 
