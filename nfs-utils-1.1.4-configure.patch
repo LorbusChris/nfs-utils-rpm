@@ -1,0 +1,64 @@
+commit 38667906c89d6944faaced7fbcda027643dc10ad
+Author: Chuck Lever <chuck.lever@oracle.com>
+Date:   Wed Mar 4 15:54:39 2009 -0500
+
+    configure: fix AC_CACHE_VAL warnings on Fedora 10
+    
+    Autoconf 2.63 (and maybe earlier releases) complains about the cache
+    variable name used in aclocal/libblkid.m4:
+    
+    configure.ac:217: warning: AC_CACHE_VAL(libblkid_is_recent, ...):
+    suspicious cache-id, must contain _cv_ to be cached
+    ../../lib/autoconf/general.m4:1974: AC_CACHE_VAL is expanded from...
+    aclocal/libblkid.m4:2: AC_BLKID_VERS is expanded from...
+    configure.ac:217: the top level
+    
+    This addresses
+      https://bugzilla.redhat.com/attachment.cgi?bugid=481386 .
+    
+    Signed-off-by: Chuck Lever <chuck.lever@oracle.com>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff --git a/aclocal/libblkid.m4 b/aclocal/libblkid.m4
+index d751a8c..10824e9 100644
+--- a/aclocal/libblkid.m4
++++ b/aclocal/libblkid.m4
+@@ -1,7 +1,7 @@
+ dnl *************************** libblkid needs version 1.40 or later ***********************
+ AC_DEFUN([AC_BLKID_VERS], [
+   AC_MSG_CHECKING(for suitable libblkid version)
+-  AC_CACHE_VAL(libblkid_is_recent,
++  AC_CACHE_VAL([libblkid_cv_is_recent],
+    [
+     saved_LIBS="$LIBS"
+     LIBS=-lblkid
+@@ -12,9 +12,8 @@ AC_DEFUN([AC_BLKID_VERS], [
+ 		int vers = blkid_get_library_version(0, 0);
+ 		return vers >= 140 ? 0 : 1;
+ 	}
+-       ], libblkid_is_recent=yes, libblkid_is_recent=no,
+-       libblkid_is_recent=unknown)
+-    LIBS="$saved_LIBS"
+-    ])dnl
+-  AC_MSG_RESULT($libblkid_is_recent)
++       ], [libblkid_cv_is_recent=yes], [libblkid_cv_is_recent=no],
++       [libblkid_cv_is_recent=unknown])
++    LIBS="$saved_LIBS"])
++  AC_MSG_RESULT($libblkid_cv_is_recent)
+ ])dnl
+diff --git a/configure.ac b/configure.ac
+index c8508f1..4fd111f 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -219,9 +219,9 @@ if test "$choose_blkid" != no; then
+    AC_BLKID_VERS
+    if test $choose_blkid = yes; then
+       use_blkid=1
+-      test $libblkid_is_recent = no && AC_MSG_WARN([libblkid is old and may cause mountd to leak memory])
++      test $libblkid_cv_is_recent = no && AC_MSG_WARN([libblkid is old and may cause mountd to leak memory])
+    else
+-      if test $libblkid_is_recent = yes
++      if test $libblkid_cv_is_recent = yes
+       then use_blkid=1
+       else use_blkid=0
+ 	   AC_MSG_WARN([uuid support disabled as libblkid is too old])

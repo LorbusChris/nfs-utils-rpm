@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.4
-Release: 20%{?dist}
+Release: 21%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -52,6 +52,7 @@ Patch122: nfs-utils-1.1.4-mount-nolock.patch
 Patch123: nfs-utils-1.1.4-mount-udponly.patch 
 Patch124: nfs-utils-1.1.4-umount-ipv6.patch
 Patch125: nfs-utils-1.1.4-export-hash.patch
+Patch126: nfs-utils-1.1.4-configure.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -132,6 +133,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch123 -p1
 %patch124 -p1
 %patch125 -p1
+%patch126 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -295,6 +297,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Mar  4 2009 Steve Dickson <steved@redhat.com> 1.1.4-21
+- configure: fix AC_CACHE_VAL warnings
+
 * Wed Feb 25 2009 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:1.1.4-20
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_11_Mass_Rebuild
 
