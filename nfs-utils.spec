@@ -1,8 +1,8 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
-Version: 1.1.4
-Release: 21%{?dist}
+Version: 1.1.5
+Release: 1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -25,34 +25,6 @@ Source15: nfs.sysconfig
 Patch00: nfs-utils-1.0.5-statdpath.patch
 Patch01: nfs-utils-1.1.0-smnotify-path.patch
 Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
-
-Patch100: nfs-utils-1.1.4-inet6-capable-api.patch
-Patch101: nfs-utils-1.1.4-inet6-rpcbind-util-funcs.patch
-Patch102: nfs-utils-1.1.4-showmount-rpcbind.patch
-Patch103: nfs-utils-1.1.4-gssd-dnotify.patch
-Patch104: nfs-utils-1.1.4-statd-setuid.patch
-Patch105: nfs-utils-1.1.4-mount-nfs_getport.patch
-Patch106: nfs-utils-1.1.4-sm-notify-typo.patch
-Patch107: nfs-utils-1.1.4-mount-inet6-support.patch
-Patch108: nfs-utils-1.1.4-svcgssd-expiration.patch
-Patch109: nfs-utils-1.1.4-mount-po_get_numeric.patch
-Patch110: nfs-utils-1.1.4-sm-notify-freeaddrinfo.patch
-Patch111: nfs-utils-1.1.4-statd-xunlink.patch
-Patch112: nfs-utils-1.1.4-tcpwrapper-update.patch
-Patch113: nfs-utils-1.1.4-tcpwrap-warn.patch
-Patch114: nfs-utils-1.1.4-gssd-verbosity.patch
-Patch115: nfs-utils-1.1.4-mount-addrconfig.patch
-Patch116: nfs-utils-1.1.4-configure-uuid.patch
-Patch117: nfs-utils-1.1.4-configure-tirpc.patch
-Patch118: nfs-utils-1.1.4-tcpwrap-hash.patch
-Patch119: nfs-utils-1.1.4-tcpwrap-newrules.patch
-Patch120: nfs-utils-1.1.4-tcpwrap-cleanup.patch
-Patch121: nfs-utils-1.1.4-mount-textbased.patch
-Patch122: nfs-utils-1.1.4-mount-nolock.patch
-Patch123: nfs-utils-1.1.4-mount-udponly.patch 
-Patch124: nfs-utils-1.1.4-umount-ipv6.patch
-Patch125: nfs-utils-1.1.4-export-hash.patch
-Patch126: nfs-utils-1.1.4-configure.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -106,34 +78,6 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch00 -p1
 %patch01 -p1
 %patch02 -p1
-
-%patch100 -p1
-%patch101 -p1
-%patch102 -p1
-%patch103 -p1
-%patch104 -p1
-%patch105 -p1
-%patch106 -p1
-%patch107 -p1
-%patch108 -p1
-%patch109 -p1
-%patch110 -p1
-%patch111 -p1
-%patch112 -p1
-%patch113 -p1
-%patch114 -p1
-%patch115 -p1
-%patch116 -p1
-%patch117 -p1
-%patch118 -p1
-%patch119 -p1
-%patch120 -p1
-%patch121 -p1
-%patch122 -p1
-%patch123 -p1
-%patch124 -p1
-%patch125 -p1
-%patch126 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -297,6 +241,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Thu Mar  5 2009 Steve Dickson <steved@redhat.com> 1.1.5-1
+- Updated to latest upstream version: 1.1.5
+
 * Wed Mar  4 2009 Steve Dickson <steved@redhat.com> 1.1.4-21
 - configure: fix AC_CACHE_VAL warnings
 
