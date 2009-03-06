@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.5
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -241,6 +241,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Fri Mar  6 2009 Steve Dickson <steved@redhat.com> 1.1.5-2
+- Fixed lockd not using settings in sysconfig/nfs (bz 461043)
+
 * Thu Mar  5 2009 Steve Dickson <steved@redhat.com> 1.1.5-1
 - Updated to latest upstream version: 1.1.5
 
