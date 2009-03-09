@@ -26,6 +26,8 @@ Patch00: nfs-utils-1.0.5-statdpath.patch
 Patch01: nfs-utils-1.1.0-smnotify-path.patch
 Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 
+Patch100: nfs-utils-1.1.5-tcpwrap-externs.patch
+
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
 %endif
@@ -78,6 +80,8 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch00 -p1
 %patch01 -p1
 %patch02 -p1
+
+%patch100 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -243,6 +247,7 @@ fi
 %changelog
 * Fri Mar  6 2009 Steve Dickson <steved@redhat.com> 1.1.5-2
 - Fixed lockd not using settings in sysconfig/nfs (bz 461043)
+- Fixed some lost externs in the tcpwrapper code
 
 * Thu Mar  5 2009 Steve Dickson <steved@redhat.com> 1.1.5-1
 - Updated to latest upstream version: 1.1.5
