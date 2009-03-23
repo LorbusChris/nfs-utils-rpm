@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.5
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -28,6 +28,7 @@ Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 
 Patch100: nfs-utils-1.1.5-tcpwrap-externs.patch
 Patch101: nfs-utils-1-1-6-rc2.patch
+Patch102: nfs-utils-1-1-6-rc3.patch
 
 %if %{enablefscache}
 Patch90: nfs-utils-1.1.0-mount-fsc.patch
@@ -84,6 +85,7 @@ This package also contains the mount.nfs and umount.nfs program.
 
 %patch100 -p1
 %patch101 -p1
+%patch102 -p1
 
 %if %{enablefscache}
 %patch90 -p1
@@ -247,6 +249,14 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Mar 23 2009 Steve Dickson <steved@redhat.com> 1.1.5-4
+- Added upstream rc3 patch
+  - gssd: initialize fakeseed in prepare_krb5_rfc1964_buffer
+  - gssd: NULL-terminate buffer after read in read_service_info (try #2)
+  - gssd: free buffer allocated by gssd_k5_err_msg
+  - gssd: fix potential double-frees in gssd
+  - Removed a number of warn_unused_result warnings
+
 * Mon Mar 16 2009 Steve Dickson <steved@redhat.com> 1.1.5-3
 - Added upstream rc2 patch
 
