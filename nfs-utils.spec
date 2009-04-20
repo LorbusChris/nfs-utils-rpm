@@ -1,16 +1,12 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
-Version: 1.1.5
-Release: 4%{?dist}
+Version: 1.1.6
+Release: 1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i686 athlon ppc sparcv9
-
-# Enable the ability to set the 'fsc' mount flag which
-# will allow NFS to use FS-Cache.
-%define enablefscache 0
 
 Source0: http://www.kernel.org/pub/linux/utils/nfs/%{name}-%{version}.tar.bz2
 Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
@@ -25,14 +21,6 @@ Source15: nfs.sysconfig
 Patch00: nfs-utils-1.0.5-statdpath.patch
 Patch01: nfs-utils-1.1.0-smnotify-path.patch
 Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
-
-Patch100: nfs-utils-1.1.5-tcpwrap-externs.patch
-Patch101: nfs-utils-1-1-6-rc2.patch
-Patch102: nfs-utils-1-1-6-rc3.patch
-
-%if %{enablefscache}
-Patch90: nfs-utils-1.1.0-mount-fsc.patch
-%endif
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -82,14 +70,6 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch00 -p1
 %patch01 -p1
 %patch02 -p1
-
-%patch100 -p1
-%patch101 -p1
-%patch102 -p1
-
-%if %{enablefscache}
-%patch90 -p1
-%endif
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -249,6 +229,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Apr 20 2009 Steve Dickson <steved@redhat.com> 1.1.6-1
+- Updated to latest upstream release: 1.1.6
+
 * Mon Mar 23 2009 Steve Dickson <steved@redhat.com> 1.1.5-4
 - Added upstream rc3 patch
   - gssd: initialize fakeseed in prepare_krb5_rfc1964_buffer
