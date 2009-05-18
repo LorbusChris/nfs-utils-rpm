@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.6
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -21,6 +21,8 @@ Source15: nfs.sysconfig
 Patch00: nfs-utils-1.0.5-statdpath.patch
 Patch01: nfs-utils-1.1.0-smnotify-path.patch
 Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
+
+Patch100: nfs-utils-1.1.7-rc1.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -70,6 +72,8 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch00 -p1
 %patch01 -p1
 %patch02 -p1
+
+%patch100 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -229,6 +233,16 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon May 18 2009 Steve Dickson <steved@redhat.com> 1.1.6-3
+- Added upstream 1.1.7-rc1 patch 
+  - utils/nfsd: add support for minorvers4
+  - sm-notify: Don't orphan addrinfo structs
+  - sm-notify: Failed DNS lookups should be retried
+  - mount: remove legacy version of nfs_name_to_address()
+  - compiling error in rpcgen
+  - nfs-utils: Fix IPv6 support in support/nfs/rpc_socket.c
+  - umount.nfs: Harden umount.nfs error reportin
+
 * Mon Apr 27 2009 Steve Dickson <steved@redhat.com> 1.1.6-2
 - nfslock.init: options not correctly parsed (bz 459591)
 

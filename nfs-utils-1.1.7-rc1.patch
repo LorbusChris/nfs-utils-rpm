@@ -1,0 +1,600 @@
+diff --git a/support/export/client.c b/support/export/client.c
+index 1cb242f..5fcf355 100644
+--- a/support/export/client.c
++++ b/support/export/client.c
+@@ -371,7 +371,7 @@ client_check(nfs_client *clp, struct hostent *hp)
+ #ifdef HAVE_INNETGR
+ 		{
+ 			char	*dot;
+-			int	match;
++			int	match, i;
+ 			struct hostent *nhp = NULL;
+ 			struct sockaddr_in addr;
+ 
+@@ -380,6 +380,12 @@ client_check(nfs_client *clp, struct hostent *hp)
+ 			if (innetgr(cname+1, hname, NULL, NULL))
+ 				return 1;
+ 
++			/* try the aliases as well */
++			for (i = 0; hp->h_aliases[i]; i++) {
++				if (innetgr(cname+1, hp->h_aliases[i], NULL, NULL))
++					return 1;
++			}
++
+ 			/* If hname is ip address convert to FQDN */
+ 			if (inet_aton(hname, &addr.sin_addr) &&
+ 			   (nhp = gethostbyaddr((const char *)&(addr.sin_addr),
+diff --git a/support/include/nfs/nfs.h b/support/include/nfs/nfs.h
+index fc26f4e..00b0028 100644
+--- a/support/include/nfs/nfs.h
++++ b/support/include/nfs/nfs.h
+@@ -13,6 +13,9 @@
+ #define NFSD_MINVERS 2
+ #define NFSD_MAXVERS 4
+ 
++#define NFSD_MINMINORVERS4 1
++#define NFSD_MAXMINORVERS4 1
++
+ struct nfs_fh_len {
+ 	int		fh_size;
+ 	u_int8_t	fh_handle[NFS3_FHSIZE];
+diff --git a/support/include/nfslib.h b/support/include/nfslib.h
+index 9d0d39d..ae98650 100644
+--- a/support/include/nfslib.h
++++ b/support/include/nfslib.h
+@@ -130,7 +130,7 @@ int			wildmat(char *text, char *pattern);
+  * nfsd library functions.
+  */
+ int			nfsctl(int, struct nfsctl_arg *, union nfsctl_res *);
+-int			nfssvc(int port, int nrservs, unsigned int versbits, unsigned int portbits, char *haddr);
++int			nfssvc(int port, int nrservs, unsigned int versbits, int minorvers4, unsigned int portbits, char *haddr);
+ int			nfsaddclient(struct nfsctl_client *clp);
+ int			nfsdelclient(struct nfsctl_client *clp);
+ int			nfsexport(struct nfsctl_export *exp);
+diff --git a/support/nfs/nfssvc.c b/support/nfs/nfssvc.c
+index 9bbc9a5..33c15a7 100644
+--- a/support/nfs/nfssvc.c
++++ b/support/nfs/nfssvc.c
+@@ -116,7 +116,7 @@ nfssvc_setfds(int port, unsigned int ctlbits, char *haddr)
+ 	return;
+ }
+ static void
+-nfssvc_versbits(unsigned int ctlbits)
++nfssvc_versbits(unsigned int ctlbits, int minorvers4)
+ {
+ 	int fd, n, off;
+ 	char buf[BUFSIZ], *ptr;
+@@ -133,6 +133,11 @@ nfssvc_versbits(unsigned int ctlbits)
+ 		else
+ 		    off += snprintf(ptr+off, BUFSIZ - off, "-%d ", n);
+ 	}
++	n = minorvers4 >= 0 ? minorvers4 : -minorvers4;
++	if (n >= NFSD_MINMINORVERS4 && n <= NFSD_MAXMINORVERS4)
++		    off += snprintf(ptr+off, BUFSIZ - off, "%c4.%d",
++				    minorvers4 > 0 ? '+' : '-',
++				    n);
+ 	snprintf(ptr+off, BUFSIZ - off, "\n");
+ 	if (write(fd, buf, strlen(buf)) != strlen(buf)) {
+ 		syslog(LOG_ERR, "nfssvc: Setting version failed: errno %d (%s)", 
+@@ -143,8 +148,8 @@ nfssvc_versbits(unsigned int ctlbits)
+ 	return;
+ }
+ int
+-nfssvc(int port, int nrservs, unsigned int versbits, unsigned protobits,
+-	char *haddr)
++nfssvc(int port, int nrservs, unsigned int versbits, int minorvers4,
++	unsigned protobits, char *haddr)
+ {
+ 	struct nfsctl_arg	arg;
+ 	int fd;
+@@ -153,7 +158,7 @@ nfssvc(int port, int nrservs, unsigned int versbits, unsigned protobits,
+ 	 * the ports get registered with portmap against correct
+ 	 * versions
+ 	 */
+-	nfssvc_versbits(versbits);
++	nfssvc_versbits(versbits, minorvers4);
+ 	nfssvc_setfds(port, protobits, haddr);
+ 
+ 	fd = open(NFSD_THREAD_FILE, O_WRONLY);
+diff --git a/support/nfs/rpc_socket.c b/support/nfs/rpc_socket.c
+index 85e6064..cebf83d 100644
+--- a/support/nfs/rpc_socket.c
++++ b/support/nfs/rpc_socket.c
+@@ -132,7 +132,7 @@ static int nfs_bind(const int sock, const sa_family_t family)
+ 	return -1;
+ }
+ 
+-#ifdef IPV6_SUPPORT
++#ifdef IPV6_SUPPORTED
+ 
+ /*
+  * Bind a socket using an unused privileged source port.
+@@ -153,18 +153,16 @@ static int nfs_bindresvport(const int sock, const sa_family_t family)
+ 
+ 	switch (family) {
+ 	case AF_INET:
+-		return bindresvport_sa(sock, (struct sockaddr *)&sin,
+-					(socklen_t)sizeof(sin));
++		return bindresvport_sa(sock, (struct sockaddr *)&sin);
+ 	case AF_INET6:
+-		return bindresvport_sa(sock, (struct sockaddr *)&sin6,
+-					(socklen_t)sizeof(sin6));
++		return bindresvport_sa(sock, (struct sockaddr *)&sin6);
+ 	}
+ 
+ 	errno = EAFNOSUPPORT;
+ 	return -1;
+ }
+ 
+-#else	/* !IPV6_SUPPORT */
++#else	/* !IPV6_SUPPORTED */
+ 
+ /*
+  * Bind a socket using an unused privileged source port.
+@@ -182,7 +180,7 @@ static int nfs_bindresvport(const int sock, const sa_family_t family)
+ 	return bindresvport(sock, NULL);
+ }
+ 
+-#endif	/* !IPV6_SUPPORT */
++#endif	/* !IPV6_SUPPORTED */
+ 
+ /*
+  * Perform a non-blocking connect on the socket fd.
+diff --git a/tools/rpcgen/rpc_main.c b/tools/rpcgen/rpc_main.c
+index 26f202b..e23caff 100644
+--- a/tools/rpcgen/rpc_main.c
++++ b/tools/rpcgen/rpc_main.c
+@@ -550,7 +550,7 @@ s_output(int argc, char **argv, char *infile, char *define, int extend,
+ 	  f_print(fout, "#include <sys/ttycom.h>/* TIOCNOTTY */\n");
+ #else
+ 	if( !tirpcflag )
+-	  f_print(fout, "#include <sys/ttycom.h>/* TIOCNOTTY */\n");
++	  f_print(fout, "#include <sys/ioctl.h>/* TIOCNOTTY */\n");
+ #endif
+ 	if( Cflag && (inetdflag || pmflag ) ) {
+ 	  f_print(fout, "#ifdef __cplusplus\n");
+diff --git a/utils/mount/network.c b/utils/mount/network.c
+index 72f4b84..04a62ab 100644
+--- a/utils/mount/network.c
++++ b/utils/mount/network.c
+@@ -185,39 +185,32 @@ static void nfs_set_port(struct sockaddr *sap, const unsigned short port)
+ 	}
+ }
+ 
+-#ifdef HAVE_DECL_AI_ADDRCONFIG
+-/**
+- * nfs_name_to_address - resolve hostname to an IPv4 or IPv6 socket address
+- * @hostname: pointer to C string containing DNS hostname to resolve
+- * @af_hint: hint to restrict resolution to one address family
+- * @sap: pointer to buffer to fill with socket address
+- * @len: IN: size of buffer to fill; OUT: size of socket address
+- *
+- * Returns 1 and places a socket address at @sap if successful;
+- * otherwise zero.
+- */
+-int nfs_name_to_address(const char *hostname,
+-			const sa_family_t af_hint,
+-			struct sockaddr *sap, socklen_t *salen)
++static int nfs_lookup(const char *hostname, const sa_family_t family,
++		      struct sockaddr *sap, socklen_t *salen)
+ {
+ 	struct addrinfo *gai_results;
+ 	struct addrinfo gai_hint = {
+-		.ai_family	= af_hint,
++#ifdef HAVE_DECL_AI_ADDRCONFIG
+ 		.ai_flags	= AI_ADDRCONFIG,
++#endif	/* HAVE_DECL_AI_ADDRCONFIG */
++		.ai_family	= family,
+ 	};
+ 	socklen_t len = *salen;
+ 	int error, ret = 0;
+ 
+-	if (af_hint == AF_INET6)
+-		gai_hint.ai_flags |= AI_V4MAPPED|AI_ALL;
+-
+ 	*salen = 0;
+ 
+ 	error = getaddrinfo(hostname, NULL, &gai_hint, &gai_results);
+-	if (error) {
++	switch (error) {
++	case 0:
++		break;
++	case EAI_SYSTEM:
++		nfs_error(_("%s: DNS resolution failed for %s: %s"),
++			progname, hostname, strerror(errno));
++		return ret;
++	default:
+ 		nfs_error(_("%s: DNS resolution failed for %s: %s"),
+-			progname, hostname, (error == EAI_SYSTEM ?
+-				strerror(errno) : gai_strerror(error)));
++			progname, hostname, gai_strerror(error));
+ 		return ret;
+ 	}
+ 
+@@ -240,61 +233,25 @@ int nfs_name_to_address(const char *hostname,
+ 	freeaddrinfo(gai_results);
+ 	return ret;
+ }
+-#else	/* HAVE_DECL_AI_ADDRCONFIG */
++
+ /**
+- * nfs_name_to_address - resolve hostname to an IPv4 socket address
++ * nfs_name_to_address - resolve hostname to an IPv4 or IPv6 socket address
+  * @hostname: pointer to C string containing DNS hostname to resolve
+- * @af_hint: hint to restrict resolution to one address family
+  * @sap: pointer to buffer to fill with socket address
+  * @len: IN: size of buffer to fill; OUT: size of socket address
+  *
+  * Returns 1 and places a socket address at @sap if successful;
+  * otherwise zero.
+- *
+- * Some older getaddrinfo(3) implementations don't support
+- * AI_ADDRCONFIG or AI_V4MAPPED properly.  For those cases, a DNS
+- * resolver based on the traditional gethostbyname(3) is provided.
+  */
+ int nfs_name_to_address(const char *hostname,
+-			const sa_family_t af_hint,
+ 			struct sockaddr *sap, socklen_t *salen)
+ {
+-	struct sockaddr_in *sin = (struct sockaddr_in *)sap;
+-	socklen_t len = *salen;
+-	struct hostent *hp;
+-
+-	*salen = 0;
+-
+-	if (af_hint != AF_INET) {
+-		nfs_error(_("%s: address family not supported by DNS resolver\n"),
+-				progname, hostname);
+-		return 0;
+-	}
+-
+-	sin->sin_family = AF_INET;
+-	if (inet_aton(hostname, &sin->sin_addr)) {
+-		*salen = sizeof(*sin);
+-		return 1;
+-	}
+-
+-	hp = gethostbyname(hostname);
+-	if (hp == NULL) {
+-		nfs_error(_("%s: DNS resolution failed for %s: %s"),
+-				progname, hostname, hstrerror(h_errno));
+-		return 0;
+-	}
+-
+-	if (hp->h_length > len) {
+-		nfs_error(_("%s: DNS resolution results too long for buffer\n"),
+-				progname);
+-		return 0;
+-	}
+-
+-	memcpy(&sin->sin_addr, hp->h_addr, hp->h_length);
+-	*salen = sizeof(struct sockaddr_in);
+-	return 1;
++#ifdef IPV6_SUPPORTED
++	return nfs_lookup(hostname, AF_UNSPEC, sap, salen);
++#else	/* !IPV6_SUPPORTED */
++	return nfs_lookup(hostname, AF_INET, sap, salen);
++#endif	/* !IPV6_SUPPORTED */
+ }
+-#endif	/* HAVE_DECL_AI_ADDRCONFIG */
+ 
+ /**
+  * nfs_gethostbyname - resolve a hostname to an IPv4 address
+@@ -307,8 +264,7 @@ int nfs_gethostbyname(const char *hostname, struct sockaddr_in *sin)
+ {
+ 	socklen_t len = sizeof(*sin);
+ 
+-	return nfs_name_to_address(hostname, AF_INET,
+-					(struct sockaddr *)sin, &len);
++	return nfs_lookup(hostname, AF_INET, (struct sockaddr *)sin, &len);
+ }
+ 
+ /**
+@@ -863,17 +819,24 @@ int nfs_advise_umount(const struct sockaddr *sap, const socklen_t salen,
+ 	CLIENT *client;
+ 	enum clnt_stat res = 0;
+ 
+-	if (nfs_probe_mntport(sap, salen, &mnt_pmap) == 0)
+-		return 0;
+-
+ 	memcpy(saddr, sap, salen);
++	if (nfs_probe_mntport(saddr, salen, &mnt_pmap) == 0) {
++		if (verbose)
++			nfs_error(_("%s: Failed to discover mountd port%s"),
++				progname, clnt_spcreateerror(""));
++		return 0;
++	}
+ 	nfs_set_port(saddr, mnt_pmap.pm_port);
+ 
+ 	client = nfs_get_priv_rpcclient(saddr, salen, mnt_pmap.pm_prot,
+ 					mnt_pmap.pm_prog, mnt_pmap.pm_vers,
+ 					&timeout);
+-	if (client == NULL)
++	if (client == NULL) {
++		if (verbose)
++			nfs_error(_("%s: Failed to create RPC client%s"),
++				progname, clnt_spcreateerror(""));
+ 		return 0;
++	}
+ 
+ 	client->cl_auth = authunix_create_default();
+ 
+@@ -881,13 +844,15 @@ int nfs_advise_umount(const struct sockaddr *sap, const socklen_t salen,
+ 			(xdrproc_t)xdr_dirpath, (caddr_t)argp,
+ 			(xdrproc_t)xdr_void, NULL,
+ 			timeout);
++	if (verbose && res != RPC_SUCCESS)
++		nfs_error(_("%s: UMNT call failed: %s"),
++			progname, clnt_sperrno(res));
+ 
+ 	auth_destroy(client->cl_auth);
+ 	CLNT_DESTROY(client);
+ 
+ 	if (res != RPC_SUCCESS)
+ 		return 0;
+-
+ 	return 1;
+ }
+ 
+diff --git a/utils/mount/network.h b/utils/mount/network.h
+index 0dd90f8..b3f9bd2 100644
+--- a/utils/mount/network.h
++++ b/utils/mount/network.h
+@@ -44,8 +44,7 @@ int nfs_probe_bothports(const struct sockaddr *, const socklen_t,
+ 			struct pmap *, const struct sockaddr *,
+ 			const socklen_t, struct pmap *);
+ int nfs_gethostbyname(const char *, struct sockaddr_in *);
+-int nfs_name_to_address(const char *, const sa_family_t,
+-		struct sockaddr *, socklen_t *);
++int nfs_name_to_address(const char *, struct sockaddr *, socklen_t *);
+ int nfs_string_to_sockaddr(const char *, const size_t,
+ 			   struct sockaddr *, socklen_t *);
+ int nfs_present_sockaddr(const struct sockaddr *,
+diff --git a/utils/mount/nfsumount.c b/utils/mount/nfsumount.c
+index 78ebd4a..9b48cc9 100644
+--- a/utils/mount/nfsumount.c
++++ b/utils/mount/nfsumount.c
+@@ -182,14 +182,15 @@ static int nfs_umount_do_umnt(struct mount_options *options,
+ 		return EX_FAIL;
+ 	}
+ 
+-	if (nfs_name_to_address(*hostname, AF_UNSPEC, sap, &salen)) {
+-		if (nfs_advise_umount(sap, salen, &mnt_pmap, dirname) != 0)
+-			return EX_SUCCESS;
+-		else
+-			nfs_error(_("%s: Server failed to unmount '%s:%s'"),
+-					progname, *hostname, *dirname);
+-	}
+-	return EX_FAIL;
++	if (nfs_name_to_address(*hostname, sap, &salen) == 0)
++		/* nfs_name_to_address reports any errors */
++		return EX_FAIL;
++
++	if (nfs_advise_umount(sap, salen, &mnt_pmap, dirname) == 0)
++		/* nfs_advise_umount reports any errors */
++		return EX_FAIL;
++
++	return EX_SUCCESS;
+ }
+ 
+ /*
+diff --git a/utils/mount/stropts.c b/utils/mount/stropts.c
+index c369136..ec95b78 100644
+--- a/utils/mount/stropts.c
++++ b/utils/mount/stropts.c
+@@ -87,8 +87,6 @@ struct nfsmount_info {
+ 	int			flags,		/* MS_ flags */
+ 				fake,		/* actually do the mount? */
+ 				child;		/* forked bg child? */
+-
+-	sa_family_t		family;		/* supported address family */
+ };
+ 
+ /*
+@@ -198,8 +196,7 @@ static int nfs_append_clientaddr_option(const struct sockaddr *sap,
+  * Resolve the 'mounthost=' hostname and append a new option using
+  * the resulting address.
+  */
+-static int nfs_fix_mounthost_option(const sa_family_t family,
+-				    struct mount_options *options)
++static int nfs_fix_mounthost_option(struct mount_options *options)
+ {
+ 	struct sockaddr_storage dummy;
+ 	struct sockaddr *sap = (struct sockaddr *)&dummy;
+@@ -210,7 +207,7 @@ static int nfs_fix_mounthost_option(const sa_family_t family,
+ 	if (!mounthost)
+ 		return 1;
+ 
+-	if (!nfs_name_to_address(mounthost, family, sap, &salen)) {
++	if (!nfs_name_to_address(mounthost, sap, &salen)) {
+ 		nfs_error(_("%s: unable to determine mount server's address"),
+ 				progname);
+ 		return 0;
+@@ -270,14 +267,14 @@ static int nfs_validate_options(struct nfsmount_info *mi)
+ 	if (!nfs_parse_devname(mi->spec, &mi->hostname, NULL))
+ 		return 0;
+ 
+-	if (!nfs_name_to_address(mi->hostname, mi->family, sap, &salen))
++	if (!nfs_name_to_address(mi->hostname, sap, &salen))
+ 		return 0;
+ 
+ 	if (strncmp(mi->type, "nfs4", 4) == 0) {
+ 		if (!nfs_append_clientaddr_option(sap, salen, mi->options))
+ 			return 0;
+ 	} else {
+-		if (!nfs_fix_mounthost_option(mi->family, mi->options))
++		if (!nfs_fix_mounthost_option(mi->options))
+ 			return 0;
+ 		if (!mi->fake && !nfs_verify_lock_option(mi->options))
+ 			return 0;
+@@ -785,11 +782,6 @@ int nfsmount_string(const char *spec, const char *node, const char *type,
+ 		.flags		= flags,
+ 		.fake		= fake,
+ 		.child		= child,
+-#ifdef IPV6_SUPPORTED
+-		.family		= AF_UNSPEC,	/* either IPv4 or v6 */
+-#else
+-		.family		= AF_INET,	/* only IPv4 */
+-#endif
+ 	};
+ 	int retval = EX_FAIL;
+ 
+diff --git a/utils/nfsd/nfsd.c b/utils/nfsd/nfsd.c
+index c97c81f..e3c0094 100644
+--- a/utils/nfsd/nfsd.c
++++ b/utils/nfsd/nfsd.c
+@@ -41,6 +41,7 @@ static struct option longopts[] =
+ };
+ unsigned int protobits = NFSCTL_ALLBITS;
+ unsigned int versbits = NFSCTL_ALLBITS;
++int minorvers4 = NFSD_MAXMINORVERS4;		/* nfsv4 minor version */
+ char *haddr = NULL;
+ 
+ int
+@@ -49,6 +50,7 @@ main(int argc, char **argv)
+ 	int	count = 1, c, error, port, fd, found_one;
+ 	struct servent *ent;
+ 	struct hostent *hp;
++	char *p;
+ 
+ 	ent = getservbyname ("nfs", "udp");
+ 	if (ent != NULL)
+@@ -79,10 +81,14 @@ main(int argc, char **argv)
+ 			}
+ 			break;
+ 		case 'N':
+-			switch((c = atoi(optarg))) {
+-			case 2:
+-			case 3:
++			switch((c = strtol(optarg, &p, 0))) {
+ 			case 4:
++				if (*p == '.') {
++					minorvers4 = -atoi(p + 1);
++					break;
++				}
++			case 3:
++			case 2:
+ 				NFSCTL_VERUNSET(versbits, c);
+ 				break;
+ 			default:
+@@ -158,7 +164,7 @@ main(int argc, char **argv)
+ 	closeall(3);
+ 
+ 	openlog("nfsd", LOG_PID, LOG_DAEMON);
+-	if ((error = nfssvc(port, count, versbits, protobits, haddr)) < 0) {
++	if ((error = nfssvc(port, count, versbits, minorvers4, protobits, haddr)) < 0) {
+ 		int e = errno;
+ 		syslog(LOG_ERR, "nfssvc: %s", strerror(e));
+ 		closelog();
+diff --git a/utils/statd/sm-notify.c b/utils/statd/sm-notify.c
+index f1fc619..72dcff4 100644
+--- a/utils/statd/sm-notify.c
++++ b/utils/statd/sm-notify.c
+@@ -118,17 +118,33 @@ static void smn_set_port(struct sockaddr *sap, const unsigned short port)
+ 	}
+ }
+ 
+-static struct addrinfo *smn_lookup(const sa_family_t family, const char *name)
++static struct addrinfo *smn_lookup(const char *name)
+ {
+ 	struct addrinfo	*ai, hint = {
+-		.ai_family	= family,
++#if HAVE_DECL_AI_ADDRCONFIG
++		.ai_flags	= AI_ADDRCONFIG,
++#endif	/* HAVE_DECL_AI_ADDRCONFIG */
++		.ai_family	= AF_INET,
+ 		.ai_protocol	= IPPROTO_UDP,
+ 	};
++	int error;
++
++	error = getaddrinfo(name, NULL, &hint, &ai);
++	switch (error) {
++	case 0:
++		return ai;
++	case EAI_SYSTEM: 
++		if (opt_debug)
++			nsm_log(LOG_ERR, "getaddrinfo(3): %s",
++					strerror(errno));
++		break;
++	default:
++		if (opt_debug)
++			nsm_log(LOG_ERR, "getaddrinfo(3): %s",
++					gai_strerror(error));
++	}
+ 
+-	if (getaddrinfo(name, NULL, &hint, &ai) != 0)
+-		return NULL;
+-
+-	return ai;
++	return NULL;
+ }
+ 
+ static void smn_forget_host(struct nsm_host *host)
+@@ -291,7 +307,7 @@ notify(void)
+ 
+ 	/* Bind source IP if provided on command line */
+ 	if (opt_srcaddr) {
+-		struct addrinfo *ai = smn_lookup(AF_INET, opt_srcaddr);
++		struct addrinfo *ai = smn_lookup(opt_srcaddr);
+ 		if (!ai) {
+ 			nsm_log(LOG_ERR,
+ 				"Not a valid hostname or address: \"%s\"",
+@@ -402,13 +418,12 @@ notify_host(int sock, struct nsm_host *host)
+ 		host->xid = xid++;
+ 
+ 	if (host->ai == NULL) {
+-		host->ai = smn_lookup(AF_UNSPEC, host->name);
++		host->ai = smn_lookup(host->name);
+ 		if (host->ai == NULL) {
+ 			nsm_log(LOG_WARNING,
+-				"%s doesn't seem to be a valid address,"
+-				" skipped", host->name);
+-			smn_forget_host(host);
+-			return 1;
++				"DNS resolution of %s failed; "
++				"retrying later", host->name);
++			return 0;
+ 		}
+ 	}
+ 
+@@ -424,19 +439,27 @@ notify_host(int sock, struct nsm_host *host)
+ 	 * point.
+ 	 */
+ 	if (host->retries >= 4) {
+-		struct addrinfo *first = host->ai;
+-		struct addrinfo **next = &host->ai;
+-
+-		/* remove the first entry from the list */
+-		host->ai = first->ai_next;
+-		first->ai_next = NULL;
+-		/* find the end of the list */
+-		next = &first->ai_next;
+-		while ( *next )
+-			next = & (*next)->ai_next;
+-		/* put first entry at end */
+-		*next = first;
+-		memcpy(&host->addr, first->ai_addr, first->ai_addrlen);
++		/* don't rotate if there is only one addrinfo */
++		if (host->ai->ai_next == NULL)
++			memcpy(&host->addr, host->ai->ai_addr,
++						host->ai->ai_addrlen);
++		else {
++			struct addrinfo *first = host->ai;
++			struct addrinfo **next = &host->ai;
++
++			/* remove the first entry from the list */
++			host->ai = first->ai_next;
++			first->ai_next = NULL;
++			/* find the end of the list */
++			next = &first->ai_next;
++			while ( *next )
++				next = & (*next)->ai_next;
++			/* put first entry at end */
++			*next = first;
++			memcpy(&host->addr, first->ai_addr,
++						first->ai_addrlen);
++		}
++
+ 		smn_set_port((struct sockaddr *)&host->addr, 0);
+ 		host->retries = 0;
+ 	}
