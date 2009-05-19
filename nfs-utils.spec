@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.1.6
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -23,6 +23,7 @@ Patch01: nfs-utils-1.1.0-smnotify-path.patch
 Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 
 Patch100: nfs-utils-1.1.7-rc1.patch
+Patch101: nfs-utils-changelicensetoBSD.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -42,7 +43,7 @@ Provides: umount.nfs4 = %{epoch}:%{version}-%{release}
 Provides: sm-notify   = %{epoch}:%{version}-%{release}
 Provides: start-statd = %{epoch}:%{version}-%{release}
 
-License: MIT and GPLv2 and GPLv2+
+License: MIT and GPLv2 and GPLv2+ and BSD
 Buildroot: %{_tmppath}/%{name}-%{version}-root
 Requires: rpcbind, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
@@ -74,6 +75,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch02 -p1
 
 %patch100 -p1
+%patch101 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -233,6 +235,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue May 19 2009 Tom "spot" Callaway <tcallawa@redhat.com> 1.1.6-4
+- Replace the Sun RPC license with the BSD license, with the explicit permission of Sun Microsystems
+
 * Mon May 18 2009 Steve Dickson <steved@redhat.com> 1.1.6-3
 - Added upstream 1.1.7-rc1 patch 
   - utils/nfsd: add support for minorvers4

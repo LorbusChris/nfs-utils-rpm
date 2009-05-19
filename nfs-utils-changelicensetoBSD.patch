@@ -1,0 +1,1055 @@
+diff -up nfs-utils-1.1.6/support/export/mount.x.BAD nfs-utils-1.1.6/support/export/mount.x
+--- nfs-utils-1.1.6/support/export/mount.x.BAD	2009-05-19 16:50:35.732807564 -0400
++++ nfs-utils-1.1.6/support/export/mount.x	2009-05-19 16:51:38.523059441 -0400
+@@ -1,31 +1,29 @@
+ %/*
+-% * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
+-% * unrestricted use provided that this legend is included on all tape
+-% * media and as a part of the software program in whole or part.  Users
+-% * may copy or modify Sun RPC without charge, but are not authorized
+-% * to license or distribute it to anyone else except as part of a product or
+-% * program developed by the user or with the express written consent of
+-% * Sun Microsystems, Inc.
++% * Copyright (c) 2009, Sun Microsystems, Inc.
++% * All rights reserved.
+ % *
+-% * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
+-% * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
+-% * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
++% * Redistribution and use in source and binary forms, with or without
++% * modification, are permitted provided that the following conditions are met:
++% * - Redistributions of source code must retain the above copyright notice,
++% *   this list of conditions and the following disclaimer.
++% * - Redistributions in binary form must reproduce the above copyright notice,
++% *   this list of conditions and the following disclaimer in the documentation
++% *   and/or other materials provided with the distribution.
++% * - Neither the name of Sun Microsystems, Inc. nor the names of its
++% *   contributors may be used to endorse or promote products derived
++% *   from this software without specific prior written permission.
+ % *
+-% * Sun RPC is provided with no support and without any obligation on the
+-% * part of Sun Microsystems, Inc. to assist in its use, correction,
+-% * modification or enhancement.
+-% *
+-% * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
+-% * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
+-% * OR ANY PART THEREOF.
+-% *
+-% * In no event will Sun Microsystems, Inc. be liable for any lost revenue
+-% * or profits or other special, indirect and consequential damages, even if
+-% * Sun has been advised of the possibility of such damages.
+-% *
+-% * Sun Microsystems, Inc.
+-% * 2550 Garcia Avenue
+-% * Mountain View, California  94043
++% * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++% * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++% * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++% * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++% * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++% * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++% * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++% * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++% * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++% * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++% * POSSIBILITY OF SUCH DAMAGE.
+ % */
+ 
+ %/*
+diff -up nfs-utils-1.1.6/support/misc/from_local.c.BAD nfs-utils-1.1.6/support/misc/from_local.c
+--- nfs-utils-1.1.6/support/misc/from_local.c.BAD	2009-05-19 16:50:35.733825711 -0400
++++ nfs-utils-1.1.6/support/misc/from_local.c	2009-05-19 16:51:57.914830175 -0400
+@@ -6,33 +6,31 @@
+   */
+ 
+ /*
+- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
+- * unrestricted use provided that this legend is included on all tape
+- * media and as a part of the software program in whole or part.  Users
+- * may copy or modify Sun RPC without charge, but are not authorized
+- * to license or distribute it to anyone else except as part of a product or
+- * program developed by the user or with the express written consent of
+- * Sun Microsystems, Inc.
++ * Copyright (c) 2009, Sun Microsystems, Inc.
++ * All rights reserved.
+  *
+- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
+- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
+- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ * - Redistributions of source code must retain the above copyright notice,
++ *   this list of conditions and the following disclaimer.
++ * - Redistributions in binary form must reproduce the above copyright notice,
++ *   this list of conditions and the following disclaimer in the documentation
++ *   and/or other materials provided with the distribution.
++ * - Neither the name of Sun Microsystems, Inc. nor the names of its
++ *   contributors may be used to endorse or promote products derived
++ *   from this software without specific prior written permission.
+  *
+- * Sun RPC is provided with no support and without any obligation on the
+- * part of Sun Microsystems, Inc. to assist in its use, correction,
+- * modification or enhancement.
+- *
+- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
+- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
+- * OR ANY PART THEREOF.
+- *
+- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
+- * or profits or other special, indirect and consequential damages, even if
+- * Sun has been advised of the possibility of such damages.
+- *
+- * Sun Microsystems, Inc.
+- * 2550 Garcia Avenue
+- * Mountain View, California  94043
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+ #if 0
+diff -up nfs-utils-1.1.6/tools/rpcgen/rpc_clntout.c.BAD nfs-utils-1.1.6/tools/rpcgen/rpc_clntout.c
+--- nfs-utils-1.1.6/tools/rpcgen/rpc_clntout.c.BAD	2009-05-19 16:50:35.735807598 -0400
++++ nfs-utils-1.1.6/tools/rpcgen/rpc_clntout.c	2009-05-19 16:52:15.058808996 -0400
+@@ -1,31 +1,29 @@
+ /*
+- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
+- * unrestricted use provided that this legend is included on all tape
+- * media and as a part of the software program in whole or part.  Users
+- * may copy or modify Sun RPC without charge, but are not authorized
+- * to license or distribute it to anyone else except as part of a product or
+- * program developed by the user or with the express written consent of
+- * Sun Microsystems, Inc.
++ * Copyright (c) 2009, Sun Microsystems, Inc.
++ * All rights reserved.
+  *
+- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
+- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
+- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ * - Redistributions of source code must retain the above copyright notice,
++ *   this list of conditions and the following disclaimer.
++ * - Redistributions in binary form must reproduce the above copyright notice,
++ *   this list of conditions and the following disclaimer in the documentation
++ *   and/or other materials provided with the distribution.
++ * - Neither the name of Sun Microsystems, Inc. nor the names of its
++ *   contributors may be used to endorse or promote products derived
++ *   from this software without specific prior written permission.
+  *
+- * Sun RPC is provided with no support and without any obligation on the
+- * part of Sun Microsystems, Inc. to assist in its use, correction,
+- * modification or enhancement.
+- *
+- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
+- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
+- * OR ANY PART THEREOF.
+- *
+- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
+- * or profits or other special, indirect and consequential damages, even if
+- * Sun has been advised of the possibility of such damages.
+- *
+- * Sun Microsystems, Inc.
+- * 2550 Garcia Avenue
+- * Mountain View, California  94043
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+ #if 0
+diff -up nfs-utils-1.1.6/tools/rpcgen/rpc_cout.c.BAD nfs-utils-1.1.6/tools/rpcgen/rpc_cout.c
+--- nfs-utils-1.1.6/tools/rpcgen/rpc_cout.c.BAD	2009-05-19 16:50:35.736823788 -0400
++++ nfs-utils-1.1.6/tools/rpcgen/rpc_cout.c	2009-05-19 16:52:26.218809125 -0400
+@@ -1,31 +1,29 @@
+ /*
+- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
+- * unrestricted use provided that this legend is included on all tape
+- * media and as a part of the software program in whole or part.  Users
+- * may copy or modify Sun RPC without charge, but are not authorized
+- * to license or distribute it to anyone else except as part of a product or
+- * program developed by the user or with the express written consent of
+- * Sun Microsystems, Inc.
++ * Copyright (c) 2009, Sun Microsystems, Inc.
++ * All rights reserved.
+  *
+- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
+- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
+- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ * - Redistributions of source code must retain the above copyright notice,
++ *   this list of conditions and the following disclaimer.
++ * - Redistributions in binary form must reproduce the above copyright notice,
++ *   this list of conditions and the following disclaimer in the documentation
++ *   and/or other materials provided with the distribution.
++ * - Neither the name of Sun Microsystems, Inc. nor the names of its
++ *   contributors may be used to endorse or promote products derived
++ *   from this software without specific prior written permission.
+  *
+- * Sun RPC is provided with no support and without any obligation on the
+- * part of Sun Microsystems, Inc. to assist in its use, correction,
+- * modification or enhancement.
+- *
+- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
+- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
+- * OR ANY PART THEREOF.
+- *
+- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
+- * or profits or other special, indirect and consequential damages, even if
+- * Sun has been advised of the possibility of such damages.
+- *
+- * Sun Microsystems, Inc.
+- * 2550 Garcia Avenue
+- * Mountain View, California  94043
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+ #if 0
+diff -up nfs-utils-1.1.6/tools/rpcgen/rpc_hout.c.BAD nfs-utils-1.1.6/tools/rpcgen/rpc_hout.c
+--- nfs-utils-1.1.6/tools/rpcgen/rpc_hout.c.BAD	2009-05-19 16:50:35.737807503 -0400
++++ nfs-utils-1.1.6/tools/rpcgen/rpc_hout.c	2009-05-19 16:52:36.969844084 -0400
+@@ -1,31 +1,29 @@
+ /*
+- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
+- * unrestricted use provided that this legend is included on all tape
+- * media and as a part of the software program in whole or part.  Users
+- * may copy or modify Sun RPC without charge, but are not authorized
+- * to license or distribute it to anyone else except as part of a product or
+- * program developed by the user or with the express written consent of
+- * Sun Microsystems, Inc.
++ * Copyright (c) 2009, Sun Microsystems, Inc.
++ * All rights reserved.
+  *
+- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
+- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
+- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ * - Redistributions of source code must retain the above copyright notice,
++ *   this list of conditions and the following disclaimer.
++ * - Redistributions in binary form must reproduce the above copyright notice,
++ *   this list of conditions and the following disclaimer in the documentation
++ *   and/or other materials provided with the distribution.
++ * - Neither the name of Sun Microsystems, Inc. nor the names of its
++ *   contributors may be used to endorse or promote products derived
++ *   from this software without specific prior written permission.
+  *
+- * Sun RPC is provided with no support and without any obligation on the
+- * part of Sun Microsystems, Inc. to assist in its use, correction,
+- * modification or enhancement.
+- *
+- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
+- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
+- * OR ANY PART THEREOF.
+- *
+- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
+- * or profits or other special, indirect and consequential damages, even if
+- * Sun has been advised of the possibility of such damages.
+- *
+- * Sun Microsystems, Inc.
+- * 2550 Garcia Avenue
+- * Mountain View, California  94043
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+ #if 0
+diff -up nfs-utils-1.1.6/tools/rpcgen/rpc_main.c.BAD nfs-utils-1.1.6/tools/rpcgen/rpc_main.c
+--- nfs-utils-1.1.6/tools/rpcgen/rpc_main.c.BAD	2009-05-19 16:50:35.739807549 -0400
++++ nfs-utils-1.1.6/tools/rpcgen/rpc_main.c	2009-05-19 16:52:47.869808319 -0400
+@@ -1,31 +1,29 @@
+ /*
+- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
+- * unrestricted use provided that this legend is included on all tape
+- * media and as a part of the software program in whole or part.  Users
+- * may copy or modify Sun RPC without charge, but are not authorized
+- * to license or distribute it to anyone else except as part of a product or
+- * program developed by the user or with the express written consent of
+- * Sun Microsystems, Inc.
++ * Copyright (c) 2009, Sun Microsystems, Inc.
++ * All rights reserved.
+  *
+- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
+- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
+- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ * - Redistributions of source code must retain the above copyright notice,
++ *   this list of conditions and the following disclaimer.
++ * - Redistributions in binary form must reproduce the above copyright notice,
++ *   this list of conditions and the following disclaimer in the documentation
++ *   and/or other materials provided with the distribution.
++ * - Neither the name of Sun Microsystems, Inc. nor the names of its
++ *   contributors may be used to endorse or promote products derived
++ *   from this software without specific prior written permission.
+  *
+- * Sun RPC is provided with no support and without any obligation on the
+- * part of Sun Microsystems, Inc. to assist in its use, correction,
+- * modification or enhancement.
+- *
+- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
+- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
+- * OR ANY PART THEREOF.
+- *
+- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
+- * or profits or other special, indirect and consequential damages, even if
+- * Sun has been advised of the possibility of such damages.
+- *
+- * Sun Microsystems, Inc.
+- * 2550 Garcia Avenue
+- * Mountain View, California  94043
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+ #if 0
+diff -up nfs-utils-1.1.6/tools/rpcgen/rpc_parse.c.BAD nfs-utils-1.1.6/tools/rpcgen/rpc_parse.c
+--- nfs-utils-1.1.6/tools/rpcgen/rpc_parse.c.BAD	2009-05-19 16:50:35.740825695 -0400
++++ nfs-utils-1.1.6/tools/rpcgen/rpc_parse.c	2009-05-19 16:53:01.611059425 -0400
+@@ -1,31 +1,29 @@
+ /*
+- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
+- * unrestricted use provided that this legend is included on all tape
+- * media and as a part of the software program in whole or part.  Users
+- * may copy or modify Sun RPC without charge, but are not authorized
+- * to license or distribute it to anyone else except as part of a product or
+- * program developed by the user or with the express written consent of
+- * Sun Microsystems, Inc.
++ * Copyright (c) 2009, Sun Microsystems, Inc.
++ * All rights reserved.
+  *
+- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
+- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
+- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ * - Redistributions of source code must retain the above copyright notice,
++ *   this list of conditions and the following disclaimer.
++ * - Redistributions in binary form must reproduce the above copyright notice,
++ *   this list of conditions and the following disclaimer in the documentation
++ *   and/or other materials provided with the distribution.
++ * - Neither the name of Sun Microsystems, Inc. nor the names of its
++ *   contributors may be used to endorse or promote products derived
++ *   from this software without specific prior written permission.
+  *
+- * Sun RPC is provided with no support and without any obligation on the
+- * part of Sun Microsystems, Inc. to assist in its use, correction,
+- * modification or enhancement.
+- *
+- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
+- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
+- * OR ANY PART THEREOF.
+- *
+- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
+- * or profits or other special, indirect and consequential damages, even if
+- * Sun has been advised of the possibility of such damages.
+- *
+- * Sun Microsystems, Inc.
+- * 2550 Garcia Avenue
+- * Mountain View, California  94043
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+ #if 0
+diff -up nfs-utils-1.1.6/tools/rpcgen/rpc_parse.h.BAD nfs-utils-1.1.6/tools/rpcgen/rpc_parse.h
+--- nfs-utils-1.1.6/tools/rpcgen/rpc_parse.h.BAD	2009-05-19 16:50:35.742807442 -0400
++++ nfs-utils-1.1.6/tools/rpcgen/rpc_parse.h	2009-05-19 16:53:13.034809112 -0400
+@@ -1,31 +1,29 @@
+ /*
+- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
+- * unrestricted use provided that this legend is included on all tape
+- * media and as a part of the software program in whole or part.  Users
+- * may copy or modify Sun RPC without charge, but are not authorized
+- * to license or distribute it to anyone else except as part of a product or
+- * program developed by the user or with the express written consent of
+- * Sun Microsystems, Inc.
++ * Copyright (c) 2009, Sun Microsystems, Inc.
++ * All rights reserved.
+  *
+- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
+- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
+- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ * - Redistributions of source code must retain the above copyright notice,
++ *   this list of conditions and the following disclaimer.
++ * - Redistributions in binary form must reproduce the above copyright notice,
++ *   this list of conditions and the following disclaimer in the documentation
++ *   and/or other materials provided with the distribution.
++ * - Neither the name of Sun Microsystems, Inc. nor the names of its
++ *   contributors may be used to endorse or promote products derived
++ *   from this software without specific prior written permission.
+  *
+- * Sun RPC is provided with no support and without any obligation on the
+- * part of Sun Microsystems, Inc. to assist in its use, correction,
+- * modification or enhancement.
+- *
+- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
+- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
+- * OR ANY PART THEREOF.
+- *
+- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
+- * or profits or other special, indirect and consequential damages, even if
+- * Sun has been advised of the possibility of such damages.
+- *
+- * Sun Microsystems, Inc.
+- * 2550 Garcia Avenue
+- * Mountain View, California  94043
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+ /*      @(#)rpc_parse.h  1.3  90/08/29  (C) 1987 SMI   */
+diff -up nfs-utils-1.1.6/tools/rpcgen/rpc_sample.c.BAD nfs-utils-1.1.6/tools/rpcgen/rpc_sample.c
+--- nfs-utils-1.1.6/tools/rpcgen/rpc_sample.c.BAD	2009-05-19 16:50:35.743825239 -0400
++++ nfs-utils-1.1.6/tools/rpcgen/rpc_sample.c	2009-05-19 16:53:25.522809084 -0400
+@@ -1,31 +1,29 @@
+ /*
+- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
+- * unrestricted use provided that this legend is included on all tape
+- * media and as a part of the software program in whole or part.  Users
+- * may copy or modify Sun RPC without charge, but are not authorized
+- * to license or distribute it to anyone else except as part of a product or
+- * program developed by the user or with the express written consent of
+- * Sun Microsystems, Inc.
++ * Copyright (c) 2009, Sun Microsystems, Inc.
++ * All rights reserved.
+  *
+- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
+- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
+- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ * - Redistributions of source code must retain the above copyright notice,
++ *   this list of conditions and the following disclaimer.
++ * - Redistributions in binary form must reproduce the above copyright notice,
++ *   this list of conditions and the following disclaimer in the documentation
++ *   and/or other materials provided with the distribution.
++ * - Neither the name of Sun Microsystems, Inc. nor the names of its
++ *   contributors may be used to endorse or promote products derived
++ *   from this software without specific prior written permission.
+  *
+- * Sun RPC is provided with no support and without any obligation on the
+- * part of Sun Microsystems, Inc. to assist in its use, correction,
+- * modification or enhancement.
+- *
+- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
+- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
+- * OR ANY PART THEREOF.
+- *
+- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
+- * or profits or other special, indirect and consequential damages, even if
+- * Sun has been advised of the possibility of such damages.
+- *
+- * Sun Microsystems, Inc.
+- * 2550 Garcia Avenue
+- * Mountain View, California  94043
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+ #if 0
+diff -up nfs-utils-1.1.6/tools/rpcgen/rpc_scan.c.BAD nfs-utils-1.1.6/tools/rpcgen/rpc_scan.c
+--- nfs-utils-1.1.6/tools/rpcgen/rpc_scan.c.BAD	2009-05-19 16:50:35.745807475 -0400
++++ nfs-utils-1.1.6/tools/rpcgen/rpc_scan.c	2009-05-19 16:53:39.187809090 -0400
+@@ -1,31 +1,29 @@
+ /*
+- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
+- * unrestricted use provided that this legend is included on all tape
+- * media and as a part of the software program in whole or part.  Users
+- * may copy or modify Sun RPC without charge, but are not authorized
+- * to license or distribute it to anyone else except as part of a product or
+- * program developed by the user or with the express written consent of
+- * Sun Microsystems, Inc.
++ * Copyright (c) 2009, Sun Microsystems, Inc.
++ * All rights reserved.
+  *
+- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
+- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
+- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ * - Redistributions of source code must retain the above copyright notice,
++ *   this list of conditions and the following disclaimer.
++ * - Redistributions in binary form must reproduce the above copyright notice,
++ *   this list of conditions and the following disclaimer in the documentation
++ *   and/or other materials provided with the distribution.
++ * - Neither the name of Sun Microsystems, Inc. nor the names of its
++ *   contributors may be used to endorse or promote products derived
++ *   from this software without specific prior written permission.
+  *
+- * Sun RPC is provided with no support and without any obligation on the
+- * part of Sun Microsystems, Inc. to assist in its use, correction,
+- * modification or enhancement.
+- *
+- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
+- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
+- * OR ANY PART THEREOF.
+- *
+- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
+- * or profits or other special, indirect and consequential damages, even if
+- * Sun has been advised of the possibility of such damages.
+- *
+- * Sun Microsystems, Inc.
+- * 2550 Garcia Avenue
+- * Mountain View, California  94043
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+ #if 0
+diff -up nfs-utils-1.1.6/tools/rpcgen/rpc_scan.h.BAD nfs-utils-1.1.6/tools/rpcgen/rpc_scan.h
+--- nfs-utils-1.1.6/tools/rpcgen/rpc_scan.h.BAD	2009-05-19 16:50:35.746824783 -0400
++++ nfs-utils-1.1.6/tools/rpcgen/rpc_scan.h	2009-05-19 16:53:48.202808709 -0400
+@@ -1,31 +1,29 @@
+ /*
+- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
+- * unrestricted use provided that this legend is included on all tape
+- * media and as a part of the software program in whole or part.  Users
+- * may copy or modify Sun RPC without charge, but are not authorized
+- * to license or distribute it to anyone else except as part of a product or
+- * program developed by the user or with the express written consent of
+- * Sun Microsystems, Inc.
++ * Copyright (c) 2009, Sun Microsystems, Inc.
++ * All rights reserved.
+  *
+- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
+- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
+- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ * - Redistributions of source code must retain the above copyright notice,
++ *   this list of conditions and the following disclaimer.
++ * - Redistributions in binary form must reproduce the above copyright notice,
++ *   this list of conditions and the following disclaimer in the documentation
++ *   and/or other materials provided with the distribution.
++ * - Neither the name of Sun Microsystems, Inc. nor the names of its
++ *   contributors may be used to endorse or promote products derived
++ *   from this software without specific prior written permission.
+  *
+- * Sun RPC is provided with no support and without any obligation on the
+- * part of Sun Microsystems, Inc. to assist in its use, correction,
+- * modification or enhancement.
+- *
+- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
+- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
+- * OR ANY PART THEREOF.
+- *
+- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
+- * or profits or other special, indirect and consequential damages, even if
+- * Sun has been advised of the possibility of such damages.
+- *
+- * Sun Microsystems, Inc.
+- * 2550 Garcia Avenue
+- * Mountain View, California  94043
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+ /*      @(#)rpc_scan.h  1.3  90/08/29  (C) 1987 SMI   */
+diff -up nfs-utils-1.1.6/tools/rpcgen/rpc_svcout.c.BAD nfs-utils-1.1.6/tools/rpcgen/rpc_svcout.c
+--- nfs-utils-1.1.6/tools/rpcgen/rpc_svcout.c.BAD	2009-05-19 16:50:35.747807311 -0400
++++ nfs-utils-1.1.6/tools/rpcgen/rpc_svcout.c	2009-05-19 16:53:59.499081663 -0400
+@@ -1,31 +1,29 @@
+ /*
+- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
+- * unrestricted use provided that this legend is included on all tape
+- * media and as a part of the software program in whole or part.  Users
+- * may copy or modify Sun RPC without charge, but are not authorized
+- * to license or distribute it to anyone else except as part of a product or
+- * program developed by the user or with the express written consent of
+- * Sun Microsystems, Inc.
++ * Copyright (c) 2009, Sun Microsystems, Inc.
++ * All rights reserved.
+  *
+- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
+- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
+- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ * - Redistributions of source code must retain the above copyright notice,
++ *   this list of conditions and the following disclaimer.
++ * - Redistributions in binary form must reproduce the above copyright notice,
++ *   this list of conditions and the following disclaimer in the documentation
++ *   and/or other materials provided with the distribution.
++ * - Neither the name of Sun Microsystems, Inc. nor the names of its
++ *   contributors may be used to endorse or promote products derived
++ *   from this software without specific prior written permission.
+  *
+- * Sun RPC is provided with no support and without any obligation on the
+- * part of Sun Microsystems, Inc. to assist in its use, correction,
+- * modification or enhancement.
+- *
+- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
+- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
+- * OR ANY PART THEREOF.
+- *
+- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
+- * or profits or other special, indirect and consequential damages, even if
+- * Sun has been advised of the possibility of such damages.
+- *
+- * Sun Microsystems, Inc.
+- * 2550 Garcia Avenue
+- * Mountain View, California  94043
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+ #if 0
+diff -up nfs-utils-1.1.6/tools/rpcgen/rpc_tblout.c.BAD nfs-utils-1.1.6/tools/rpcgen/rpc_tblout.c
+--- nfs-utils-1.1.6/tools/rpcgen/rpc_tblout.c.BAD	2009-05-19 16:50:35.749807286 -0400
++++ nfs-utils-1.1.6/tools/rpcgen/rpc_tblout.c	2009-05-19 16:54:11.242809182 -0400
+@@ -1,31 +1,29 @@
+ /*
+- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
+- * unrestricted use provided that this legend is included on all tape
+- * media and as a part of the software program in whole or part.  Users
+- * may copy or modify Sun RPC without charge, but are not authorized
+- * to license or distribute it to anyone else except as part of a product or
+- * program developed by the user or with the express written consent of
+- * Sun Microsystems, Inc.
++ * Copyright (c) 2009, Sun Microsystems, Inc.
++ * All rights reserved.
+  *
+- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
+- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
+- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ * - Redistributions of source code must retain the above copyright notice,
++ *   this list of conditions and the following disclaimer.
++ * - Redistributions in binary form must reproduce the above copyright notice,
++ *   this list of conditions and the following disclaimer in the documentation
++ *   and/or other materials provided with the distribution.
++ * - Neither the name of Sun Microsystems, Inc. nor the names of its
++ *   contributors may be used to endorse or promote products derived
++ *   from this software without specific prior written permission.
+  *
+- * Sun RPC is provided with no support and without any obligation on the
+- * part of Sun Microsystems, Inc. to assist in its use, correction,
+- * modification or enhancement.
+- *
+- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
+- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
+- * OR ANY PART THEREOF.
+- *
+- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
+- * or profits or other special, indirect and consequential damages, even if
+- * Sun has been advised of the possibility of such damages.
+- *
+- * Sun Microsystems, Inc.
+- * 2550 Garcia Avenue
+- * Mountain View, California  94043
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+ #if 0
+diff -up nfs-utils-1.1.6/tools/rpcgen/rpc_util.c.BAD nfs-utils-1.1.6/tools/rpcgen/rpc_util.c
+--- nfs-utils-1.1.6/tools/rpcgen/rpc_util.c.BAD	2009-05-19 16:50:35.750824874 -0400
++++ nfs-utils-1.1.6/tools/rpcgen/rpc_util.c	2009-05-19 16:54:25.267081301 -0400
+@@ -1,31 +1,29 @@
+ /*
+- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
+- * unrestricted use provided that this legend is included on all tape
+- * media and as a part of the software program in whole or part.  Users
+- * may copy or modify Sun RPC without charge, but are not authorized
+- * to license or distribute it to anyone else except as part of a product or
+- * program developed by the user or with the express written consent of
+- * Sun Microsystems, Inc.
++ * Copyright (c) 2009, Sun Microsystems, Inc.
++ * All rights reserved.
+  *
+- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
+- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
+- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ * - Redistributions of source code must retain the above copyright notice,
++ *   this list of conditions and the following disclaimer.
++ * - Redistributions in binary form must reproduce the above copyright notice,
++ *   this list of conditions and the following disclaimer in the documentation
++ *   and/or other materials provided with the distribution.
++ * - Neither the name of Sun Microsystems, Inc. nor the names of its
++ *   contributors may be used to endorse or promote products derived
++ *   from this software without specific prior written permission.
+  *
+- * Sun RPC is provided with no support and without any obligation on the
+- * part of Sun Microsystems, Inc. to assist in its use, correction,
+- * modification or enhancement.
+- *
+- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
+- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
+- * OR ANY PART THEREOF.
+- *
+- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
+- * or profits or other special, indirect and consequential damages, even if
+- * Sun has been advised of the possibility of such damages.
+- *
+- * Sun Microsystems, Inc.
+- * 2550 Garcia Avenue
+- * Mountain View, California  94043
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+ #if 0
+diff -up nfs-utils-1.1.6/tools/rpcgen/rpc_util.h.BAD nfs-utils-1.1.6/tools/rpcgen/rpc_util.h
+--- nfs-utils-1.1.6/tools/rpcgen/rpc_util.h.BAD	2009-05-19 16:50:35.752808087 -0400
++++ nfs-utils-1.1.6/tools/rpcgen/rpc_util.h	2009-05-19 16:54:33.762809105 -0400
+@@ -1,31 +1,29 @@
+ /*
+- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
+- * unrestricted use provided that this legend is included on all tape
+- * media and as a part of the software program in whole or part.  Users
+- * may copy or modify Sun RPC without charge, but are not authorized
+- * to license or distribute it to anyone else except as part of a product or
+- * program developed by the user or with the express written consent of
+- * Sun Microsystems, Inc.
++ * Copyright (c) 2009, Sun Microsystems, Inc.
++ * All rights reserved.
+  *
+- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
+- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
+- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ * - Redistributions of source code must retain the above copyright notice,
++ *   this list of conditions and the following disclaimer.
++ * - Redistributions in binary form must reproduce the above copyright notice,
++ *   this list of conditions and the following disclaimer in the documentation
++ *   and/or other materials provided with the distribution.
++ * - Neither the name of Sun Microsystems, Inc. nor the names of its
++ *   contributors may be used to endorse or promote products derived
++ *   from this software without specific prior written permission.
+  *
+- * Sun RPC is provided with no support and without any obligation on the
+- * part of Sun Microsystems, Inc. to assist in its use, correction,
+- * modification or enhancement.
+- *
+- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
+- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
+- * OR ANY PART THEREOF.
+- *
+- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
+- * or profits or other special, indirect and consequential damages, even if
+- * Sun has been advised of the possibility of such damages.
+- *
+- * Sun Microsystems, Inc.
+- * 2550 Garcia Avenue
+- * Mountain View, California  94043
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+ /*      @(#)rpc_util.h  1.5  90/08/29  (C) 1987 SMI   */
+diff -up nfs-utils-1.1.6/utils/mountd/svc_run.c.BAD nfs-utils-1.1.6/utils/mountd/svc_run.c
+--- nfs-utils-1.1.6/utils/mountd/svc_run.c.BAD	2009-05-19 16:50:35.754808132 -0400
++++ nfs-utils-1.1.6/utils/mountd/svc_run.c	2009-05-19 16:54:50.634808762 -0400
+@@ -7,32 +7,31 @@
+  */
+ 
+ /* 
+- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
+- * unrestricted use provided that this legend is included on all tape
+- * media and as a part of the software program in whole or part.  Users
+- * may copy or modify Sun RPC without charge, but are not authorized
+- * to license or distribute it to anyone else except as part of a product or
+- * program developed by the user.
+- * 
+- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
+- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
+- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
+- * 
+- * Sun RPC is provided with no support and without any obligation on the
+- * part of Sun Microsystems, Inc. to assist in its use, correction,
+- * modification or enhancement.
+- * 
+- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
+- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
+- * OR ANY PART THEREOF.
+- * 
+- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
+- * or profits or other special, indirect and consequential damages, even if
+- * Sun has been advised of the possibility of such damages.
+- * 
+- * Sun Microsystems, Inc.
+- * 2550 Garcia Avenue
+- * Mountain View, California  94043
++ * Copyright (c) 2009, Sun Microsystems, Inc.
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ * - Redistributions of source code must retain the above copyright notice,
++ *   this list of conditions and the following disclaimer.
++ * - Redistributions in binary form must reproduce the above copyright notice,
++ *   this list of conditions and the following disclaimer in the documentation
++ *   and/or other materials provided with the distribution.
++ * - Neither the name of Sun Microsystems, Inc. nor the names of its
++ *   contributors may be used to endorse or promote products derived
++ *   from this software without specific prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+ /* 
+diff -up nfs-utils-1.1.6/utils/statd/sm_inter.x.BAD nfs-utils-1.1.6/utils/statd/sm_inter.x
+--- nfs-utils-1.1.6/utils/statd/sm_inter.x.BAD	2009-05-19 16:50:35.756828013 -0400
++++ nfs-utils-1.1.6/utils/statd/sm_inter.x	2009-05-19 16:55:07.426829709 -0400
+@@ -8,32 +8,31 @@
+  */
+ 
+ /*
+- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
+- * unrestricted use provided that this legend is included on all tape
+- * media and as a part of the software program in whole or part.  Users
+- * may copy or modify Sun RPC without charge, but are not authorized
+- * to license or distribute it to anyone else except as part of a product or
+- * program developed by the user.
+- * 
+- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
+- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
+- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
+- * 
+- * Sun RPC is provided with no support and without any obligation on the
+- * part of Sun Microsystems, Inc. to assist in its use, correction,
+- * modification or enhancement.
+- * 
+- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
+- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
+- * OR ANY PART THEREOF.
+- * 
+- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
+- * or profits or other special, indirect and consequential damages, even if
+- * Sun has been advised of the possibility of such damages.
+- * 
+- * Sun Microsystems, Inc.
+- * 2550 Garcia Avenue
+- * Mountain View, California  94043
++ * Copyright (c) 2009, Sun Microsystems, Inc.
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ * - Redistributions of source code must retain the above copyright notice,
++ *   this list of conditions and the following disclaimer.
++ * - Redistributions in binary form must reproduce the above copyright notice,
++ *   this list of conditions and the following disclaimer in the documentation
++ *   and/or other materials provided with the distribution.
++ * - Neither the name of Sun Microsystems, Inc. nor the names of its
++ *   contributors may be used to endorse or promote products derived
++ *   from this software without specific prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+ /*
+diff -up nfs-utils-1.1.6/utils/statd/svc_run.c.BAD nfs-utils-1.1.6/utils/statd/svc_run.c
+--- nfs-utils-1.1.6/utils/statd/svc_run.c.BAD	2009-05-19 16:50:35.758807944 -0400
++++ nfs-utils-1.1.6/utils/statd/svc_run.c	2009-05-19 16:55:24.650808571 -0400
+@@ -7,32 +7,31 @@
+  */
+ 
+ /* 
+- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
+- * unrestricted use provided that this legend is included on all tape
+- * media and as a part of the software program in whole or part.  Users
+- * may copy or modify Sun RPC without charge, but are not authorized
+- * to license or distribute it to anyone else except as part of a product or
+- * program developed by the user.
+- * 
+- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
+- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
+- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
+- * 
+- * Sun RPC is provided with no support and without any obligation on the
+- * part of Sun Microsystems, Inc. to assist in its use, correction,
+- * modification or enhancement.
+- * 
+- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
+- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
+- * OR ANY PART THEREOF.
+- * 
+- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
+- * or profits or other special, indirect and consequential damages, even if
+- * Sun has been advised of the possibility of such damages.
+- * 
+- * Sun Microsystems, Inc.
+- * 2550 Garcia Avenue
+- * Mountain View, California  94043
++ * Copyright (c) 2009, Sun Microsystems, Inc.
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ * - Redistributions of source code must retain the above copyright notice,
++ *   this list of conditions and the following disclaimer.
++ * - Redistributions in binary form must reproduce the above copyright notice,
++ *   this list of conditions and the following disclaimer in the documentation
++ *   and/or other materials provided with the distribution.
++ * - Neither the name of Sun Microsystems, Inc. nor the names of its
++ *   contributors may be used to endorse or promote products derived
++ *   from this software without specific prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+ /* 
