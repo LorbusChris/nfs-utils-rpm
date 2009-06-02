@@ -1,8 +1,8 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
-Version: 1.1.6
-Release: 4%{?dist}
+Version: 1.2.0
+Release: 1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -21,9 +21,6 @@ Source15: nfs.sysconfig
 Patch00: nfs-utils-1.0.5-statdpath.patch
 Patch01: nfs-utils-1.1.0-smnotify-path.patch
 Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
-
-Patch100: nfs-utils-1.1.7-rc1.patch
-Patch101: nfs-utils-changelicensetoBSD.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -73,9 +70,6 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch00 -p1
 %patch01 -p1
 %patch02 -p1
-
-%patch100 -p1
-%patch101 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -235,6 +229,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Jun  2 2009 <steved@redhat.com> 1.2.0-1
+- Updated to latest upstream release: 1.2.0
+
 * Tue May 19 2009 Tom "spot" Callaway <tcallawa@redhat.com> 1.1.6-4
 - Replace the Sun RPC license with the BSD license, with the explicit permission of Sun Microsystems
 
