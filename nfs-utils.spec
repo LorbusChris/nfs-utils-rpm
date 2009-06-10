@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -137,10 +137,18 @@ done
 %define nfsnobody_uid   4294967294
 %endif
 
-# If UID 65534 (or 4294967294 64bit archs) is unassigned, create user "nfsnobody"
+# If GID 65534 (or 4294967294 64bit archs) is unassigned, 
+# create group "nfsnobody"
+cat /etc/group | cut -d':' -f 3 | grep --quiet %{nfsnobody_uid} 2>/dev/null
+if [ "$?" -eq 1 ]; then
+    /usr/sbin/groupadd -g %{nfsnobody_uid} nfsnobody 2>/dev/null || :
+fi
+
+# If UID 65534 (or 4294967294 64bit archs) is unassigned, 
+# create user "nfsnobody"
 cat /etc/passwd | cut -d':' -f 3 | grep --quiet %{nfsnobody_uid} 2>/dev/null
 if [ "$?" -eq 1 ]; then
-    /usr/sbin/useradd -l -c "Anonymous NFS User" -r \
+    /usr/sbin/useradd -l -c "Anonymous NFS User" -r -g %{nfsnobody_uid} \
         -s /sbin/nologin -u %{nfsnobody_uid} -d /var/lib/nfs nfsnobody 2>/dev/null || :
 fi
 
@@ -167,6 +175,7 @@ if [ "$1" = "0" ]; then
     /usr/sbin/userdel rpcuser 2>/dev/null || :
     /usr/sbin/groupdel rpcuser 2>/dev/null || :
     /usr/sbin/userdel nfsnobody 2>/dev/null || :
+    /usr/sbin/groupdel nfsnobody 2>/dev/null || :
     rm -rf /var/lib/nfs/statd
     rm -rf /var/lib/nfs/v4recovery
 fi
@@ -229,6 +238,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Jun 10 2009 <steved@redhat.com> 1.2.0-2
+- nfsnobody gid is wrong (bz 485379)
+
 * Tue Jun  2 2009 <steved@redhat.com> 1.2.0-1
 - Updated to latest upstream release: 1.2.0
 
