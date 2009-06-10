@@ -2,11 +2,21 @@
 #
 # rpcgssd       Start up and shut down RPCSEC GSS daemon
 #
-# Authors:	Chuck Lever <cel@netapp.com>
-#
 # chkconfig: 345 19 85
 # description: Starts user-level daemon that manages RPCSEC GSS contexts \
-#	       for the NFSv4 client.
+#	       for the NFS client.
+
+### BEGIN INIT INFO
+# Provides: rpcgssd
+# Required-Start: $network $syslog
+# Required-Stop: $network $syslog
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: Starts the RPCSEC GSS client daemon
+# Description: NFS is a popular protocol for file sharing across \
+#          networks. This deamon manages RPCSEC GSS contexts on the
+#          client used by secure NFS mounts
+### END INIT INFO
 
 # Source function library.
 . /etc/init.d/functions

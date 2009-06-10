@@ -2,11 +2,21 @@
 #
 # rpcidmapd     Start up and shut down RPC name to UID/GID mapper
 #
-# Authors:	Chuck Lever <cel@netapp.com>
-#
 # chkconfig: 345 18 85
 # description: Starts user-level daemon for NFSv4 that maps user \
 #              names to UID and GID numbers.
+
+### BEGIN INIT INFO
+# Provides: rpcidmapd
+# Required-Start: $network $syslog
+# Required-Stop: $network $syslog
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: Starts the NFSv4 id mapping daemon
+# Description: NFS is a popular protocol for file sharing across \
+#          networks. This deamon maps user names and groups to UID \
+#          and GID numbers on NFSv4 mounts.
+### END INIT INFO
 
 # Source function library.
 . /etc/init.d/functions

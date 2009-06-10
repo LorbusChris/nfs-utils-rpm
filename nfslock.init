@@ -5,9 +5,21 @@
 #
 # chkconfig: 345 14 86
 # description: NFS is a popular protocol for file sharing across \
-#	       TCP/IP networks. This service provides NFS file \
-#	       locking functionality.
+#	       networks. This service provides NFS file locking \ 
+#          functionality.
 # probe: true
+
+### BEGIN INIT INFO
+# Provides: nfslock
+# Required-Start: $network $syslog
+# Required-Stop: $network $syslog
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: Start up the NFS file locking sevice
+# Description: NFS is a popular protocol for file sharing across \
+#          networks. This service provides NFS file locking \ 
+#          functionality.
+### END INIT INFO
 
 # Source function library.
 . /etc/rc.d/init.d/functions
