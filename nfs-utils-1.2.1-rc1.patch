@@ -1,0 +1,173 @@
+diff --git a/aclocal/ipv6.m4 b/aclocal/ipv6.m4
+index ba9dcc2..2490f3d 100644
+--- a/aclocal/ipv6.m4
++++ b/aclocal/ipv6.m4
+@@ -11,7 +11,7 @@ AC_DEFUN([AC_IPV6], [
+ 
+     dnl TI-RPC required for IPv6
+     if test "$enable_tirpc" = no; then
+-      AC_MSG_ERROR(['--enable-ipv6' requires '--enable-tirpc'.])
++      AC_MSG_ERROR(['--enable-ipv6' requires TIRPC support.])
+     fi
+ 
+     dnl IPv6-enabled networking functions required for IPv6
+diff --git a/aclocal/libtirpc.m4 b/aclocal/libtirpc.m4
+index af4c7d3..9f0fde0 100644
+--- a/aclocal/libtirpc.m4
++++ b/aclocal/libtirpc.m4
+@@ -11,17 +11,29 @@ AC_DEFUN([AC_LIBTIRPC], [
+   dnl if --enable-tirpc was specifed, the following components
+   dnl must be present, and we set up HAVE_ macros for them.
+ 
+-  if test "$enable_tirpc" = yes; then
++  if test "$enable_tirpc" != "no"; then
+ 
+     dnl look for the library; add to LIBS if found
+     AC_CHECK_LIB([tirpc], [clnt_tli_create], ,
+-                 [AC_MSG_ERROR([libtirpc not found.])])
++                 [if test "$enable_tirpc" = "yes"; then
++			AC_MSG_ERROR([libtirpc not found.])
++		  else
++			AC_MSG_WARN([libtirpc not found. TIRPC disabled!])
++			enable_tirpc="no"
++		  fi])
++  fi
+ 
++  if test "$enable_tirpc" != "no"; then
+     dnl also must have the headers installed where we expect
+     dnl look for headers; add -I compiler option if found
+-    AC_CHECK_HEADERS([${tirpc_header_dir}/netconfig.h], ,
+-                     [AC_MSG_ERROR([libtirpc headers not found.])])
+-    AC_SUBST([AM_CPPFLAGS], ["-I${tirpc_header_dir}"])
++    AC_CHECK_HEADERS([${tirpc_header_dir}/netconfig.h],
++    		      AC_SUBST([AM_CPPFLAGS], ["-I${tirpc_header_dir}"]),
++		      [if test "$enable_tirpc" = "yes"; then
++			 AC_MSG_ERROR([libtirpc headers not found.])
++		       else
++			 AC_MSG_WARN([libtirpc headers not found. TIRPC disabled!])
++			 enable_tirpc="no"
++		       fi])
+ 
+   fi
+ 
+diff --git a/configure.ac b/configure.ac
+index e09e1d9..e0ca70e 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1,6 +1,6 @@
+ dnl Process this file with autoconf to produce a configure script.
+ dnl
+-AC_INIT([linux nfs-utils],[1.1.6],[linux-nfs@vger.kernel.org],[nfs-utils])
++AC_INIT([linux nfs-utils],[1.2.0],[linux-nfs@vger.kernel.org],[nfs-utils])
+ AC_CANONICAL_BUILD([])
+ AC_CANONICAL_HOST([])
+ AC_CONFIG_MACRO_DIR(aclocal)
+@@ -120,9 +120,9 @@ AC_ARG_ENABLE(mount,
+ 	AM_CONDITIONAL(CONFIG_MOUNT, [test "$enable_mount" = "yes"])
+ AC_ARG_ENABLE(tirpc,
+ 	[AC_HELP_STRING([--enable-tirpc],
+-			[enable use of TI-RPC @<:@default=no@:>@])],
++			[enable use of TI-RPC @<:@default=yes@:>@])],
+ 	enable_tirpc=$enableval,
+-	enable_tirpc=no)
++	enable_tirpc='yes')
+ AC_ARG_ENABLE(ipv6,
+ 	[AC_HELP_STRING([--enable-ipv6],
+                         [enable support for IPv6 @<:@default=no@:>@])],
+diff --git a/support/nfs/closeall.c b/support/nfs/closeall.c
+index cc7fb3b..38fb162 100644
+--- a/support/nfs/closeall.c
++++ b/support/nfs/closeall.c
+@@ -7,19 +7,24 @@
+ #include <unistd.h>
+ #include <stdlib.h>
+ #include <dirent.h>
++#include <errno.h>
+ 
+ void
+ closeall(int min)
+ {
++	char *endp;
++	long n;
+ 	DIR *dir = opendir("/proc/self/fd");
++
+ 	if (dir != NULL) {
+ 		int dfd = dirfd(dir);
+ 		struct dirent *d;
+ 
+ 		while ((d = readdir(dir)) != NULL) {
+-			char *endp;
+-			long n = strtol(d->d_name, &endp, 10);
+-			if (*endp != '\0' && n >= min && n != dfd)
++			errno = 0;
++			n = strtol(d->d_name, &endp, 10);
++			if (!errno && *endp == '\0' && endp != d->d_name &&
++			    n >= min && n != dfd)
+ 				(void) close(n);
+ 		}
+ 		closedir(dir);
+diff --git a/utils/gssd/gssd.c b/utils/gssd/gssd.c
+index f6949db..40a2b4d 100644
+--- a/utils/gssd/gssd.c
++++ b/utils/gssd/gssd.c
+@@ -171,6 +171,8 @@ main(int argc, char *argv[])
+ 
+ 	initerr(progname, verbosity, fg);
+ #ifdef HAVE_AUTHGSS_SET_DEBUG_LEVEL
++	if (verbosity && rpc_verbosity == 0)
++		rpc_verbosity = verbosity;
+ 	authgss_set_debug_level(rpc_verbosity);
+ #else
+         if (rpc_verbosity > 0)
+diff --git a/utils/gssd/svcgssd.c b/utils/gssd/svcgssd.c
+index 6ca0e8d..69d2a69 100644
+--- a/utils/gssd/svcgssd.c
++++ b/utils/gssd/svcgssd.c
+@@ -208,6 +208,8 @@ main(int argc, char *argv[])
+ 
+ 	initerr(progname, verbosity, fg);
+ #ifdef HAVE_AUTHGSS_SET_DEBUG_LEVEL
++	if (verbosity && rpc_verbosity == 0)
++		rpc_verbosity = verbosity;
+ 	authgss_set_debug_level(rpc_verbosity);
+ #else
+ 	if (rpc_verbosity > 0)
+@@ -215,6 +217,8 @@ main(int argc, char *argv[])
+ 			    "support setting debug level\n");
+ #endif
+ #ifdef HAVE_NFS4_SET_DEBUG
++		if (verbosity && idmap_verbosity == 0)
++			idmap_verbosity = verbosity;
+         nfs4_set_debug(idmap_verbosity, NULL);
+ #else
+ 	if (idmap_verbosity > 0)
+diff --git a/utils/mountd/mountd.c b/utils/mountd/mountd.c
+index 25d292b..b59f939 100644
+--- a/utils/mountd/mountd.c
++++ b/utils/mountd/mountd.c
+@@ -467,8 +467,12 @@ get_rootfh(struct svc_req *rqstp, dirpath *path, nfs_export **expret,
+ 			return NULL;
+ 		}
+ 	} else {
+-		if (exp->m_exported<1)
++		int did_export = 0;
++	retry:
++		if (exp->m_exported<1) {
+ 			export_export(exp);
++			did_export = 1;
++		}
+ 		if (!exp->m_xtabent)
+ 			xtab_append(exp);
+ 
+@@ -482,6 +486,11 @@ get_rootfh(struct svc_req *rqstp, dirpath *path, nfs_export **expret,
+ 				fh = getfh_old ((struct sockaddr *) sin,
+ 						stb.st_dev, stb.st_ino);
+ 		}
++		if (fh == NULL && !did_export) {
++			exp->m_exported = 0;
++			goto retry;
++		}
++
+ 		if (fh == NULL) {
+ 			xlog(L_WARNING, "getfh failed: %s", strerror(errno));
+ 			*error = NFSERR_ACCES;

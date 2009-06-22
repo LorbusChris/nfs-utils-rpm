@@ -65,6 +65,9 @@ start() {
 	fi
 
 	echo -n $"Starting NFS statd: "
+	# Set statd's local hostname if defined
+	[ -n "${STATD_HOSTNAME}" ] && STATDARG="$STATDARG -n ${STATD_HOSTNAME}"
+
 	# See if a statd's ports has been defined
 	[ -n "$STATD_PORT" ] && STATDARG="$STATDARG -p $STATD_PORT"
 	[ -n "$STATD_OUTGOING_PORT" ] \
