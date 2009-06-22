@@ -47,14 +47,14 @@ Buildroot: %{_tmppath}/%{name}-%{version}-root
 Requires: rpcbind, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
 BuildRequires: libgssglue-devel libevent-devel
-BuildRequires: nfs-utils-lib-devel >= 1.1.0-3 libtirpc-devel e2fsprogs-devel
+BuildRequires: nfs-utils-lib-devel >= 1.1.0-3 libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, glibc-headers
 BuildRequires: e2fsprogs-devel, krb5-devel, tcp_wrappers-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
 Requires: nfs-utils-lib >= 1.1.0-3 libgssglue libevent
-Requires: libtirpc e2fsprogs-libs
+Requires: libtirpc libblkid
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
