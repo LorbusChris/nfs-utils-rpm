@@ -1,0 +1,703 @@
+diff -up nfs-utils-1.2.0/support/export/xtab.c.save nfs-utils-1.2.0/support/export/xtab.c
+--- nfs-utils-1.2.0/support/export/xtab.c.save	2009-07-13 13:49:23.000000000 -0400
++++ nfs-utils-1.2.0/support/export/xtab.c	2009-07-13 13:50:38.000000000 -0400
+@@ -19,7 +19,9 @@
+ #include "exportfs.h"
+ #include "xio.h"
+ #include "xlog.h"
++#include "v4root.h"
+ 
++int v4root_needed;
+ static void cond_rename(char *newfile, char *oldfile);
+ 
+ static int
+@@ -36,6 +38,8 @@ xtab_read(char *xtab, char *lockfn, int 
+ 	if ((lockid = xflock(lockfn, "r")) < 0)
+ 		return 0;
+ 	setexportent(xtab, "r");
++	if (is_export == 1)
++		v4root_needed = 1;
+ 	while ((xp = getexportent(is_export==0, 0)) != NULL) {
+ 		if (!(exp = export_lookup(xp->e_hostname, xp->e_path, is_export != 1)) &&
+ 		    !(exp = export_create(xp, is_export!=1))) {
+@@ -48,6 +52,8 @@ xtab_read(char *xtab, char *lockfn, int 
+ 		case 1:
+ 			exp->m_xtabent = 1;
+ 			exp->m_mayexport = 1;
++			if ((xp->e_flags & NFSEXP_FSID) && xp->e_fsid == 0)
++				v4root_needed = 0;
+ 			break;
+ 		case 2:
+ 			exp->m_exported = -1;/* may be exported */
+diff -up nfs-utils-1.2.0/support/include/exportfs.h.save nfs-utils-1.2.0/support/include/exportfs.h
+--- nfs-utils-1.2.0/support/include/exportfs.h.save	2009-07-13 13:49:23.000000000 -0400
++++ nfs-utils-1.2.0/support/include/exportfs.h	2009-07-13 13:49:51.000000000 -0400
+@@ -12,6 +12,17 @@
+ #include <netdb.h>
+ #include "nfslib.h"
+ 
++enum nfsd_fsid {
++	FSID_DEV = 0,
++	FSID_NUM,
++	FSID_MAJOR_MINOR,
++	FSID_ENCODE_DEV,
++	FSID_UUID4_INUM,
++	FSID_UUID8,
++	FSID_UUID16,
++	FSID_UUID16_INUM,
++};
++
+ enum {
+ 	MCL_FQDN = 0,
+ 	MCL_SUBNETWORK,
+diff -up nfs-utils-1.2.0/support/include/nfs/export.h.save nfs-utils-1.2.0/support/include/nfs/export.h
+--- nfs-utils-1.2.0/support/include/nfs/export.h.save	2009-07-13 13:49:23.000000000 -0400
++++ nfs-utils-1.2.0/support/include/nfs/export.h	2009-07-13 13:49:51.000000000 -0400
+@@ -24,6 +24,7 @@
+ #define NFSEXP_FSID		0x2000
+ #define	NFSEXP_CROSSMOUNT	0x4000
+ #define NFSEXP_NOACL		0x8000 /* reserved for possible ACL related use */
+-#define NFSEXP_ALLFLAGS		0xFFFF
++#define NFSEXP_V4ROOT       0x10000
++#define NFSEXP_ALLFLAGS		0x1FFFF
+ 
+ #endif /* _NSF_EXPORT_H */
+diff -up nfs-utils-1.2.0/support/include/nfslib.h.save nfs-utils-1.2.0/support/include/nfslib.h
+--- nfs-utils-1.2.0/support/include/nfslib.h.save	2009-07-13 13:49:23.000000000 -0400
++++ nfs-utils-1.2.0/support/include/nfslib.h	2009-07-13 13:49:51.000000000 -0400
+@@ -88,6 +88,7 @@ struct exportent {
+ 	int             e_fslocmethod;
+ 	char *          e_fslocdata;
+ 	char *		e_uuid;
++	void *		e_v4root;
+ 	struct sec_entry e_secinfo[SECFLAVOR_COUNT+1];
+ };
+ 
+diff -up /dev/null nfs-utils-1.2.0/support/include/v4root.h
+--- /dev/null	2009-07-13 07:44:43.606003629 -0400
++++ nfs-utils-1.2.0/support/include/v4root.h	2009-07-13 13:49:57.000000000 -0400
+@@ -0,0 +1,20 @@
++/*
++ * Copyright (C) 2009 Red Hat <nfs@redhat.com>
++ * support/include/v4root.h
++ *
++ * Support routines for dynamic pseudo roots.
++ *
++ */
++
++#ifndef V4ROOT_H
++#define V4ROOT_H
++
++extern int v4root_needed;
++
++extern struct exportent *v4root_chkroot(int , unsigned int , char *);
++extern struct exportent *v4root_export(char *, int);
++extern struct exportent *v4root_create(char *, nfs_export *, int);
++extern void v4root_free(struct exportent *);
++extern void v4root_unset(void), v4root_set(void);
++
++#endif /* V4ROOT_H */
+diff -up nfs-utils-1.2.0/utils/mountd/auth.c.save nfs-utils-1.2.0/utils/mountd/auth.c
+--- nfs-utils-1.2.0/utils/mountd/auth.c.save	2009-07-13 13:49:23.000000000 -0400
++++ nfs-utils-1.2.0/utils/mountd/auth.c	2009-07-13 13:50:38.000000000 -0400
+@@ -20,6 +20,7 @@
+ #include "exportfs.h"
+ #include "mountd.h"
+ #include "xmalloc.h"
++#include "v4root.h"
+ 
+ enum auth_error
+ {
+@@ -98,10 +99,13 @@ auth_reload()
+ 		last_inode = stb.st_ino;
+ 	}
+ 
++	v4root_unset();
+ 	export_freeall();
+ 	memset(&my_client, 0, sizeof(my_client));
+ 	xtab_export_read();
+ 	check_useipaddr();
++	v4root_set();
++
+ 	++counter;
+ 
+ 	return counter;
+diff -up nfs-utils-1.2.0/utils/mountd/cache.c.save nfs-utils-1.2.0/utils/mountd/cache.c
+--- nfs-utils-1.2.0/utils/mountd/cache.c.save	2009-07-13 13:49:23.000000000 -0400
++++ nfs-utils-1.2.0/utils/mountd/cache.c	2009-07-13 13:50:33.000000000 -0400
+@@ -32,23 +32,12 @@
+ #include "xmalloc.h"
+ #include "fsloc.h"
+ #include "pseudoflavors.h"
++#include "v4root.h"
+ 
+ #ifdef USE_BLKID
+ #include "blkid/blkid.h"
+ #endif
+ 
+-
+-enum nfsd_fsid {
+-	FSID_DEV = 0,
+-	FSID_NUM,
+-	FSID_MAJOR_MINOR,
+-	FSID_ENCODE_DEV,
+-	FSID_UUID4_INUM,
+-	FSID_UUID8,
+-	FSID_UUID16,
+-	FSID_UUID16_INUM,
+-};
+-
+ /*
+  * Support routines for text-based upcalls.
+  * Fields are separated by spaces.
+@@ -135,6 +124,8 @@ void auth_unix_gid(FILE *f)
+ 	if (readline(fileno(f), &lbuf, &lbuflen) != 1)
+ 		return;
+ 
++	xlog(D_CALL, "auth_unix_gid: '%s'", lbuf);
++
+ 	cp = lbuf;
+ 	if (qword_get_int(&cp, &uid) != 0)
+ 		return;
+@@ -391,6 +382,12 @@ void nfsd_fh(FILE *f)
+ 
+ 	auth_reload();
+ 
++	/* Check to see if the kenel is looking for the pseudo root */
++	if ((found = v4root_chkroot(fsidtype, fsidnum, fhuuid))) {
++		found_path = strdup(found->e_path);
++		goto found;
++	}
++
+ 	/* Now determine export point for this fsid/domain */
+ 	for (i=0 ; i < MCL_MAXTYPES; i++) {
+ 		nfs_export *next_exp;
+@@ -511,7 +508,23 @@ void nfsd_fh(FILE *f)
+ 		 */
+ 		goto out;
+ 	}
++	if (!found) {
++		/*
++		 * See if this is a pesudo export
++		 */
++		switch(fsidtype) {
++		case FSID_UUID4_INUM:
++		case FSID_UUID8:
++		case FSID_UUID16:
++		case FSID_UUID16_INUM:
++			found = v4root_export(fhuuid, uuidlen);
++			break;
++		}
++		if (found)
++			found_path = strdup(found->e_path);
++	}
+ 
++found:
+ 	if (found)
+ 		if (cache_export_ent(dom, found, found_path) < 0)
+ 			found = 0;
+@@ -590,7 +603,7 @@ static int dump_to_cache(FILE *f, char *
+ 	qword_printint(f, time(0)+30*60);
+ 	if (exp) {
+ 		int different_fs = strcmp(path, exp->e_path) != 0;
+-		
++
+ 		if (different_fs)
+ 			qword_printint(f, exp->e_flags & ~NFSEXP_FSID);
+ 		else
+@@ -631,6 +644,7 @@ void nfsd_export(FILE *f)
+ 	int found_type = 0;
+ 	struct in_addr addr;
+ 	struct hostent *he = NULL;
++	struct exportent *v4root = NULL;
+ 
+ 
+ 	if (readline(fileno(f), &lbuf, &lbuflen) != 1)
+@@ -665,10 +679,18 @@ void nfsd_export(FILE *f)
+ 				     path[l] == '/' &&
+ 				     is_mountpoint(path)))
+ 					/* ok */;
+-				else
++				else {
++					/* See if the path is part of the psuedo root */
++					if (v4root_needed && !v4root) 
++						v4root = v4root_create(path, exp, TRUE); 
+ 					continue;
+-			} else if (strcmp(path, exp->m_export.e_path) != 0)
++				}
++			} else if (strcmp(path, exp->m_export.e_path) != 0) {
++				/* See if the path is part of the psuedo root */
++				if (v4root_needed && !v4root) 
++					v4root = v4root_create(path, exp, TRUE); 
+ 				continue;
++			}
+ 			if (use_ipaddr) {
+ 				if (he == NULL) {
+ 					if (!inet_aton(dom, &addr))
+@@ -707,17 +729,28 @@ void nfsd_export(FILE *f)
+ 	}
+ 
+ 	if (found) {
++		xlog(D_CALL, "nfsd_export: found: path %s", path);
+ 		if (dump_to_cache(f, dom, path, &found->m_export) < 0) {
+ 			xlog(L_WARNING,
+ 			     "Cannot export %s, possibly unsupported filesystem"
+ 			     " or fsid= required", path);
+ 			dump_to_cache(f, dom, path, NULL);
+ 		}
+-	} else {
++	} else if (v4root) {
++		xlog(D_CALL, "nfsd_export: vroot: path %s", path);
++		dump_to_cache(f, dom, path, v4root);
++		found = (nfs_export *)v4root;
++	} else { 
+ 		dump_to_cache(f, dom, path, NULL);
+ 	}
+  out:
+-	xlog(D_CALL, "nfsd_export: found %p path %s", found, path ? path : NULL);
++	/*
++	 * If a psuedo export was create and its not needed
++	 * free it up.
++	 */
++	if (v4root && found != (nfs_export *)v4root)
++		v4root_free(v4root);
++
+ 	if (dom) free(dom);
+ 	if (path) free(path);
+ 	if (he) free(he);
+@@ -745,7 +778,9 @@ void cache_open(void) 
+ 		if (!manage_gids && cachelist[i].cache_handle == auth_unix_gid)
+ 			continue;
+ 		sprintf(path, "/proc/net/rpc/%s/channel", cachelist[i].cache_name);
+-		cachelist[i].f = fopen(path, "r+");
++		if ((cachelist[i].f = fopen(path, "r+")) == NULL)
++			xlog(L_ERROR, "cache_open: Unable to open '%s': errno %d (%s)", 
++				path, errno, strerror(errno));
+ 	}
+ }
+ 
+diff -up nfs-utils-1.2.0/utils/mountd/Makefile.am.save nfs-utils-1.2.0/utils/mountd/Makefile.am
+--- nfs-utils-1.2.0/utils/mountd/Makefile.am.save	2009-07-13 13:49:23.000000000 -0400
++++ nfs-utils-1.2.0/utils/mountd/Makefile.am	2009-07-13 13:49:57.000000000 -0400
+@@ -8,7 +8,7 @@ KPREFIX		= @kprefix@
+ sbin_PROGRAMS	= mountd
+ 
+ mountd_SOURCES = mountd.c mount_dispatch.c auth.c rmtab.c cache.c \
+-		 svc_run.c fsloc.c mountd.h
++		 svc_run.c fsloc.c v4root.c mountd.h
+ mountd_LDADD = ../../support/export/libexport.a \
+ 	       ../../support/nfs/libnfs.a \
+ 	       ../../support/misc/libmisc.a \
+diff -up /dev/null nfs-utils-1.2.0/utils/mountd/v4root.c
+--- /dev/null	2009-07-13 07:44:43.606003629 -0400
++++ nfs-utils-1.2.0/utils/mountd/v4root.c	2009-07-13 13:50:44.000000000 -0400
+@@ -0,0 +1,409 @@
++/*
++ * Copyright (C) 2009 Red Hat <nfs@redhat.com>
++ *
++ * support/export/v4root.c
++ *
++ * Routines used to support NFSv4 pseudo roots
++ *
++ */
++
++#ifdef HAVE_CONFIG_H
++#include <config.h>
++#endif
++
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <sys/queue.h>
++#include <stdio.h>
++#include <stdlib.h>
++
++#include <uuid/uuid.h>
++#include <unistd.h>
++#include <errno.h>
++
++#include "xlog.h"
++#include "exportfs.h"
++#include "nfslib.h"
++#include "misc.h"
++#include "v4root.h"
++
++#ifndef _PATH_PSEUDO_ROOT
++#define _PATH_PSEUDO_ROOT		"/"
++#endif
++
++#ifndef _PSEUDO_ROOT_FSID
++#define _PSEUDO_ROOT_FSID	0
++#endif
++
++extern int get_uuid(char *path, char *uuid, int uuidlen, char *u);
++
++typedef struct _exports_t {
++	TAILQ_ENTRY(_exports_t) list;
++	char *path;
++	void *head;
++	char uuid_len;
++	char uuid[sizeof(uuid_t)];
++	struct exportent p_export;
++} exports_t;
++
++#define HASH_TABLE_SIZE 1021
++typedef struct _hash_head {
++	TAILQ_HEAD(export_list, _exports_t) h_head;
++} hash_head;
++hash_head exports_tbl[HASH_TABLE_SIZE];
++
++
++static exports_t *hash_export_lookup(char *, unsigned int);
++static void hash_export_add(struct _exports_t *, int);
++static void hash_mount_free(void);
++
++static inline unsigned int strtoint(char *str, int len)
++{
++	unsigned int n = 0;
++	int i;
++
++	for (i=0; i < len; i++)
++		n+=((int)str[i])*i;
++	return n;
++}
++static inline int hashint(unsigned int num)
++{
++	return num % HASH_TABLE_SIZE;
++}
++#define HASH(_s, _l) hashint(strtoint((_s), (_l)))
++void v4root_set(void);
++void v4root_unset(void);
++
++int v4root_needed;
++
++static nfs_export pr_export = {
++	.m_next = NULL,
++	.m_client = NULL,
++	.m_export = {
++		.e_hostname = "*",
++		.e_path = _PATH_PSEUDO_ROOT,
++		.e_flags = NFSEXP_READONLY | NFSEXP_ROOTSQUASH
++				| NFSEXP_NOSUBTREECHECK | NFSEXP_FSID
++				| NFSEXP_CROSSMOUNT | NFSEXP_V4ROOT,
++		.e_anonuid = 65534,
++		.e_anongid = 65534,
++		.e_squids = NULL,
++		.e_nsquids = 0,
++		.e_sqgids = NULL,
++		.e_nsqgids = 0,
++		.e_fsid = 0,
++		.e_mountpoint = NULL,
++	},
++	.m_exported = 0,
++	.m_xtabent = 1,
++	.m_mayexport = 1,
++	.m_changed = 0,
++	.m_warned = 0,
++};
++static nfs_export *pseudo_root;
++
++/*
++ * Return the number '/' in the path
++ */
++inline static int slash_count(char *path)
++{
++	int i, slashs=0;
++
++	for (i=0; i < strlen(path); i++) {
++			if (path[i] == '/')
++				slashs++;
++	}
++	return slashs;
++}
++/*
++ * Make sure the kernel has pseudo root support.
++ */
++static int
++v4root_support()
++{
++	static int kernel_support = -1;
++	char *ptr, version[64];
++	int major, minor;
++	FILE *fp;
++
++	if (kernel_support != -1)
++		return kernel_support;
++
++	kernel_support = 0;
++	fp = fopen("/proc/fs/nfsd/exports", "r");
++	if (fp == NULL)
++		goto out;
++
++	ptr = fgets(version, 64, fp);
++	fclose(fp);
++	if (ptr == NULL)
++		goto out;
++
++	while(*ptr && isdigit(*ptr) == 0)
++		ptr++;
++	if (*ptr == '\0')
++		goto out;
++
++	major = minor = 0;
++	sscanf(ptr, " %d.%d",&major, &minor);
++	if (major >= 1 && minor >= 2)
++		kernel_support = 1;
++out:
++	if (!kernel_support) {
++		xlog(L_WARNING, "Kernel does not have psuedo root support.");
++		xlog(L_WARNING, "NFS v4 mounts will be disabled unless fsid=0");
++		xlog(L_WARNING, "is specfied in /etc/exports file.");
++	}
++
++	return kernel_support;
++}
++/*
++ * Build a table of pseudo exports by running through
++ * the real export looking at the components of the path
++ * that make up the export. Those path components, if not 
++ * not exported, will be come pseudo exports allow them 
++ * to be found when the kernel does an upcall looking for 
++ * components of the v4 mount.
++ */
++void
++v4root_set()
++{
++	nfs_export	*exp, *nxt;
++	int	i, slcnt;
++	char *e_path, *path, *ptr, *comp;
++	char *hostname;
++
++	if (!v4root_needed)
++		return;
++
++	if (!v4root_support())
++		return;
++
++	pseudo_root = &pr_export;
++
++	for (i = 0; i < MCL_MAXTYPES; i++) {
++		for (exp = exportlist[i].p_head; exp; exp = nxt) {
++			nxt = exp->m_next;
++			e_path = exp->m_export.e_path;
++			hostname = exp->m_export.e_hostname;
++
++			if ((slcnt = slash_count(e_path)) < 2)
++				continue;
++			slcnt--; /* knock off the leanding '/' */
++
++			path = strdup(e_path);
++			if ((ptr = strrchr(path, '/')) != NULL)
++				*ptr = '\0';
++
++			/*
++			 * Run through each component of the path to
++			 * see if a  pseudo export should be create.
++			 */
++			comp = path+1;
++			do { 
++				if ((ptr = strchr(comp, '/')) != NULL)
++					*ptr = '\0';
++
++	  			if (export_lookup(hostname, path, 0) == NULL)
++					v4root_create(path, exp, FALSE);
++
++				if (ptr) {
++					*ptr = '/';
++					comp = ptr+1; 
++				}
++			} while (--slcnt > 0);
++		}
++	}
++}
++
++/*
++ * Unset the pseudo root export
++ */
++void
++v4root_unset()
++{
++	pseudo_root = NULL;
++	hash_mount_free();
++}
++
++/*
++ * The kernel will do an upcall looking for the pseudo
++ * root via its fsid. When the wanted fsid equals 
++ * PSEUDO_ROOT_FSID return the pseudo root export.
++ */
++struct exportent *
++v4root_chkroot(int fsidtype, unsigned int fsidnum, char *fhuuid)
++{
++	struct exportent *p_export = NULL;
++
++	if (pseudo_root == NULL)
++		return NULL;
++
++	switch(fsidtype) {
++		case FSID_NUM:
++			if (fsidnum == _PSEUDO_ROOT_FSID) {
++				p_export = &pseudo_root->m_export;
++				strncpy(p_export->e_path, _PATH_PSEUDO_ROOT, 
++					NFS_MAXPATHLEN);
++			}
++			break;
++	}
++
++	return p_export;
++}
++
++/*
++ * Create a psuedo export, if one does not 
++ * already exist.
++ */
++struct exportent *
++v4root_create(char *path, nfs_export *exp, int docheck)
++{
++	static struct exportent *p_export = NULL;
++	exports_t *pexp;
++	char *epath = exp->m_export.e_path;
++	char *hostname = exp->m_export.e_hostname;
++	int elen, plen, i;
++	char uuid_len = sizeof(uuid_t);
++	char uuid[sizeof(uuid_t)];
++
++	if (pseudo_root == NULL)
++		return NULL;
++
++	if (docheck) {
++
++		/* Path needs to be an subset of e_path */
++		elen = strlen(epath);
++		plen = strlen(path);
++		if (plen >= elen)
++			return NULL;
++
++		for (i=0; i < plen; i++) {
++			if (path[i] != epath[i])
++				return NULL;
++		}
++	}
++
++	/* Check to see if the export already exists */
++	get_uuid(path, NULL, uuid_len, uuid);
++	if ((p_export = v4root_export(uuid, uuid_len)) != NULL)
++		return p_export;
++
++	pexp = (exports_t *)malloc(sizeof(exports_t));
++	if (pexp == NULL) {
++		xlog(L_WARNING, "v4root_create: No memory for psuedo export");
++		return NULL;
++	}
++	p_export = &pexp->p_export;
++	pexp->path = strdup(path);
++
++	pexp->uuid_len = uuid_len;
++	memcpy(pexp->uuid, uuid, uuid_len);
++
++	memcpy(&pexp->p_export, &pr_export.m_export, 
++		sizeof(struct exportent));
++	strcpy(p_export->e_path, path);
++	p_export->e_flags &= ~NFSEXP_FSID;
++	p_export->e_v4root = (void *)pexp;
++
++	hash_export_add(pexp, HASH(pexp->uuid, sizeof(uuid_t)));
++
++	xlog(D_CALL, "v4root_create: path '%s'", p_export->e_path);
++
++	return p_export;
++}
++
++/*
++ * Free a psuedo export
++ */
++void
++v4root_free(struct exportent *p_export)
++{
++	exports_t *pexp = (exports_t *)p_export->e_v4root;
++	hash_head *head = (hash_head *)pexp->head;
++
++	free(pexp->path);
++	TAILQ_REMOVE(&head->h_head, pexp, list);
++}
++
++/*
++ * Return a psuedo export that match the given uuid
++ */
++struct exportent *
++v4root_export(char *fhuuid, int uuidlen)
++{
++	struct exportent *p_export = NULL;
++	exports_t *pexp;
++	int len = MIN(uuidlen, sizeof(uuid_t));
++
++	if (pseudo_root == NULL)
++		return NULL;
++
++	pexp = hash_export_lookup(fhuuid, len);
++	if (pexp) {
++		p_export = &pexp->p_export;
++		xlog(D_CALL, "v4root_export: path %s", p_export->e_path);
++	}
++	return p_export;
++}
++
++/*
++ * Add psuedo export to export table
++ */
++static void hash_export_add(struct _exports_t *exp, int hash)
++{
++	hash_head *head;
++
++	head = &(exports_tbl[hash]);
++	exp->head = head;
++
++	if (TAILQ_EMPTY(&head->h_head))
++		TAILQ_INSERT_HEAD(&head->h_head, exp, list);
++	else
++		TAILQ_INSERT_TAIL(&head->h_head, exp, list);
++}
++
++/*
++ * Lookup a psuedo export using the uuid and inode number
++ */
++static exports_t *
++hash_export_lookup(char *uuid, unsigned int uuidlen)
++{
++	exports_t *pexp;
++	hash_head *head;
++	int hash = HASH(uuid, uuidlen);
++
++	head = &(exports_tbl[hash]);
++
++	TAILQ_FOREACH(pexp, &head->h_head, list) {
++		if (memcmp(pexp->uuid, uuid, uuidlen) == 0)
++			return pexp;
++	}
++	return NULL;
++
++}
++
++/*
++ * Free up psuedo export table
++ */
++static void hash_mount_free()
++{
++	hash_head *head;
++	exports_t *e1, *e2;
++	int hash;
++
++	for (hash=0; hash < HASH_TABLE_SIZE; hash++) {
++		head = &(exports_tbl[hash]);
++		if (head == NULL)
++			continue;
++		e1 = TAILQ_FIRST(&head->h_head);
++		while (e1 != NULL) {
++			free(e1->path);
++			e2 =  TAILQ_NEXT(e1, list);
++			TAILQ_REMOVE(&head->h_head, e1, list);
++			free(e1);
++			e1 = e2;
++		}
++		TAILQ_INIT(&head->h_head);
++	}
++}
