@@ -1,0 +1,1003 @@
+diff --git a/support/include/nfs/nfs.h b/support/include/nfs/nfs.h
+index 00b0028..a64eb0a 100644
+--- a/support/include/nfs/nfs.h
++++ b/support/include/nfs/nfs.h
+@@ -42,14 +42,21 @@ struct nfs_fh_old {
+ #define NFSCTL_GETFD		7	/* get an fh by path (used by mountd) */
+ #define NFSCTL_GETFS		8	/* get an fh by path with max size (used by mountd) */
+ 
++#define NFSCTL_UDPBIT		      (1 << (17 - 1))
++#define NFSCTL_TCPBIT		      (1 << (18 - 1))
++
+ #define NFSCTL_VERUNSET(_cltbits, _v) ((_cltbits) &= ~(1 << ((_v) - 1))) 
+-#define NFSCTL_UDPUNSET(_cltbits)     ((_cltbits) &= ~(1 << (17 - 1))) 
+-#define NFSCTL_TCPUNSET(_cltbits)     ((_cltbits) &= ~(1 << (18 - 1))) 
++#define NFSCTL_UDPUNSET(_cltbits)     ((_cltbits) &= ~NFSCTL_UDPBIT) 
++#define NFSCTL_TCPUNSET(_cltbits)     ((_cltbits) &= ~NFSCTL_TCPBIT) 
+ 
+ #define NFSCTL_VERISSET(_cltbits, _v) ((_cltbits) & (1 << ((_v) - 1))) 
+-#define NFSCTL_UDPISSET(_cltbits)     ((_cltbits) & (1 << (17 - 1))) 
+-#define NFSCTL_TCPISSET(_cltbits)     ((_cltbits) & (1 << (18 - 1))) 
++#define NFSCTL_UDPISSET(_cltbits)     ((_cltbits) & NFSCTL_UDPBIT) 
++#define NFSCTL_TCPISSET(_cltbits)     ((_cltbits) & NFSCTL_TCPBIT) 
++
++#define NFSCTL_UDPSET(_cltbits)       ((_cltbits) |= NFSCTL_UDPBIT)
++#define NFSCTL_TCPSET(_cltbits)       ((_cltbits) |= NFSCTL_TCPBIT)
+ 
++#define NFSCTL_ANYPROTO(_cltbits)     ((_cltbits) & (NFSCTL_UDPBIT | NFSCTL_TCPBIT))
+ #define NFSCTL_ALLBITS (~0)
+ 
+ /* SVC */
+diff --git a/support/include/nfslib.h b/support/include/nfslib.h
+index ae98650..537a31e 100644
+--- a/support/include/nfslib.h
++++ b/support/include/nfslib.h
+@@ -130,7 +130,6 @@ int			wildmat(char *text, char *pattern);
+  * nfsd library functions.
+  */
+ int			nfsctl(int, struct nfsctl_arg *, union nfsctl_res *);
+-int			nfssvc(int port, int nrservs, unsigned int versbits, int minorvers4, unsigned int portbits, char *haddr);
+ int			nfsaddclient(struct nfsctl_client *clp);
+ int			nfsdelclient(struct nfsctl_client *clp);
+ int			nfsexport(struct nfsctl_export *exp);
+diff --git a/support/nfs/Makefile.am b/support/nfs/Makefile.am
+index 86f52a1..096f56d 100644
+--- a/support/nfs/Makefile.am
++++ b/support/nfs/Makefile.am
+@@ -2,7 +2,7 @@
+ 
+ noinst_LIBRARIES = libnfs.a
+ libnfs_a_SOURCES = exports.c rmtab.c xio.c rpcmisc.c rpcdispatch.c \
+-		   xlog.c xcommon.c wildmat.c nfssvc.c nfsclient.c \
++		   xlog.c xcommon.c wildmat.c nfsclient.c \
+ 		   nfsexport.c getfh.c nfsctl.c rpc_socket.c getport.c \
+ 		   svc_socket.c cacheio.c closeall.c nfs_mntent.c
+ 
+diff --git a/support/nfs/nfssvc.c b/support/nfs/nfssvc.c
+deleted file mode 100644
+index 33c15a7..0000000
+--- a/support/nfs/nfssvc.c
++++ /dev/null
+@@ -1,187 +0,0 @@
+-/*
+- * support/nfs/nfssvc.c
+- *
+- * Run an NFS daemon.
+- *
+- * Copyright (C) 1995, 1996 Olaf Kirch <okir@monad.swb.de>
+- */
+-
+-#ifdef HAVE_CONFIG_H
+-#include <config.h>
+-#endif
+-
+-#include <sys/socket.h>
+-#include <netinet/in.h>
+-#include <arpa/inet.h>
+-#include <unistd.h>
+-#include <fcntl.h>
+-#include <errno.h>
+-#include <syslog.h>
+-
+-
+-#include "nfslib.h"
+-
+-#define NFSD_PORTS_FILE     "/proc/fs/nfsd/portlist"
+-#define NFSD_VERS_FILE    "/proc/fs/nfsd/versions"
+-#define NFSD_THREAD_FILE  "/proc/fs/nfsd/threads"
+-
+-static void
+-nfssvc_setfds(int port, unsigned int ctlbits, char *haddr)
+-{
+-	int fd, n, on=1;
+-	char buf[BUFSIZ];
+-	int udpfd = -1, tcpfd = -1;
+-	struct sockaddr_in sin;
+-
+-	fd = open(NFSD_PORTS_FILE, O_RDONLY);
+-	if (fd < 0)
+-		return;
+-	n = read(fd, buf, BUFSIZ);
+-	close(fd);
+-	if (n != 0)
+-		return;
+-	/* there are no ports currently open, so it is safe to
+-	 * try to open some and pass them through.
+-	 * Note: If the user explicitly asked for 'udp', then
+-	 * we should probably check if that is open, and should
+-	 * open it if not.  However we don't yet.  All sockets
+-	 * have to be opened when the first daemon is started.
+-	 */
+-	fd = open(NFSD_PORTS_FILE, O_WRONLY);
+-	if (fd < 0)
+-		return;
+-	sin.sin_family = AF_INET;
+-	sin.sin_port   = htons(port);
+-	sin.sin_addr.s_addr =  inet_addr(haddr);
+-
+-	if (NFSCTL_UDPISSET(ctlbits)) {
+-		udpfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+-		if (udpfd < 0) {
+-			syslog(LOG_ERR, "nfssvc: unable to create UPD socket: "
+-				"errno %d (%s)\n", errno, strerror(errno));
+-			exit(1);
+-		}
+-		if (bind(udpfd, (struct  sockaddr  *)&sin, sizeof(sin)) < 0){
+-			syslog(LOG_ERR, "nfssvc: unable to bind UPD socket: "
+-				"errno %d (%s)\n", errno, strerror(errno));
+-			exit(1);
+-		}
+-	}
+-
+-	if (NFSCTL_TCPISSET(ctlbits)) {
+-		tcpfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+-		if (tcpfd < 0) {
+-			syslog(LOG_ERR, "nfssvc: unable to createt tcp socket: "
+-				"errno %d (%s)\n", errno, strerror(errno));
+-			exit(1);
+-		}
+-		if (setsockopt(tcpfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0) {
+-			syslog(LOG_ERR, "nfssvc: unable to set SO_REUSEADDR: "
+-				"errno %d (%s)\n", errno, strerror(errno));
+-			exit(1);
+-		}
+-		if (bind(tcpfd, (struct  sockaddr  *)&sin, sizeof(sin)) < 0){
+-			syslog(LOG_ERR, "nfssvc: unable to bind TCP socket: "
+-				"errno %d (%s)\n", errno, strerror(errno));
+-			exit(1);
+-		}
+-		if (listen(tcpfd, 64) < 0){
+-			syslog(LOG_ERR, "nfssvc: unable to create listening socket: "
+-				"errno %d (%s)\n", errno, strerror(errno));
+-			exit(1);
+-		}
+-	}
+-	if (udpfd >= 0) {
+-		snprintf(buf, BUFSIZ,"%d\n", udpfd); 
+-		if (write(fd, buf, strlen(buf)) != strlen(buf)) {
+-			syslog(LOG_ERR, 
+-			       "nfssvc: writing fds to kernel failed: errno %d (%s)", 
+-			       errno, strerror(errno));
+-		}
+-		close(fd);
+-		fd = -1;
+-	}
+-	if (tcpfd >= 0) {
+-		if (fd < 0)
+-			fd = open(NFSD_PORTS_FILE, O_WRONLY);
+-		snprintf(buf, BUFSIZ,"%d\n", tcpfd); 
+-		if (write(fd, buf, strlen(buf)) != strlen(buf)) {
+-			syslog(LOG_ERR, 
+-			       "nfssvc: writing fds to kernel failed: errno %d (%s)", 
+-			       errno, strerror(errno));
+-		}
+-	}
+-	close(fd);
+-
+-	return;
+-}
+-static void
+-nfssvc_versbits(unsigned int ctlbits, int minorvers4)
+-{
+-	int fd, n, off;
+-	char buf[BUFSIZ], *ptr;
+-
+-	ptr = buf;
+-	off = 0;
+-	fd = open(NFSD_VERS_FILE, O_WRONLY);
+-	if (fd < 0)
+-		return;
+-
+-	for (n = NFSD_MINVERS; n <= NFSD_MAXVERS; n++) {
+-		if (NFSCTL_VERISSET(ctlbits, n))
+-		    off += snprintf(ptr+off, BUFSIZ - off, "+%d ", n);
+-		else
+-		    off += snprintf(ptr+off, BUFSIZ - off, "-%d ", n);
+-	}
+-	n = minorvers4 >= 0 ? minorvers4 : -minorvers4;
+-	if (n >= NFSD_MINMINORVERS4 && n <= NFSD_MAXMINORVERS4)
+-		    off += snprintf(ptr+off, BUFSIZ - off, "%c4.%d",
+-				    minorvers4 > 0 ? '+' : '-',
+-				    n);
+-	snprintf(ptr+off, BUFSIZ - off, "\n");
+-	if (write(fd, buf, strlen(buf)) != strlen(buf)) {
+-		syslog(LOG_ERR, "nfssvc: Setting version failed: errno %d (%s)", 
+-			errno, strerror(errno));
+-	}
+-	close(fd);
+-
+-	return;
+-}
+-int
+-nfssvc(int port, int nrservs, unsigned int versbits, int minorvers4,
+-	unsigned protobits, char *haddr)
+-{
+-	struct nfsctl_arg	arg;
+-	int fd;
+-
+-	/* Note: must set versions before fds so that
+-	 * the ports get registered with portmap against correct
+-	 * versions
+-	 */
+-	nfssvc_versbits(versbits, minorvers4);
+-	nfssvc_setfds(port, protobits, haddr);
+-
+-	fd = open(NFSD_THREAD_FILE, O_WRONLY);
+-	if (fd < 0)
+-		fd = open("/proc/fs/nfs/threads", O_WRONLY);
+-	if (fd >= 0) {
+-		/* 2.5+ kernel with nfsd filesystem mounted.
+-		 * Just write the number in.
+-		 * Cannot handle port number yet, but does anyone care?
+-		 */
+-		char buf[20];
+-		int n;
+-		snprintf(buf, 20,"%d\n", nrservs);
+-		n = write(fd, buf, strlen(buf));
+-		close(fd);
+-		if (n != strlen(buf))
+-			return -1;
+-		else
+-			return 0;
+-	}
+-
+-	arg.ca_version = NFSCTL_VERSION;
+-	arg.ca_svc.svc_nthreads = nrservs;
+-	arg.ca_svc.svc_port = port;
+-	return nfsctl(NFSCTL_SVC, &arg, NULL);
+-}
+diff --git a/utils/nfsd/Makefile.am b/utils/nfsd/Makefile.am
+index 445e3fd..c4c6fb0 100644
+--- a/utils/nfsd/Makefile.am
++++ b/utils/nfsd/Makefile.am
+@@ -7,10 +7,8 @@ RPCPREFIX	= rpc.
+ KPREFIX		= @kprefix@
+ sbin_PROGRAMS	= nfsd
+ 
+-nfsd_SOURCES = nfsd.c
+-nfsd_LDADD = ../../support/export/libexport.a \
+-	     ../../support/nfs/libnfs.a \
+-	     ../../support/misc/libmisc.a
++nfsd_SOURCES = nfsd.c nfssvc.c
++nfsd_LDADD = ../../support/nfs/libnfs.a
+ 
+ MAINTAINERCLEANFILES = Makefile.in
+ 
+diff --git a/utils/nfsd/nfsd.c b/utils/nfsd/nfsd.c
+index e3c0094..650c593 100644
+--- a/utils/nfsd/nfsd.c
++++ b/utils/nfsd/nfsd.c
+@@ -18,13 +18,14 @@
+ #include <string.h>
+ #include <errno.h>
+ #include <getopt.h>
+-#include <syslog.h>
+ #include <netdb.h>
+ #include <sys/socket.h>
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
+ 
+ #include "nfslib.h"
++#include "nfssvc.h"
++#include "xlog.h"
+ 
+ static void	usage(const char *);
+ 
+@@ -37,47 +38,116 @@ static struct option longopts[] =
+ 	{ "no-udp", 0, 0, 'U' },
+ 	{ "port", 1, 0, 'P' },
+ 	{ "port", 1, 0, 'p' },
++	{ "debug", 0, 0, 'd' },
++	{ "syslog", 0, 0, 's' },
+ 	{ NULL, 0, 0, 0 }
+ };
+-unsigned int protobits = NFSCTL_ALLBITS;
+-unsigned int versbits = NFSCTL_ALLBITS;
+-int minorvers4 = NFSD_MAXMINORVERS4;		/* nfsv4 minor version */
+-char *haddr = NULL;
++
++/* given a family and ctlbits, disable any that aren't listed in netconfig */
++#ifdef HAVE_LIBTIRPC
++static void
++nfsd_enable_protos(unsigned int *proto4, unsigned int *proto6)
++{
++	struct netconfig *nconf;
++	unsigned int *famproto;
++	void *handle;
++
++	xlog(D_GENERAL, "Checking netconfig for visible protocols.");
++
++	handle = setnetconfig();
++	while((nconf = getnetconfig(handle))) {
++		if (!(nconf->nc_flag & NC_VISIBLE))
++			continue;
++
++		if (!strcmp(nconf->nc_protofmly, NC_INET))
++			famproto = proto4;
++		else if (!strcmp(nconf->nc_protofmly, NC_INET6))
++			famproto = proto6;
++		else
++			continue;
++
++		if (!strcmp(nconf->nc_proto, NC_TCP))
++			NFSCTL_TCPSET(*famproto);
++		else if (!strcmp(nconf->nc_proto, NC_UDP))
++			NFSCTL_UDPSET(*famproto);
++
++		xlog(D_GENERAL, "Enabling %s %s.", nconf->nc_protofmly,
++			nconf->nc_proto);
++	}
++	endnetconfig(handle);
++	return;
++}
++#else /* HAVE_LIBTIRPC */
++static void
++nfsd_enable_protos(unsigned int *proto4, unsigned int *proto6)
++{
++	/* Enable all IPv4 protocols if no TIRPC support */
++	*proto4 = NFSCTL_ALLBITS;
++	*proto6 = 0;
++}
++#endif /* HAVE_LIBTIRPC */
+ 
+ int
+ main(int argc, char **argv)
+ {
+-	int	count = 1, c, error, port, fd, found_one;
+-	struct servent *ent;
+-	struct hostent *hp;
+-	char *p;
+-
+-	ent = getservbyname ("nfs", "udp");
+-	if (ent != NULL)
+-		port = ntohs (ent->s_port);
+-	else
+-		port = 2049;
+-
+-	while ((c = getopt_long(argc, argv, "H:hN:p:P:TU", longopts, NULL)) != EOF) {
++	int	count = 1, c, error = 0, portnum = 0, fd, found_one;
++	char *p, *progname, *port;
++	char *haddr = NULL;
++	int	socket_up = 0;
++	int minorvers4 = NFSD_MAXMINORVERS4;	/* nfsv4 minor version */
++	unsigned int versbits = NFSCTL_ALLBITS;
++	unsigned int protobits = NFSCTL_ALLBITS;
++	unsigned int proto4 = 0;
++	unsigned int proto6 = 0;
++
++	progname = strdup(basename(argv[0]));
++	if (!progname) {
++		fprintf(stderr, "%s: unable to allocate memory.\n", argv[0]);
++		exit(1);
++	}
++
++	port = strdup("nfs");
++	if (!port) {
++		fprintf(stderr, "%s: unable to allocate memory.\n", progname);
++		exit(1);
++	}
++
++	xlog_syslog(0);
++	xlog_stderr(1);
++
++	while ((c = getopt_long(argc, argv, "dH:hN:p:P:sTU", longopts, NULL)) != EOF) {
+ 		switch(c) {
++		case 'd':
++			xlog_config(D_ALL, 1);
++			break;
+ 		case 'H':
+-			if (inet_addr(optarg) != INADDR_NONE) {
+-				haddr = strdup(optarg);
+-			} else if ((hp = gethostbyname(optarg)) != NULL) {
+-				haddr = inet_ntoa((*(struct in_addr*)(hp->h_addr_list[0])));
+-			} else {
+-				fprintf(stderr, "%s: Unknown hostname: %s\n",
+-					argv[0], optarg);
+-				usage(argv [0]);
++			/*
++			 * for now, this only handles one -H option. Use the
++			 * last one specified.
++			 */
++			free(haddr);
++			haddr = strdup(optarg);
++			if (!haddr) {
++				fprintf(stderr, "%s: unable to allocate "
++					"memory.\n", progname);
++				exit(1);
+ 			}
+ 			break;
+ 		case 'P':	/* XXX for nfs-server compatibility */
+ 		case 'p':
+-			port = atoi(optarg);
+-			if (port <= 0 || port > 65535) {
++			/* only the last -p option has any effect */
++			portnum = atoi(optarg);
++			if (portnum <= 0 || portnum > 65535) {
+ 				fprintf(stderr, "%s: bad port number: %s\n",
+-					argv[0], optarg);
+-				usage(argv [0]);
++					progname, optarg);
++				usage(progname);
++			}
++			free(port);
++			port = strdup(optarg);
++			if (!port) {
++				fprintf(stderr, "%s: unable to allocate "
++						"memory.\n", progname);
++				exit(1);
+ 			}
+ 			break;
+ 		case 'N':
+@@ -96,80 +166,133 @@ main(int argc, char **argv)
+ 				exit(1);
+ 			}
+ 			break;
++		case 's':
++			xlog_syslog(1);
++			xlog_stderr(0);
++			break;
+ 		case 'T':
+-				NFSCTL_TCPUNSET(protobits);
+-				break;
++			NFSCTL_TCPUNSET(protobits);
++			break;
+ 		case 'U':
+-				NFSCTL_UDPUNSET(protobits);
+-				break;
++			NFSCTL_UDPUNSET(protobits);
++			break;
+ 		default:
+ 			fprintf(stderr, "Invalid argument: '%c'\n", c);
+ 		case 'h':
+-			usage(argv[0]);
++			usage(progname);
+ 		}
+ 	}
+-	/*
+-	 * Do some sanity checking, if the ctlbits are set
+-	 */
+-	if (!NFSCTL_UDPISSET(protobits) && !NFSCTL_TCPISSET(protobits)) {
+-		fprintf(stderr, "invalid protocol specified\n");
+-		exit(1);
++
++	if (optind < argc) {
++		if ((count = atoi(argv[optind])) < 0) {
++			/* insane # of servers */
++			fprintf(stderr,
++				"%s: invalid server count (%d), using 1\n",
++				argv[0], count);
++			count = 1;
++		} else if (count == 0) {
++			/*
++			 * don't bother setting anything else if the threads
++			 * are coming down anyway.
++			 */
++			socket_up = 1;
++			goto set_threads;
++		}
+ 	}
++
++	xlog_open(progname);
++
++	nfsd_enable_protos(&proto4, &proto6);
++
++	if (!NFSCTL_TCPISSET(protobits)) {
++		NFSCTL_TCPUNSET(proto4);
++		NFSCTL_TCPUNSET(proto6);
++	}
++
++	if (!NFSCTL_UDPISSET(protobits)) {
++		NFSCTL_UDPUNSET(proto4);
++		NFSCTL_UDPUNSET(proto6);
++	}
++
++	/* make sure that at least one version is enabled */
+ 	found_one = 0;
+ 	for (c = NFSD_MINVERS; c <= NFSD_MAXVERS; c++) {
+ 		if (NFSCTL_VERISSET(versbits, c))
+ 			found_one = 1;
+ 	}
+ 	if (!found_one) {
+-		fprintf(stderr, "no version specified\n");
++		xlog(L_ERROR, "no version specified");
+ 		exit(1);
+ 	}			
+ 
+-	if (NFSCTL_VERISSET(versbits, 4) && !NFSCTL_TCPISSET(protobits)) {
+-		fprintf(stderr, "version 4 requires the TCP protocol\n");
++	if (NFSCTL_VERISSET(versbits, 4) &&
++	    !NFSCTL_TCPISSET(proto4) &&
++	    !NFSCTL_TCPISSET(proto6)) {
++		xlog(L_ERROR, "version 4 requires the TCP protocol");
+ 		exit(1);
+ 	}
+-	if (haddr == NULL) {
+-		struct in_addr in = {INADDR_ANY}; 
+-		haddr = strdup(inet_ntoa(in));
+-	}
+ 
+ 	if (chdir(NFS_STATEDIR)) {
+-		fprintf(stderr, "%s: chdir(%s) failed: %s\n",
+-			argv [0], NFS_STATEDIR, strerror(errno));
++		xlog(L_ERROR, "chdir(%s) failed: %m", NFS_STATEDIR);
+ 		exit(1);
+ 	}
+ 
+-	if (optind < argc) {
+-		if ((count = atoi(argv[optind])) < 0) {
+-			/* insane # of servers */
+-			fprintf(stderr,
+-				"%s: invalid server count (%d), using 1\n",
+-				argv[0], count);
+-			count = 1;
+-		}
++	/* can only change number of threads if nfsd is already up */
++	if (nfssvc_inuse()) {
++		socket_up = 1;
++		goto set_threads;
+ 	}
+-	/* KLUDGE ALERT:
+-	   Some kernels let nfsd kernel threads inherit open files
+-	   from the program that spawns them (i.e. us).  So close
+-	   everything before spawning kernel threads.  --Chip */
++
++	/*
++	 * must set versions before the fd's so that the right versions get
++	 * registered with rpcbind. Note that on older kernels w/o the right
++	 * interfaces, these are a no-op.
++	 */
++	nfssvc_setvers(versbits, minorvers4);
++ 
++	error = nfssvc_set_sockets(AF_INET, proto4, haddr, port);
++	if (!error)
++		socket_up = 1;
++
++#ifdef IPV6_SUPPORTED
++	error = nfssvc_set_sockets(AF_INET6, proto6, haddr, port);
++	if (!error)
++		socket_up = 1;
++#endif /* IPV6_SUPPORTED */
++
++set_threads:
++	/* don't start any threads if unable to hand off any sockets */
++	if (!socket_up) {
++		xlog(L_ERROR, "unable to set any sockets for nfsd");
++		goto out;
++	}
++	error = 0;
++
++	/*
++	 * KLUDGE ALERT:
++	 * Some kernels let nfsd kernel threads inherit open files
++	 * from the program that spawns them (i.e. us).  So close
++	 * everything before spawning kernel threads.  --Chip
++	 */
+ 	fd = open("/dev/null", O_RDWR);
+ 	if (fd == -1)
+-		perror("/dev/null");
++		xlog(L_ERROR, "Unable to open /dev/null: %m");
+ 	else {
++		/* switch xlog output to syslog since stderr is being closed */
++		xlog_syslog(1);
++		xlog_stderr(0);
+ 		(void) dup2(fd, 0);
+ 		(void) dup2(fd, 1);
+ 		(void) dup2(fd, 2);
+ 	}
+ 	closeall(3);
+ 
+-	openlog("nfsd", LOG_PID, LOG_DAEMON);
+-	if ((error = nfssvc(port, count, versbits, minorvers4, protobits, haddr)) < 0) {
+-		int e = errno;
+-		syslog(LOG_ERR, "nfssvc: %s", strerror(e));
+-		closelog();
+-	}
+-
++	if ((error = nfssvc_threads(portnum, count)) < 0)
++		xlog(L_ERROR, "error starting threads: errno %d (%m)", errno);
++out:
++	free(port);
++	free(haddr);
++	free(progname);
+ 	return (error != 0);
+ }
+ 
+@@ -177,7 +300,7 @@ static void
+ usage(const char *prog)
+ {
+ 	fprintf(stderr, "Usage:\n"
+-		"%s [-H hostname] [-p|-P|--port port] [-N|--no-nfs-version version ] [-T|--no-tcp] [-U|--no-udp] nrservs\n", 
++		"%s [-d|--debug] [-H hostname] [-p|-P|--port port] [-N|--no-nfs-version version ] [-s|--syslog] [-T|--no-tcp] [-U|--no-udp] nrservs\n", 
+ 		prog);
+ 	exit(2);
+ }
+diff --git a/utils/nfsd/nfsd.man b/utils/nfsd/nfsd.man
+index 4eb3e21..d8988d2 100644
+--- a/utils/nfsd/nfsd.man
++++ b/utils/nfsd/nfsd.man
+@@ -13,8 +13,9 @@ The
+ program implements the user level part of the NFS service. The
+ main functionality is handled by the
+ .B nfsd
+-kernel module; the user space program merely starts the specified
+-number of kernel threads.
++kernel module. The user space program merely specifies what sort of sockets
++the kernel service should listen on, what NFS versions it should support, and
++how many kernel threads it should use.
+ .P
+ The
+ .B rpc.mountd
+@@ -22,6 +23,9 @@ server provides an ancillary service needed to satisfy mount requests
+ by NFS clients.
+ .SH OPTIONS
+ .TP
++.B \-d " or " \-\-debug
++enable logging of debugging messages
++.TP
+ .B \-H " or " \-\-host  hostname
+ specify a particular hostname (or address) that NFS requests will
+ be accepted on. By default,
+@@ -45,6 +49,14 @@ does not offer certain versions of NFS. The current version of
+ .B rpc.nfsd
+ can support both NFS version 2,3 and the newer version 4.
+ .TP
++.B \-s " or " \-\-syslog
++By default,
++.B rpc.nfsd
++logs error messages (and debug messages, if enabled) to stderr. This option makes 
++.B rpc.nfsd
++log these messages to syslog instead. Note that errors encountered during
++option processing will still be logged to stderr regardless of this option.
++.TP
+ .B \-T " or " \-\-no-tcp
+ Disable 
+ .B rpc.nfsd 
+@@ -75,12 +87,19 @@ In particular
+ .B rpc.nfsd 0
+ will stop all threads and thus close any open connections.
+ 
++.SH NOTES
++If the program is built with TI-RPC support, it will enable any protocol and
++address family combinations that are marked visible in the
++.B netconfig
++database.
++
+ .SH SEE ALSO
+ .BR rpc.mountd (8),
+ .BR exports (5),
+ .BR exportfs (8),
+ .BR rpc.rquotad (8),
+-.BR nfsstat (8).
++.BR nfsstat (8),
++.BR netconfig(5).
+ .SH AUTHOR
+ Olaf Kirch, Bill Hawes, H. J. Lu, G. Allan Morris III,
+ and a host of others.
+diff --git a/utils/nfsd/nfssvc.c b/utils/nfsd/nfssvc.c
+new file mode 100644
+index 0000000..ee862b2
+--- /dev/null
++++ b/utils/nfsd/nfssvc.c
+@@ -0,0 +1,289 @@
++/*
++ * utils/nfsd/nfssvc.c
++ *
++ * Run an NFS daemon.
++ *
++ * Copyright (C) 1995, 1996 Olaf Kirch <okir@monad.swb.de>
++ */
++
++#ifdef HAVE_CONFIG_H
++#include <config.h>
++#endif
++
++#include <sys/types.h>
++#include <sys/socket.h>
++#include <netdb.h>
++#include <netinet/in.h>
++#include <arpa/inet.h>
++#include <unistd.h>
++#include <fcntl.h>
++#include <errno.h>
++
++#include "nfslib.h"
++#include "xlog.h"
++
++#define NFSD_PORTS_FILE     "/proc/fs/nfsd/portlist"
++#define NFSD_VERS_FILE    "/proc/fs/nfsd/versions"
++#define NFSD_THREAD_FILE  "/proc/fs/nfsd/threads"
++
++/*
++ * declaring a common static scratch buffer here keeps us from having to
++ * continually thrash the stack. The value of 128 bytes here is really just a
++ * SWAG and can be increased if necessary. It ought to be enough for the
++ * routines below however.
++ */
++char buf[128];
++
++/*
++ * Are there already sockets configured? If not, then it is safe to try to
++ * open some and pass them through.
++ *
++ * Note: If the user explicitly asked for 'udp', then we should probably check
++ * if that is open, and should open it if not. However we don't yet. All
++ * sockets have to be opened when the first daemon is started.
++ */
++int
++nfssvc_inuse(void)
++{
++	int fd, n;
++
++	fd = open(NFSD_PORTS_FILE, O_RDONLY);
++
++	/* problem opening file, assume that nothing is configured */
++	if (fd < 0)
++		return 0;
++
++	n = read(fd, buf, sizeof(buf));
++	close(fd);
++
++	xlog(D_GENERAL, "knfsd is currently %s", (n > 0) ? "up" : "down");
++
++	return (n > 0);
++}
++
++static int
++nfssvc_setfds(const struct addrinfo *hints, const char *node, const char *port)
++{
++	int fd, on = 1, fac = L_ERROR;
++	int sockfd = -1, rc = 0;
++	struct addrinfo *addrhead = NULL, *addr;
++	char *proto, *family;
++
++	/*
++	 * if file can't be opened, then assume that it's not available and
++	 * that the caller should just fall back to the old nfsctl interface
++ 	 */
++	fd = open(NFSD_PORTS_FILE, O_WRONLY);
++	if (fd < 0)
++		return 0;
++
++	switch(hints->ai_family) {
++	case AF_INET:
++		family = "inet";
++		break;
++#ifdef IPV6_SUPPORTED
++	case AF_INET6:
++		family = "inet6";
++		break;
++#endif /* IPV6_SUPPORTED */
++	default:
++		xlog(L_ERROR, "Unknown address family specified: %d\n",
++				hints->ai_family);
++		rc = EAFNOSUPPORT;
++		goto error;
++	}
++
++	rc = getaddrinfo(node, port, hints, &addrhead);
++	if (rc == EAI_NONAME && !strcmp(port, "nfs")) {
++		snprintf(buf, sizeof(buf), "%d", NFS_PORT);
++		rc = getaddrinfo(node, buf, hints, &addrhead);
++	}
++
++	if (rc != 0) {
++		xlog(L_ERROR, "unable to resolve %s:%s to %s address: "
++				"%s", node ? node : "ANYADDR", port, family,
++				rc == EAI_SYSTEM ? strerror(errno) :
++					gai_strerror(rc));
++		goto error;
++	}
++
++	addr = addrhead;
++	while(addr) {
++		/* skip non-TCP / non-UDP sockets */
++		switch(addr->ai_protocol) {
++		case IPPROTO_UDP:
++			proto = "UDP";
++			break;
++		case IPPROTO_TCP:
++			proto = "TCP";
++			break;
++		default:
++			addr = addr->ai_next;
++			continue;
++		}
++
++		xlog(D_GENERAL, "Creating %s %s socket.", family, proto);
++
++		/* open socket and prepare to hand it off to kernel */
++		sockfd = socket(addr->ai_family, addr->ai_socktype,
++				addr->ai_protocol);
++		if (sockfd < 0) {
++			xlog(L_ERROR, "unable to create %s %s socket: "
++				"errno %d (%m)", family, proto, errno);
++			rc = errno;
++			goto error;
++		}
++#ifdef IPV6_SUPPORTED
++		if (addr->ai_family == AF_INET6 &&
++		    setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(on))) {
++			xlog(L_ERROR, "unable to set IPV6_V6ONLY: "
++				"errno %d (%m)\n", errno);
++			rc = errno;
++			goto error;
++		}
++#endif /* IPV6_SUPPORTED */
++		if (addr->ai_protocol == IPPROTO_TCP &&
++		    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on))) {
++			xlog(L_ERROR, "unable to set SO_REUSEADDR on %s "
++				"socket: errno %d (%m)", family, errno);
++			rc = errno;
++			goto error;
++		}
++		if (bind(sockfd, addr->ai_addr, addr->ai_addrlen)) {
++			xlog(L_ERROR, "unable to bind %s %s socket: "
++				"errno %d (%m)", family, proto, errno);
++			rc = errno;
++			goto error;
++		}
++		if (addr->ai_protocol == IPPROTO_TCP && listen(sockfd, 64)) {
++			xlog(L_ERROR, "unable to create listening socket: "
++				"errno %d (%m)", errno);
++			rc = errno;
++			goto error;
++		}
++
++		if (fd < 0)
++			fd = open(NFSD_PORTS_FILE, O_WRONLY);
++
++		if (fd < 0) {
++			xlog(L_ERROR, "couldn't open ports file: errno "
++				      "%d (%m)", errno);
++			goto error;
++		}
++
++		snprintf(buf, sizeof(buf), "%d\n", sockfd); 
++		if (write(fd, buf, strlen(buf)) != strlen(buf)) {
++			/*
++			 * this error may be common on older kernels that don't
++			 * support IPv6, so turn into a debug message.
++			 */
++			if (errno == EAFNOSUPPORT)
++				fac = D_ALL;
++			xlog(fac, "writing fd to kernel failed: errno %d (%m)",
++				  errno);
++			rc = errno;
++			goto error;
++		}
++		close(fd);
++		close(sockfd);
++		sockfd = fd = -1;
++		addr = addr->ai_next;
++	}
++error:
++	if (fd >= 0)
++		close(fd);
++	if (sockfd >= 0)
++		close(sockfd);
++	if (addrhead)
++		freeaddrinfo(addrhead);
++	return rc;
++}
++
++int
++nfssvc_set_sockets(const int family, const unsigned int protobits,
++		   const char *host, const char *port)
++{
++	struct addrinfo hints = { .ai_flags = AI_PASSIVE | AI_ADDRCONFIG };
++
++	hints.ai_family = family;
++
++	if (!NFSCTL_ANYPROTO(protobits))
++		return EPROTOTYPE;
++	else if (!NFSCTL_UDPISSET(protobits))
++		hints.ai_protocol = IPPROTO_TCP;
++	else if (!NFSCTL_TCPISSET(protobits))
++		hints.ai_protocol = IPPROTO_UDP;
++
++	return nfssvc_setfds(&hints, host, port);
++}
++
++void
++nfssvc_setvers(unsigned int ctlbits, int minorvers4)
++{
++	int fd, n, off;
++	char *ptr;
++
++	ptr = buf;
++	off = 0;
++	fd = open(NFSD_VERS_FILE, O_WRONLY);
++	if (fd < 0)
++		return;
++
++	for (n = NFSD_MINVERS; n <= NFSD_MAXVERS; n++) {
++		if (NFSCTL_VERISSET(ctlbits, n))
++		    off += snprintf(ptr+off, sizeof(buf) - off, "+%d ", n);
++		else
++		    off += snprintf(ptr+off, sizeof(buf) - off, "-%d ", n);
++	}
++	n = minorvers4 >= 0 ? minorvers4 : -minorvers4;
++	if (n >= NFSD_MINMINORVERS4 && n <= NFSD_MAXMINORVERS4)
++		    off += snprintf(ptr+off, sizeof(buf) - off, "%c4.%d",
++				    minorvers4 > 0 ? '+' : '-',
++				    n);
++	xlog(D_GENERAL, "Writing version string to kernel: %s", buf);
++	snprintf(ptr+off, sizeof(buf) - off, "\n");
++	if (write(fd, buf, strlen(buf)) != strlen(buf))
++		xlog(L_ERROR, "Setting version failed: errno %d (%m)", errno);
++
++	close(fd);
++
++	return;
++}
++
++int
++nfssvc_threads(unsigned short port, const int nrservs)
++{
++	struct nfsctl_arg	arg;
++	struct servent *ent;
++	ssize_t n;
++	int fd;
++
++	fd = open(NFSD_THREAD_FILE, O_WRONLY);
++	if (fd < 0)
++		fd = open("/proc/fs/nfs/threads", O_WRONLY);
++	if (fd >= 0) {
++		/* 2.5+ kernel with nfsd filesystem mounted.
++		 * Just write the number of threads.
++		 */
++		snprintf(buf, sizeof(buf), "%d\n", nrservs);
++		n = write(fd, buf, strlen(buf));
++		close(fd);
++		if (n != strlen(buf))
++			return -1;
++		else
++			return 0;
++	}
++
++	if (!port) {
++		ent = getservbyname("nfs", "udp");
++		if (ent != NULL)
++			port = ntohs(ent->s_port);
++		else
++			port = NFS_PORT;
++	}
++
++	arg.ca_version = NFSCTL_VERSION;
++	arg.ca_svc.svc_nthreads = nrservs;
++	arg.ca_svc.svc_port = port;
++	return nfsctl(NFSCTL_SVC, &arg, NULL);
++}
+diff --git a/utils/nfsd/nfssvc.h b/utils/nfsd/nfssvc.h
+new file mode 100644
+index 0000000..0c69bd6
+--- /dev/null
++++ b/utils/nfsd/nfssvc.h
+@@ -0,0 +1,27 @@
++/*
++ *   utils/nfsd/nfssvc.h -- nfs service control routines for rpc.nfsd
++ *
++ *   Copyright (C) 2009 Red Hat, Inc <nfs@redhat.com>.
++ *   Copyright (C) 2009 Jeff Layton <jlayton@redhat.com>
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License along
++ * with this program; if not, write to the Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
++ *
++ */
++
++int	nfssvc_inuse(void);
++int	nfssvc_set_sockets(const int family, const unsigned int protobits,
++			   const char *host, const char *port);
++void	nfssvc_setvers(unsigned int ctlbits, int minorvers4);
++int	nfssvc_threads(unsigned short port, int nrservs);

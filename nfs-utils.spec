@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.0
-Release: 8%{?dist}
+Release: 9%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -25,7 +25,7 @@ Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 Patch100: nfs-utils-1.2.1-rc1.patch
 Patch101: nfs-utils-1.2.1-rc2.patch
 Patch102: nfs-utils-1.2.0-proots-rel5.patch
-Patch103: nfs-utils-1.2.0-nfsd-41vers.patch
+Patch103: nfs-utils-1.2.1-rc3.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -249,35 +249,44 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
-* Tue Jul 28 2009 <steved@redhat.com> 1.2.0-8
+* Fri Aug 14 2009 Steve Dickson <steved@redhat.com> 1.2.0-9
+- Added upstream 1.2.1-rc3 patch
+  - Add IPv6 support to nfsd
+  - Allow nfssvc_setfds to properly deal with AF_INET6
+  - Convert nfssvc_setfds to use getaddrinfo
+  - Move check for active knfsd to helper function
+  - Declare a static common buffer for nfssvc.c routine
+  - Convert rpc.nfsd to use xlog() and add --debug and --syslog options
+
+* Tue Jul 28 2009 Steve Dickson <steved@redhat.com> 1.2.0-8
 - Fixed 4.1 versioning problem (bz 512377)
 
-* Wed Jul 15 2009 <steved@redhat.com> 1.2.0-7
+* Wed Jul 15 2009 Steve Dickson <steved@redhat.com> 1.2.0-7
 - Added upstream 1.2.1-rc2 patch
   - A large number of mount command changes.
 
-* Mon Jul 13 2009 <steved@redhat.com> 1.2.0-6
+* Mon Jul 13 2009 Steve Dickson <steved@redhat.com> 1.2.0-6
 - Added NFSD v4 dynamic pseudo root patch which allows
   NFS v3 exports to be mounted by v4 clients.
 
-* Mon Jun 29 2009 <steved@redhat.com> 1.2.0-5
+* Mon Jun 29 2009 Steve Dickson <steved@redhat.com> 1.2.0-5
 - Stopped rpc.idmapd from spinning (bz 508221)
 
-* Mon Jun 22 2009 <steved@redhat.com> 1.2.0-4
+* Mon Jun 22 2009 Steve Dickson <steved@redhat.com> 1.2.0-4
 - Added upstream 1.2.1-rc1 patch 
   - Fix to check in closeall()
   - Make --enable-tirpc the default
   - Set all verbose types in gssd daemons
   - Retry exports if getfh() fails
 
-* Wed Jun 10 2009 <steved@redhat.com> 1.2.0-3
+* Wed Jun 10 2009 Steve Dickson <steved@redhat.com> 1.2.0-3
 - Updated init scripts to add dependencies
   on other system facilities (bz 475133)
 
-* Wed Jun 10 2009 <steved@redhat.com> 1.2.0-2
+* Wed Jun 10 2009 Steve Dickson <steved@redhat.com> 1.2.0-2
 - nfsnobody gid is wrong (bz 485379)
 
-* Tue Jun  2 2009 <steved@redhat.com> 1.2.0-1
+* Tue Jun  2 2009 Steve Dickson <steved@redhat.com> 1.2.0-1
 - Updated to latest upstream release: 1.2.0
 
 * Tue May 19 2009 Tom "spot" Callaway <tcallawa@redhat.com> 1.1.6-4
