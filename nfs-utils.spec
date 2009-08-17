@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.0
-Release: 9%{?dist}
+Release: 10%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -24,8 +24,10 @@ Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 
 Patch100: nfs-utils-1.2.1-rc1.patch
 Patch101: nfs-utils-1.2.1-rc2.patch
-Patch102: nfs-utils-1.2.0-proots-rel5.patch
-Patch103: nfs-utils-1.2.1-rc3.patch
+Patch102: nfs-utils-1.2.1-rc3.patch
+Patch103: nfs-utils-1.2.1-rc4.patch
+
+Patch200: nfs-utils-1.2.0-proots-rel5.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -82,6 +84,8 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch102 -p1
 %patch103 -p1
 
+%patch200 -p1
+
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
 
@@ -101,7 +105,8 @@ CFLAGS="`echo $RPM_OPT_FLAGS $ARCH_OPT_FLAGS $PIE -D_FILE_OFFSET_BITS=64`"
     CFLAGS="$CFLAGS" \
     CPPFLAGS="$DEFINES" \
     LDFLAGS="-pie" \
-    --enable-mount
+    --enable-mount \
+    --enable-mountconfig
 
 make all
 
@@ -118,6 +123,7 @@ install -m 755 %{SOURCE12} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcidmapd
 install -m 755 %{SOURCE13} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcgssd
 install -m 755 %{SOURCE14} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcsvcgssd
 install -m 644 %{SOURCE15} $RPM_BUILD_ROOT/etc/sysconfig/nfs
+install -m 644 utils/mount/nfsmount.conf  $RPM_BUILD_ROOT/etc
 
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/rpc_pipefs
 
@@ -215,6 +221,7 @@ fi
 %config /etc/rc.d/init.d/rpcgssd
 %config /etc/rc.d/init.d/rpcsvcgssd
 %config(noreplace) /etc/sysconfig/nfs
+%config(noreplace) /etc/nfsmount.conf
 %dir /var/lib/nfs/v4recovery
 %dir /var/lib/nfs/rpc_pipefs
 %dir /var/lib/nfs
@@ -249,6 +256,14 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Aug 17 2009 Steve Dickson <steved@redhat.com> 1.2.0-10
+- Added upstream 1.2.1-rc4 patch
+  - Fix bug when both crossmnt
+  - nfs(5): Add description of lookupcache mount option
+  - nfs(5): Remove trailing blanks
+  - Added nfs41 support to nfssat
+  - Added support for mount to us a configuration file.
+
 * Fri Aug 14 2009 Steve Dickson <steved@redhat.com> 1.2.0-9
 - Added upstream 1.2.1-rc3 patch
   - Add IPv6 support to nfsd

@@ -1,0 +1,3601 @@
+diff --git a/configure.ac b/configure.ac
+index e0ca70e..1b653e4 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -136,6 +136,31 @@ AC_ARG_ENABLE(ipv6,
+ 	AC_SUBST(enable_ipv6)
+ 	AM_CONDITIONAL(CONFIG_IPV6, [test "$enable_ipv6" = "yes"])
+ 
++if test "$enable_mount" = yes; then
++	AC_ARG_ENABLE(mountconfig,
++	[AC_HELP_STRING([--enable-mountconfig],
++                        [enable mount to use a configuration file])],
++	mountconfig=$enableval,
++	mountconfig=no)
++	if test "$enable_mountconfig" = yes; then
++		AC_DEFINE(MOUNT_CONFIG, 1, 
++			[Define this if you want mount to read a configuration file])
++		AC_ARG_WITH(mountfile,
++			[AC_HELP_STRING([--with-mountfile=filename],
++			[Using filename as the NFS mount options file [/etc/nfsmounts.conf]]
++			)],
++		mountfile=$withval,
++		mountfile=/etc/nfsmount.conf)
++		AC_SUBST(mountfile)
++		AC_DEFINE_UNQUOTED(MOUNTOPTS_CONFFILE, "$mountfile", 
++			[This defines the location of the NFS mount configuration file])
++	else
++		enable_mountconfig=
++	fi
++	AC_SUBST(enable_mountconfig)
++	AM_CONDITIONAL(MOUNT_CONFIG, [test "$enable_mountconfig" = "yes"])
++fi
++
+ dnl Check for TI-RPC library and headers
+ AC_LIBTIRPC
+ 
+diff --git a/support/include/Makefile.am b/support/include/Makefile.am
+index 718abda..f5a77ec 100644
+--- a/support/include/Makefile.am
++++ b/support/include/Makefile.am
+@@ -14,6 +14,7 @@ noinst_HEADERS = \
+ 	xio.h \
+ 	xlog.h \
+ 	xmalloc.h \
+-	xcommon.h
++	xcommon.h \
++	conffile.h
+ 
+ MAINTAINERCLEANFILES = Makefile.in
+diff --git a/support/include/conffile.h b/support/include/conffile.h
+new file mode 100644
+index 0000000..132a149
+--- /dev/null
++++ b/support/include/conffile.h
+@@ -0,0 +1,77 @@
++/* $OpenBSD: conf.h,v 1.30 2004/06/25 20:25:34 hshoexer Exp $	 */
++/* $EOM: conf.h,v 1.13 2000/09/18 00:01:47 ho Exp $	 */
++
++/*
++ * Copyright (c) 1998, 1999, 2001 Niklas Hallqvist.  All rights reserved.
++ * Copyright (c) 2000, 2003 Håkan Olsson.  All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++
++/*
++ * This code was written under funding by Ericsson Radio Systems.
++ */
++
++#ifndef _CONFFILE_H_
++#define _CONFFILE_H_
++
++#include <sys/queue.h>
++
++struct conf_list_node {
++	TAILQ_ENTRY(conf_list_node) link;
++	char	*field;
++};
++
++struct conf_list {
++	size_t	cnt;
++	TAILQ_HEAD(conf_list_fields_head, conf_list_node) fields;
++};
++
++extern char    *conf_path;
++
++extern int      conf_begin(void);
++extern int      conf_decode_base64(u_int8_t *, u_int32_t *, u_char *);
++extern int      conf_end(int, int);
++extern void     conf_free_list(struct conf_list *);
++extern struct sockaddr *conf_get_address(char *, char *);
++extern struct conf_list *conf_get_list(char *, char *);
++extern struct conf_list *conf_get_tag_list(char *);
++extern int      conf_get_num(char *, char *, int);
++extern char    *conf_get_str(char *, char *);
++extern char    *conf_get_section(char *, char *, char *);
++extern void     conf_init(void);
++extern int      conf_match_num(char *, char *, int);
++extern void     conf_reinit(void);
++extern int      conf_remove(int, char *, char *);
++extern int      conf_remove_section(int, char *);
++extern void     conf_report(void);
++
++/*
++ * Convert letter from upper case to lower case
++ */
++static inline void upper2lower(char *str)
++{
++	char c;
++
++	while ((c = tolower(*str)))
++		*str++ = c;
++}
++#endif				/* _CONFFILE_H_ */
+diff --git a/support/nfs/Makefile.am b/support/nfs/Makefile.am
+index 096f56d..e9462fc 100644
+--- a/support/nfs/Makefile.am
++++ b/support/nfs/Makefile.am
+@@ -4,7 +4,7 @@ noinst_LIBRARIES = libnfs.a
+ libnfs_a_SOURCES = exports.c rmtab.c xio.c rpcmisc.c rpcdispatch.c \
+ 		   xlog.c xcommon.c wildmat.c nfsclient.c \
+ 		   nfsexport.c getfh.c nfsctl.c rpc_socket.c getport.c \
+-		   svc_socket.c cacheio.c closeall.c nfs_mntent.c
++		   svc_socket.c cacheio.c closeall.c nfs_mntent.c conffile.c
+ 
+ MAINTAINERCLEANFILES = Makefile.in
+ 
+diff --git a/support/nfs/conffile.c b/support/nfs/conffile.c
+new file mode 100644
+index 0000000..b277c2a
+--- /dev/null
++++ b/support/nfs/conffile.c
+@@ -0,0 +1,962 @@
++/*	$OpenBSD: conf.c,v 1.55 2003/06/03 14:28:16 ho Exp $	*/
++/*	$EOM: conf.c,v 1.48 2000/12/04 02:04:29 angelos Exp $	*/
++
++/*
++ * Copyright (c) 1998, 1999, 2000, 2001 Niklas Hallqvist.  All rights reserved.
++ * Copyright (c) 2000, 2001, 2002 Håkan Olsson.  All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
++ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
++ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++
++/*
++ * This code was written under funding by Ericsson Radio Systems.
++ */
++
++#include <sys/param.h>
++#include <sys/mman.h>
++#include <sys/socket.h>
++#include <sys/stat.h>
++#include <netinet/in.h>
++#include <arpa/inet.h>
++#include <ctype.h>
++#include <fcntl.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++#include <errno.h>
++#include <err.h>
++#include <syslog.h>
++
++#include "conffile.h"
++#include "xlog.h"
++
++static void conf_load_defaults (int);
++static int conf_set(int , char *, char *, char *, 
++	char *, int , int );
++
++struct conf_trans {
++	TAILQ_ENTRY (conf_trans) link;
++	int trans;
++	enum conf_op { CONF_SET, CONF_REMOVE, CONF_REMOVE_SECTION } op;
++	char *section;
++	char *arg;
++	char *tag;
++	char *value;
++	int override;
++	int is_default;
++};
++
++TAILQ_HEAD (conf_trans_head, conf_trans) conf_trans_queue;
++
++/*
++ * Radix-64 Encoding.
++ */
++static const u_int8_t bin2asc[]
++  = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
++
++static const u_int8_t asc2bin[] =
++{
++  255, 255, 255, 255, 255, 255, 255, 255,
++  255, 255, 255, 255, 255, 255, 255, 255,
++  255, 255, 255, 255, 255, 255, 255, 255,
++  255, 255, 255, 255, 255, 255, 255, 255,
++  255, 255, 255, 255, 255, 255, 255, 255,
++  255, 255, 255,  62, 255, 255, 255,  63,
++   52,  53,  54,  55,  56,  57,  58,  59,
++   60,  61, 255, 255, 255, 255, 255, 255,
++  255,   0,   1,   2,   3,   4,   5,   6,
++    7,   8,   9,  10,  11,  12,  13,  14,
++   15,  16,  17,  18,  19,  20,  21,  22,
++   23,  24,  25, 255, 255, 255, 255, 255,
++  255,  26,  27,  28,  29,  30,  31,  32,
++   33,  34,  35,  36,  37,  38,  39,  40,
++   41,  42,  43,  44,  45,  46,  47,  48,
++   49,  50,  51, 255, 255, 255, 255, 255
++};
++
++struct conf_binding {
++  LIST_ENTRY (conf_binding) link;
++  char *section;
++  char *arg;
++  char *tag;
++  char *value;
++  int is_default;
++};
++
++char *conf_path;
++LIST_HEAD (conf_bindings, conf_binding) conf_bindings[256];
++
++static char *conf_addr;
++
++static __inline__ u_int8_t
++conf_hash(char *s)
++{
++	u_int8_t hash = 0;
++
++	while (*s) {
++		hash = ((hash << 1) | (hash >> 7)) ^ tolower (*s);
++		s++;
++	}
++	return hash;
++}
++
++/*
++ * Insert a tag-value combination from LINE (the equal sign is at POS)
++ */
++static int
++conf_remove_now(char *section, char *tag)
++{
++	struct conf_binding *cb, *next;
++
++	cb = LIST_FIRST(&conf_bindings[conf_hash (section)]);
++	for (; cb; cb = next) {
++		next = LIST_NEXT(cb, link);
++		if (strcasecmp(cb->section, section) == 0
++				&& strcasecmp(cb->tag, tag) == 0) {
++			LIST_REMOVE(cb, link);
++			xlog(LOG_INFO,"[%s]:%s->%s removed", section, tag, cb->value);
++			free(cb->section);
++			free(cb->arg);
++			free(cb->tag);
++			free(cb->value);
++			free(cb);
++			return 0;
++		}
++	}
++	return 1;
++}
++
++static int
++conf_remove_section_now(char *section)
++{
++  struct conf_binding *cb, *next;
++  int unseen = 1;
++
++	cb = LIST_FIRST(&conf_bindings[conf_hash (section)]);
++	for (; cb; cb = next) {
++		next = LIST_NEXT(cb, link);
++		if (strcasecmp(cb->section, section) == 0) {
++			unseen = 0;
++			LIST_REMOVE(cb, link);
++			xlog(LOG_INFO, "[%s]:%s->%s removed", section, cb->tag, cb->value);
++			free(cb->section);
++			free(cb->arg);
++			free(cb->tag);
++			free(cb->value);
++			free(cb);
++			}
++		}
++	return unseen;
++}
++
++/*
++ * Insert a tag-value combination from LINE (the equal sign is at POS)
++ * into SECTION of our configuration database.
++ */
++static int
++conf_set_now(char *section, char *arg, char *tag, 
++	char *value, int override, int is_default)
++{
++	struct conf_binding *node = 0;
++
++	if (override)
++		conf_remove_now(section, tag);
++	else if (conf_get_section(section, arg, tag)) {
++		if (!is_default) {
++			xlog(LOG_INFO, "conf_set: duplicate tag [%s]:%s, ignoring...\n", 
++				section, tag);
++		}
++		return 1;
++	}
++	node = calloc(1, sizeof *node);
++	if (!node) {
++		xlog_warn("conf_set: calloc (1, %lu) failed", (unsigned long)sizeof *node);
++		return 1;
++	}
++	node->section = strdup(section);
++	if (arg)
++		node->arg = strdup(arg);
++	node->tag = strdup(tag);
++	node->value = strdup(value);
++	node->is_default = is_default;
++
++	LIST_INSERT_HEAD(&conf_bindings[conf_hash (section)], node, link);
++	return 0;
++}
++
++/*
++ * Parse the line LINE of SZ bytes.  Skip Comments, recognize section
++ * headers and feed tag-value pairs into our configuration database.
++ */
++static void
++conf_parse_line(int trans, char *line, size_t sz)
++{
++	char *val, *ptr;
++	size_t i;
++	int j;
++	static char *section = 0;
++	static char *arg = 0;
++	static int ln = 0;
++
++	/* Lines starting with '#' or ';' are comments.  */
++	ln++;
++	/* Ignore blank lines */
++	if (*line == '\0')
++		return;
++
++	/* Strip off any leading blanks */
++	while (isblank(*line)) 
++		line++;
++
++	if (*line == '#' || *line == ';')
++		return;
++
++	/* '[section]' parsing...  */
++	if (*line == '[') {
++		line++;
++		/* Strip off any blanks after '[' */
++		while (isblank(*line)) 
++			line++;
++		for (i = 0; i < sz; i++) {
++			if (line[i] == ']') {
++				break;
++			}
++		}
++		if (section)
++			free(section);
++		if (i == sz) {
++			xlog_warn("config file error: line %d: "
++ 				"non-matched ']', ignoring until next section", ln);
++			section = 0;
++			return;
++		}
++		/* Strip off any blanks before ']' */
++		val = line;
++		while (*val && !isblank(*val)) 
++			val++, j++;
++		if (*val)
++			i = j;
++		section = malloc(i);
++		if (!section) {
++			xlog_warn("conf_parse_line: %d: malloc (%lu) failed", ln,
++						(unsigned long)i);
++			return;
++		}
++		strncpy(section, line, i);
++
++		if (arg) 
++			free(arg);
++		arg = 0;
++
++		ptr = strchr(val, '"');
++		if (ptr == NULL)
++			return;
++		line = ++ptr;
++		while (*ptr && *ptr != '"')
++			ptr++;
++		if (*ptr == '\0') {
++			xlog_warn("config file error: line %d: "
++ 				"non-matched '\"', ignoring until next section", ln);
++		}  else {
++			*ptr = '\0';
++			arg = strdup(line);
++			if (!arg) 
++				xlog_warn("conf_parse_line: %d: malloc arg failed", ln);
++		}
++		return;
++	}
++
++	/* Deal with assignments.  */
++	for (i = 0; i < sz; i++) {
++		if (line[i] == '=') {
++			/* If no section, we are ignoring the lines.  */
++			if (!section) {
++			xlog_warn("config file error: line %d: "
++				"ignoring line due to no section", ln);
++				return;
++			}
++			line[strcspn (line, " \t=")] = '\0';
++			val = line + i + 1 + strspn (line + i + 1, " \t");
++
++			/* Skip trailing comments, if any */
++			for (j = 0; j < sz - (val - line); j++) {
++				if (val[j] == '#' || val[j] == ';') {
++					val[j] = '\0';
++					break;
++				}
++			}
++
++			/* Skip trailing whitespace, if any */
++			for (j--; j > 0; j--) {
++				if (isspace(val[j]))
++					val[j] = '\0';
++				else 
++					break;
++			}
++
++			/* XXX Perhaps should we not ignore errors?  */
++			conf_set(trans, section, arg, line, val, 0, 0);
++			return;
++		}
++	}
++	/* Other non-empty lines are weird.  */
++	i = strspn(line, " \t");
++	if (line[i])
++		xlog_warn("config file error: line %d:", ln);
++
++	return;
++}
++
++/* Parse the mapped configuration file.  */
++static void
++conf_parse(int trans, char *buf, size_t sz)
++{
++	char *cp = buf;
++	char *bufend = buf + sz;
++	char *line;
++
++	line = cp;
++	while (cp < bufend) {
++		if (*cp == '\n') {
++			/* Check for escaped newlines.  */
++			if (cp > buf && *(cp - 1) == '\\')
++				*(cp - 1) = *cp = ' ';
++			else {
++				*cp = '\0';
++				conf_parse_line(trans, line, cp - line);
++				line = cp + 1;
++			}
++		}
++		cp++;
++	}
++	if (cp != line)
++		xlog_warn("conf_parse: last line non-terminated, ignored.");
++}
++
++static void
++conf_load_defaults(int tr)
++{
++	/* No defaults */
++	return;
++}
++
++void
++conf_init (void)
++{
++	unsigned int i;
++
++	for (i = 0; i < sizeof conf_bindings / sizeof conf_bindings[0]; i++)
++		LIST_INIT (&conf_bindings[i]);
++
++	TAILQ_INIT (&conf_trans_queue);
++	conf_reinit();
++}
++
++/* Open the config file and map it into our address space, then parse it.  */
++void
++conf_reinit(void)
++{
++	struct conf_binding *cb = 0;
++	int fd, trans;
++	unsigned int i;
++	size_t sz;
++	char *new_conf_addr = 0;
++	struct stat sb;
++
++	if ((stat (conf_path, &sb) == 0) || (errno != ENOENT)) {
++		sz = sb.st_size;
++		fd = open (conf_path, O_RDONLY, 0);
++		if (fd == -1) {
++			xlog_warn("conf_reinit: open (\"%s\", O_RDONLY) failed", conf_path);
++			return;
++		}
++
++		new_conf_addr = malloc(sz);
++		if (!new_conf_addr) {
++			xlog_warn("conf_reinit: malloc (%lu) failed", (unsigned long)sz);
++			goto fail;
++		}
++
++		/* XXX I assume short reads won't happen here.  */
++		if (read (fd, new_conf_addr, sz) != (int)sz) {
++			xlog_warn("conf_reinit: read (%d, %p, %lu) failed",
++   				fd, new_conf_addr, (unsigned long)sz);
++			goto fail;
++		}
++		close(fd);
++
++		trans = conf_begin();
++		/* XXX Should we not care about errors and rollback?  */
++		conf_parse(trans, new_conf_addr, sz);
++	}
++	else
++		trans = conf_begin();
++
++	/* Load default configuration values.  */
++	conf_load_defaults(trans);
++
++	/* Free potential existing configuration.  */
++	if (conf_addr) {
++		for (i = 0; i < sizeof conf_bindings / sizeof conf_bindings[0]; i++) {
++			cb = LIST_FIRST (&conf_bindings[i]);
++			for (; cb; cb = LIST_FIRST (&conf_bindings[i]))
++				conf_remove_now(cb->section, cb->tag);
++		}
++		free (conf_addr);
++	}
++
++	conf_end(trans, 1);
++	conf_addr = new_conf_addr;
++	return;
++
++fail:
++	if (new_conf_addr)
++		free(new_conf_addr);
++	close (fd);
++}
++
++/*
++ * Return the numeric value denoted by TAG in section SECTION or DEF
++ * if that tag does not exist.
++ */
++int
++conf_get_num(char *section, char *tag, int def)
++{
++	char *value = conf_get_str(section, tag);
++
++	if (value)
++		return atoi(value);
++
++	return def;
++}
++
++/* Validate X according to the range denoted by TAG in section SECTION.  */
++int
++conf_match_num(char *section, char *tag, int x)
++{
++	char *value = conf_get_str (section, tag);
++	int val, min, max, n;
++
++	if (!value)
++		return 0;
++	n = sscanf (value, "%d,%d:%d", &val, &min, &max);
++	switch (n) {
++	case 1:
++		xlog(LOG_INFO, "conf_match_num: %s:%s %d==%d?", section, tag, val, x);
++		return x == val;
++	case 3:
++		xlog(LOG_INFO, "conf_match_num: %s:%s %d<=%d<=%d?", section, 
++			tag, min, x, max);
++		return min <= x && max >= x;
++	default:
++		xlog(LOG_INFO, "conf_match_num: section %s tag %s: invalid number spec %s",
++			section, tag, value);
++	}
++	return 0;
++}
++
++/* Return the string value denoted by TAG in section SECTION.  */
++char *
++conf_get_str(char *section, char *tag)
++{
++	struct conf_binding *cb;
++
++	cb = LIST_FIRST (&conf_bindings[conf_hash (section)]);
++	for (; cb; cb = LIST_NEXT (cb, link)) {
++		if (strcasecmp (section, cb->section) == 0
++				&& strcasecmp (tag, cb->tag) == 0)
++			return cb->value;
++	}
++	return 0;
++}
++/*
++ * Find a section that may or may not have an argument
++ */
++char *
++conf_get_section(char *section, char *arg, char *tag)
++{
++	struct conf_binding *cb;
++
++	cb = LIST_FIRST (&conf_bindings[conf_hash (section)]);
++	for (; cb; cb = LIST_NEXT (cb, link)) {
++		if (strcasecmp(section, cb->section) != 0)
++			continue;
++		if (arg && strcasecmp(arg, cb->arg) != 0)
++			continue;
++		if (strcasecmp(tag, cb->tag) != 0)
++			continue;
++		return cb->value;
++	}
++	return 0;
++}
++
++/*
++ * Build a list of string values out of the comma separated value denoted by
++ * TAG in SECTION.
++ */
++struct conf_list *
++conf_get_list(char *section, char *tag)
++{
++	char *liststr = 0, *p, *field, *t;
++	struct conf_list *list = 0;
++	struct conf_list_node *node;
++
++	list = malloc (sizeof *list);
++	if (!list)
++		goto cleanup;
++	TAILQ_INIT (&list->fields);
++	list->cnt = 0;
++	liststr = conf_get_str(section, tag);
++	if (!liststr)
++		goto cleanup;
++	liststr = strdup (liststr);
++	if (!liststr)
++		goto cleanup;
++	p = liststr;
++	while ((field = strsep (&p, ",")) != NULL) {
++		/* Skip leading whitespace */
++		while (isspace (*field))
++			field++;
++		/* Skip trailing whitespace */
++		if (p) {
++			for (t = p - 1; t > field && isspace (*t); t--)
++				*t = '\0';
++		}
++		if (*field == '\0') {
++			xlog(LOG_INFO, "conf_get_list: empty field, ignoring...");
++			continue;
++		}
++		list->cnt++;
++		node = calloc (1, sizeof *node);
++		if (!node)
++			goto cleanup;
++		node->field = strdup (field);
++		if (!node->field) {
++			free(node);
++			goto cleanup;
++		}
++		TAILQ_INSERT_TAIL (&list->fields, node, link);
++	}
++	free (liststr);
++	return list;
++
++cleanup:
++	if (list)
++		conf_free_list(list);
++	if (liststr)
++		free(liststr);
++	return 0;
++}
++
++struct conf_list *
++conf_get_tag_list(char *section)
++{
++	struct conf_list *list = 0;
++	struct conf_list_node *node;
++	struct conf_binding *cb;
++
++	list = malloc(sizeof *list);
++	if (!list)
++		goto cleanup;
++	TAILQ_INIT(&list->fields);
++	list->cnt = 0;
++	cb = LIST_FIRST(&conf_bindings[conf_hash (section)]);
++	for (; cb; cb = LIST_NEXT(cb, link)) {
++		if (strcasecmp (section, cb->section) == 0) {
++			list->cnt++;
++			node = calloc(1, sizeof *node);
++			if (!node)
++				goto cleanup;
++			node->field = strdup(cb->tag);
++			if (!node->field) {
++				free(node);
++				goto cleanup;
++			}
++			TAILQ_INSERT_TAIL(&list->fields, node, link);
++		}
++	}
++	return list;
++
++cleanup:
++	if (list)
++		conf_free_list(list);
++	return 0;
++}
++
++/* Decode a PEM encoded buffer.  */
++int
++conf_decode_base64 (u_int8_t *out, u_int32_t *len, u_char *buf)
++{
++	u_int32_t c = 0;
++	u_int8_t c1, c2, c3, c4;
++
++	while (*buf) {
++		if (*buf > 127 || (c1 = asc2bin[*buf]) == 255)
++			return 0;
++
++		buf++;
++		if (*buf > 127 || (c2 = asc2bin[*buf]) == 255)
++			return 0;
++
++		buf++;
++		if (*buf == '=') {
++			c3 = c4 = 0;
++			c++;
++
++			/* Check last four bit */
++			if (c2 & 0xF)
++				return 0;
++
++			if (strcmp((char *)buf, "==") == 0)
++				buf++;
++			else
++				return 0;
++		} else if (*buf > 127 || (c3 = asc2bin[*buf]) == 255)
++			return 0;
++		else {
++			if (*++buf == '=') {
++				c4 = 0;
++				c += 2;
++
++				/* Check last two bit */
++				if (c3 & 3)
++					return 0;
++
++			if (strcmp((char *)buf, "="))
++				return 0;
++			} else if (*buf > 127 || (c4 = asc2bin[*buf]) == 255)
++				return 0;
++			else
++				c += 3;
++		}
++
++		buf++;
++		*out++ = (c1 << 2) | (c2 >> 4);
++		*out++ = (c2 << 4) | (c3 >> 2);
++		*out++ = (c3 << 6) | c4;
++	}
++
++	*len = c;
++	return 1;
++}
++
++void
++conf_free_list(struct conf_list *list)
++{
++	struct conf_list_node *node = TAILQ_FIRST(&list->fields);
++
++	while (node) {
++		TAILQ_REMOVE(&list->fields, node, link);
++		if (node->field)
++			free(node->field);
++		free (node);
++		node = TAILQ_FIRST(&list->fields);
++	}
++	free (list);
++}
++
++int
++conf_begin(void)
++{
++  static int seq = 0;
++
++  return ++seq;
++}
++
++static struct conf_trans *
++conf_trans_node(int transaction, enum conf_op op)
++{
++	struct conf_trans *node;
++
++	node = calloc (1, sizeof *node);
++	if (!node) {
++		xlog_warn("conf_trans_node: calloc (1, %lu) failed",
++		(unsigned long)sizeof *node);
++		return 0;
++	}
++	node->trans = transaction;
++	node->op = op;
++	TAILQ_INSERT_TAIL (&conf_trans_queue, node, link);
++	return node;
++}
++
++/* Queue a set operation.  */
++static int
++conf_set(int transaction, char *section, char *arg,
++	char *tag, char *value, int override, int is_default)
++{
++	struct conf_trans *node;
++
++	node = conf_trans_node(transaction, CONF_SET);
++	if (!node)
++		return 1;
++	node->section = strdup(section);
++	if (!node->section) {
++		xlog_warn("conf_set: strdup(\"%s\") failed", section);
++		goto fail;
++	}
++	/* Make Section names case-insensitive */
++	upper2lower(node->section);
++
++	if (arg) {
++		node->arg = strdup(arg);
++		if (!node->arg) {
++			xlog_warn("conf_set: strdup(\"%s\") failed", arg);
++			goto fail;
++		}
++	} else
++		node->arg = NULL;
++
++	node->tag = strdup(tag);
++	if (!node->tag) {
++		xlog_warn("conf_set: strdup(\"%s\") failed", tag);
++		goto fail;
++	}
++	node->value = strdup(value);
++	if (!node->value) {
++		xlog_warn("conf_set: strdup(\"%s\") failed", value);
++		goto fail;
++	}
++	node->override = override;
++	node->is_default = is_default;
++	return 0;
++
++fail:
++	if (node->tag)
++		free(node->tag);
++	if (node->section)
++		free(node->section);
++	if (node)
++		free(node);
++	return 1;
++}
++
++/* Queue a remove operation.  */
++int
++conf_remove(int transaction, char *section, char *tag)
++{
++	struct conf_trans *node;
++
++	node = conf_trans_node(transaction, CONF_REMOVE);
++	if (!node)
++		goto fail;
++	node->section = strdup(section);
++	if (!node->section) {
++		xlog_warn("conf_remove: strdup(\"%s\") failed", section);
++		goto fail;
++	}
++	node->tag = strdup(tag);
++	if (!node->tag) {
++		xlog_warn("conf_remove: strdup(\"%s\") failed", tag);
++		goto fail;
++	}
++	return 0;
++
++fail:
++	if (node && node->section)
++		free (node->section);
++	if (node)
++		free (node);
++	return 1;
++}
++
++/* Queue a remove section operation.  */
++int
++conf_remove_section(int transaction, char *section)
++{
++	struct conf_trans *node;
++
++	node = conf_trans_node(transaction, CONF_REMOVE_SECTION);
++	if (!node)
++		goto fail;
++	node->section = strdup(section);
++	if (!node->section) {
++		xlog_warn("conf_remove_section: strdup(\"%s\") failed", section);
++		goto fail;
++	}
++	return 0;
++
++fail:
++	if (node)
++		free(node);
++	return 1;
++}
++
++/* Execute all queued operations for this transaction.  Cleanup.  */
++int
++conf_end(int transaction, int commit)
++{
++	struct conf_trans *node, *next;
++
++	for (node = TAILQ_FIRST(&conf_trans_queue); node; node = next) {
++		next = TAILQ_NEXT(node, link);
++		if (node->trans == transaction) {
++			if (commit) {
++				switch (node->op) {
++				case CONF_SET:
++					conf_set_now(node->section, node->arg, 
++						node->tag, node->value, node->override, 
++						node->is_default);
++					break;
++				case CONF_REMOVE:
++					conf_remove_now(node->section, node->tag);
++					break;
++				case CONF_REMOVE_SECTION:
++					conf_remove_section_now(node->section);
++					break;
++				default:
++					xlog(LOG_INFO, "conf_end: unknown operation: %d", node->op);
++				}
++			}
++			TAILQ_REMOVE (&conf_trans_queue, node, link);
++			if (node->section)
++				free(node->section);
++			if (node->tag)
++				free(node->tag);
++			if (node->value)
++				free(node->value);
++			free (node);
++		}
++	}
++	return 0;
++}
++
++/*
++ * Dump running configuration upon SIGUSR1.
++ * Configuration is "stored in reverse order", so reverse it again.
++ */
++struct dumper {
++	char *s, *v;
++	struct dumper *next;
++};
++
++static void
++conf_report_dump(struct dumper *node)
++{
++	/* Recursive, cleanup when we're done.  */
++	if (node->next)
++		conf_report_dump(node->next);
++
++	if (node->v)
++		xlog(LOG_INFO, "%s=\t%s", node->s, node->v);
++	else if (node->s) {
++		xlog(LOG_INFO, "%s", node->s);
++		if (strlen(node->s) > 0)
++			free(node->s);
++	}
++
++	free (node);
++}
++
++void
++conf_report (void)
++{
++	struct conf_binding *cb, *last = 0;
++	unsigned int i, len, diff_arg = 0;
++	char *current_section = (char *)0;
++	char *current_arg = (char *)0;
++	struct dumper *dumper, *dnode;
++
++	dumper = dnode = (struct dumper *)calloc(1, sizeof *dumper);
++	if (!dumper)
++		goto mem_fail;
++
++	xlog(LOG_INFO, "conf_report: dumping running configuration");
++
++	for (i = 0; i < sizeof conf_bindings / sizeof conf_bindings[0]; i++)
++		for (cb = LIST_FIRST(&conf_bindings[i]); cb; cb = LIST_NEXT(cb, link)) {
++			if (!cb->is_default) {
++				/* Make sure the Section arugment is the same */
++				if (current_arg && current_section && cb->arg) {
++					if (strcmp(cb->section, current_section) == 0 &&
++						strcmp(cb->arg, current_arg) != 0)
++					diff_arg = 1;
++				}
++				/* Dump this entry.  */
++				if (!current_section || strcmp(cb->section, current_section) 
++							|| diff_arg) {
++					if (current_section || diff_arg) {
++						len = strlen (current_section) + 3;
++						if (current_arg)
++							len += strlen(current_arg) + 3;
++						dnode->s = malloc(len);
++						if (!dnode->s)
++							goto mem_fail;
++
++						if (current_arg)
++							snprintf(dnode->s, len, "[%s \"%s\"]", 
++								current_section, current_arg);
++						else
++							snprintf(dnode->s, len, "[%s]", current_section);
++
++						dnode->next = 
++							(struct dumper *)calloc(1, sizeof (struct dumper));
++						dnode = dnode->next;
++						if (!dnode)
++							goto mem_fail;
++
++						dnode->s = "";
++						dnode->next = 
++							(struct dumper *)calloc(1, sizeof (struct dumper));
++						dnode = dnode->next;
++						if (!dnode)
++						goto mem_fail;
++					}
++					current_section = cb->section;
++					current_arg = cb->arg;
++					diff_arg = 0;
++				}
++				dnode->s = cb->tag;
++				dnode->v = cb->value;
++				dnode->next = (struct dumper *)calloc (1, sizeof (struct dumper));
++				dnode = dnode->next;
++				if (!dnode)
++					goto mem_fail;
++				last = cb;
++		}
++	}
++
++	if (last) {
++		len = strlen(last->section) + 3;
++		if (last->arg)
++			len += strlen(last->arg) + 3;
++		dnode->s = malloc(len);
++		if (!dnode->s)
++			goto mem_fail;
++		if (last->arg)
++			snprintf(dnode->s, len, "[%s \"%s\"]", last->section, last->arg);
++		else
++			snprintf(dnode->s, len, "[%s]", last->section);
++	}
++	conf_report_dump(dumper);
++	return;
++
++mem_fail:
++	xlog_warn("conf_report: malloc/calloc failed");
++	while ((dnode = dumper) != 0) {
++		dumper = dumper->next;
++		if (dnode->s)
++			free(dnode->s);
++		free(dnode);
++	}
++	return;
++}
+diff --git a/utils/idmapd/Makefile.am b/utils/idmapd/Makefile.am
+index eb393df..4dabb3d 100644
+--- a/utils/idmapd/Makefile.am
++++ b/utils/idmapd/Makefile.am
+@@ -14,7 +14,6 @@ EXTRA_DIST = \
+ 
+ idmapd_SOURCES = \
+ 	atomicio.c \
+-	cfg.c \
+ 	idmapd.c \
+ 	strlcat.c \
+ 	strlcpy.c \
+diff --git a/utils/idmapd/cfg.c b/utils/idmapd/cfg.c
+deleted file mode 100644
+index 16d392a..0000000
+--- a/utils/idmapd/cfg.c
++++ /dev/null
+@@ -1,893 +0,0 @@
+-/*	$OpenBSD: conf.c,v 1.55 2003/06/03 14:28:16 ho Exp $	*/
+-/*	$EOM: conf.c,v 1.48 2000/12/04 02:04:29 angelos Exp $	*/
+-
+-/*
+- * Copyright (c) 1998, 1999, 2000, 2001 Niklas Hallqvist.  All rights reserved.
+- * Copyright (c) 2000, 2001, 2002 Håkan Olsson.  All rights reserved.
+- *
+- * Redistribution and use in source and binary forms, with or without
+- * modification, are permitted provided that the following conditions
+- * are met:
+- * 1. Redistributions of source code must retain the above copyright
+- *    notice, this list of conditions and the following disclaimer.
+- * 2. Redistributions in binary form must reproduce the above copyright
+- *    notice, this list of conditions and the following disclaimer in the
+- *    documentation and/or other materials provided with the distribution.
+- *
+- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+- */
+-
+-/*
+- * This code was written under funding by Ericsson Radio Systems.
+- */
+-
+-#include <sys/param.h>
+-#include <sys/mman.h>
+-#include <sys/socket.h>
+-#include <sys/stat.h>
+-#include <netinet/in.h>
+-#include <arpa/inet.h>
+-#include <ctype.h>
+-#include <fcntl.h>
+-#include <stdio.h>
+-#include <stdlib.h>
+-#include <string.h>
+-#include <unistd.h>
+-#include <errno.h>
+-#include <err.h>
+-
+-#include "cfg.h"
+-
+-static void conf_load_defaults (int);
+-#if 0
+-static int conf_find_trans_xf (int, char *);
+-#endif
+-
+-size_t  strlcpy(char *, const char *, size_t);
+-
+-struct conf_trans {
+-  TAILQ_ENTRY (conf_trans) link;
+-  int trans;
+-  enum conf_op { CONF_SET, CONF_REMOVE, CONF_REMOVE_SECTION } op;
+-  char *section;
+-  char *tag;
+-  char *value;
+-  int override;
+-  int is_default;
+-};
+-
+-TAILQ_HEAD (conf_trans_head, conf_trans) conf_trans_queue;
+-
+-/*
+- * Radix-64 Encoding.
+- */
+-const u_int8_t bin2asc[]
+-  = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+-
+-const u_int8_t asc2bin[] =
+-{
+-  255, 255, 255, 255, 255, 255, 255, 255,
+-  255, 255, 255, 255, 255, 255, 255, 255,
+-  255, 255, 255, 255, 255, 255, 255, 255,
+-  255, 255, 255, 255, 255, 255, 255, 255,
+-  255, 255, 255, 255, 255, 255, 255, 255,
+-  255, 255, 255,  62, 255, 255, 255,  63,
+-   52,  53,  54,  55,  56,  57,  58,  59,
+-   60,  61, 255, 255, 255, 255, 255, 255,
+-  255,   0,   1,   2,   3,   4,   5,   6,
+-    7,   8,   9,  10,  11,  12,  13,  14,
+-   15,  16,  17,  18,  19,  20,  21,  22,
+-   23,  24,  25, 255, 255, 255, 255, 255,
+-  255,  26,  27,  28,  29,  30,  31,  32,
+-   33,  34,  35,  36,  37,  38,  39,  40,
+-   41,  42,  43,  44,  45,  46,  47,  48,
+-   49,  50,  51, 255, 255, 255, 255, 255
+-};
+-
+-struct conf_binding {
+-  LIST_ENTRY (conf_binding) link;
+-  char *section;
+-  char *tag;
+-  char *value;
+-  int is_default;
+-};
+-
+-char *conf_path;
+-LIST_HEAD (conf_bindings, conf_binding) conf_bindings[256];
+-
+-static char *conf_addr;
+-
+-static __inline__ u_int8_t
+-conf_hash (char *s)
+-{
+-  u_int8_t hash = 0;
+-
+-  while (*s)
+-    {
+-      hash = ((hash << 1) | (hash >> 7)) ^ tolower (*s);
+-      s++;
+-    }
+-  return hash;
+-}
+-
+-/*
+- * Insert a tag-value combination from LINE (the equal sign is at POS)
+- */
+-static int
+-conf_remove_now (char *section, char *tag)
+-{
+-  struct conf_binding *cb, *next;
+-
+-  for (cb = LIST_FIRST (&conf_bindings[conf_hash (section)]); cb; cb = next)
+-    {
+-      next = LIST_NEXT (cb, link);
+-      if (strcasecmp (cb->section, section) == 0
+-	  && strcasecmp (cb->tag, tag) == 0)
+-	{
+-	  LIST_REMOVE (cb, link);
+-	  warnx("[%s]:%s->%s removed", section, tag, cb->value);
+-	  free (cb->section);
+-	  free (cb->tag);
+-	  free (cb->value);
+-	  free (cb);
+-	  return 0;
+-	}
+-    }
+-  return 1;
+-}
+-
+-static int
+-conf_remove_section_now (char *section)
+-{
+-  struct conf_binding *cb, *next;
+-  int unseen = 1;
+-
+-  for (cb = LIST_FIRST (&conf_bindings[conf_hash (section)]); cb; cb = next)
+-    {
+-      next = LIST_NEXT (cb, link);
+-      if (strcasecmp (cb->section, section) == 0)
+-	{
+-	  unseen = 0;
+-	  LIST_REMOVE (cb, link);
+-	  warnx("[%s]:%s->%s removed", section, cb->tag, cb->value);
+-	  free (cb->section);
+-	  free (cb->tag);
+-	  free (cb->value);
+-	  free (cb);
+-	}
+-    }
+-  return unseen;
+-}
+-
+-/*
+- * Insert a tag-value combination from LINE (the equal sign is at POS)
+- * into SECTION of our configuration database.
+- */
+-static int
+-conf_set_now (char *section, char *tag, char *value, int override,
+-	      int is_default)
+-{
+-  struct conf_binding *node = 0;
+-
+-  if (override)
+-    conf_remove_now (section, tag);
+-  else if (conf_get_str (section, tag))
+-    {
+-      if (!is_default)
+-	warnx("conf_set: duplicate tag [%s]:%s, ignoring...\n", section, tag);
+-      return 1;
+-    }
+-
+-  node = calloc (1, sizeof *node);
+-  if (!node)
+-    {
+-      warnx("conf_set: calloc (1, %lu) failed", (unsigned long)sizeof *node);
+-      return 1;
+-    }
+-  node->section = strdup (section);
+-  node->tag = strdup (tag);
+-  node->value = strdup (value);
+-  node->is_default = is_default;
+-
+-  LIST_INSERT_HEAD (&conf_bindings[conf_hash (section)], node, link);
+-  return 0;
+-}
+-
+-/*
+- * Parse the line LINE of SZ bytes.  Skip Comments, recognize section
+- * headers and feed tag-value pairs into our configuration database.
+- */
+-static void
+-conf_parse_line (int trans, char *line, size_t sz)
+-{
+-  char *val;
+-  size_t i;
+-  int j;
+-  static char *section = 0;
+-  static int ln = 0;
+-
+-  ln++;
+-
+-  /* Lines starting with '#' or ';' are comments.  */
+-  if (*line == '#' || *line == ';')
+-    return;
+-
+-  /* '[section]' parsing...  */
+-  if (*line == '[')
+-    {
+-      for (i = 1; i < sz; i++)
+-	if (line[i] == ']')
+-	  break;
+-      if (section)
+-	free (section);
+-      if (i == sz)
+-	{
+-	  warnx("conf_parse_line: %d:"
+-		     "non-matched ']', ignoring until next section", ln);
+-	  section = 0;
+-	  return;
+-	}
+-      section = malloc (i);
+-      if (!section)
+-	{
+-	  warnx("conf_parse_line: %d: malloc (%lu) failed", ln,
+-		(unsigned long)i);
+-	  return;
+-	}
+-      strlcpy (section, line + 1, i);
+-      return;
+-    }
+-
+-  /* Deal with assignments.  */
+-  for (i = 0; i < sz; i++)
+-    if (line[i] == '=')
+-      {
+-	/* If no section, we are ignoring the lines.  */
+-	if (!section)
+-	  {
+-	    warnx("conf_parse_line: %d: ignoring line due to no section", ln);
+-	    return;
+-	  }
+-	line[strcspn (line, " \t=")] = '\0';
+-	val = line + i + 1 + strspn (line + i + 1, " \t");
+-	/* Skip trailing whitespace, if any */
+-	for (j = sz - (val - line) - 1; j > 0 && isspace (val[j]); j--)
+-	  val[j] = '\0';
+-	/* XXX Perhaps should we not ignore errors?  */
+-	conf_set (trans, section, line, val, 0, 0);
+-	return;
+-      }
+-
+-  /* Other non-empty lines are weird.  */
+-  i = strspn (line, " \t");
+-  if (line[i])
+-    warnx("conf_parse_line: %d: syntax error", ln);
+-
+-  return;
+-}
+-
+-/* Parse the mapped configuration file.  */
+-static void
+-conf_parse (int trans, char *buf, size_t sz)
+-{
+-  char *cp = buf;
+-  char *bufend = buf + sz;
+-  char *line;
+-
+-  line = cp;
+-  while (cp < bufend)
+-    {
+-      if (*cp == '\n')
+-	{
+-	  /* Check for escaped newlines.  */
+-	  if (cp > buf && *(cp - 1) == '\\')
+-	    *(cp - 1) = *cp = ' ';
+-	  else
+-	    {
+-	      *cp = '\0';
+-	      conf_parse_line (trans, line, cp - line);
+-	      line = cp + 1;
+-	    }
+-	}
+-      cp++;
+-    }
+-  if (cp != line)
+-    warnx("conf_parse: last line non-terminated, ignored.");
+-}
+-
+-static void
+-conf_load_defaults (int tr)
+-{
+-	/* No defaults */
+-	return;
+-}
+-
+-void
+-conf_init (void)
+-{
+-  unsigned int i;
+-
+-  for (i = 0; i < sizeof conf_bindings / sizeof conf_bindings[0]; i++)
+-    LIST_INIT (&conf_bindings[i]);
+-  TAILQ_INIT (&conf_trans_queue);
+-  conf_reinit ();
+-}
+-
+-/* Open the config file and map it into our address space, then parse it.  */
+-void
+-conf_reinit (void)
+-{
+-  struct conf_binding *cb = 0;
+-  int fd, trans;
+-  unsigned int i;
+-  size_t sz;
+-  char *new_conf_addr = 0;
+-  struct stat sb;
+-
+-  if ((stat (conf_path, &sb) == 0) || (errno != ENOENT))
+-    {
+-      sz = sb.st_size;
+-      fd = open (conf_path, O_RDONLY, 0);
+-      if (fd == -1)
+-        {
+-	  warnx("conf_reinit: open (\"%s\", O_RDONLY) failed", conf_path);
+-	  return;
+-	}
+-
+-      new_conf_addr = malloc (sz);
+-      if (!new_conf_addr)
+-        {
+-	  warnx("conf_reinit: malloc (%lu) failed", (unsigned long)sz);
+-	  goto fail;
+-	}
+-
+-      /* XXX I assume short reads won't happen here.  */
+-      if (read (fd, new_conf_addr, sz) != (int)sz)
+-        {
+-	    warnx("conf_reinit: read (%d, %p, %lu) failed",
+-		       fd, new_conf_addr, (unsigned long)sz);
+-	    goto fail;
+-	}
+-      close (fd);
+-
+-      trans = conf_begin ();
+-
+-      /* XXX Should we not care about errors and rollback?  */
+-      conf_parse (trans, new_conf_addr, sz);
+-    }
+-  else
+-    trans = conf_begin ();
+-
+-  /* Load default configuration values.  */
+-  conf_load_defaults (trans);
+-
+-  /* Free potential existing configuration.  */
+-  if (conf_addr)
+-    {
+-      for (i = 0; i < sizeof conf_bindings / sizeof conf_bindings[0]; i++)
+-	for (cb = LIST_FIRST (&conf_bindings[i]); cb;
+-	     cb = LIST_FIRST (&conf_bindings[i]))
+-	  conf_remove_now (cb->section, cb->tag);
+-      free (conf_addr);
+-    }
+-
+-  conf_end (trans, 1);
+-  conf_addr = new_conf_addr;
+-  return;
+-
+- fail:
+-  if (new_conf_addr)
+-    free (new_conf_addr);
+-  close (fd);
+-}
+-
+-/*
+- * Return the numeric value denoted by TAG in section SECTION or DEF
+- * if that tag does not exist.
+- */
+-int
+-conf_get_num (char *section, char *tag, int def)
+-{
+-  char *value = conf_get_str (section, tag);
+-
+-  if (value)
+-      return atoi (value);
+-  return def;
+-}
+-
+-/* Validate X according to the range denoted by TAG in section SECTION.  */
+-int
+-conf_match_num (char *section, char *tag, int x)
+-{
+-  char *value = conf_get_str (section, tag);
+-  int val, min, max, n;
+-
+-  if (!value)
+-    return 0;
+-  n = sscanf (value, "%d,%d:%d", &val, &min, &max);
+-  switch (n)
+-    {
+-    case 1:
+-      warnx("conf_match_num: %s:%s %d==%d?", section, tag, val, x);
+-      return x == val;
+-    case 3:
+-      warnx("conf_match_num: %s:%s %d<=%d<=%d?", section, tag, min, x, max);
+-      return min <= x && max >= x;
+-    default:
+-      warnx("conf_match_num: section %s tag %s: invalid number spec %s",
+-		 section, tag, value);
+-    }
+-  return 0;
+-}
+-
+-/* Return the string value denoted by TAG in section SECTION.  */
+-char *
+-conf_get_str (char *section, char *tag)
+-{
+-  struct conf_binding *cb;
+-
+-  for (cb = LIST_FIRST (&conf_bindings[conf_hash (section)]); cb;
+-       cb = LIST_NEXT (cb, link))
+-    if (strcasecmp (section, cb->section) == 0
+-	&& strcasecmp (tag, cb->tag) == 0)
+-      {
+-	return cb->value;
+-      }
+-  return 0;
+-}
+-
+-/*
+- * Build a list of string values out of the comma separated value denoted by
+- * TAG in SECTION.
+- */
+-struct conf_list *
+-conf_get_list (char *section, char *tag)
+-{
+-  char *liststr = 0, *p, *field, *t;
+-  struct conf_list *list = 0;
+-  struct conf_list_node *node;
+-
+-  list = malloc (sizeof *list);
+-  if (!list)
+-    goto cleanup;
+-  TAILQ_INIT (&list->fields);
+-  list->cnt = 0;
+-  liststr = conf_get_str (section, tag);
+-  if (!liststr)
+-    goto cleanup;
+-  liststr = strdup (liststr);
+-  if (!liststr)
+-    goto cleanup;
+-  p = liststr;
+-  while ((field = strsep (&p, ",")) != NULL)
+-    {
+-      /* Skip leading whitespace */
+-      while (isspace (*field))
+-	field++;
+-      /* Skip trailing whitespace */
+-      if (p)
+-	for (t = p - 1; t > field && isspace (*t); t--)
+-	  *t = '\0';
+-      if (*field == '\0')
+-	{
+-	  warnx("conf_get_list: empty field, ignoring...");
+-	  continue;
+-	}
+-      list->cnt++;
+-      node = calloc (1, sizeof *node);
+-      if (!node)
+-	goto cleanup;
+-      node->field = strdup (field);
+-      if (!node->field) {
+-	free(node);
+-	goto cleanup;
+-      }
+-      TAILQ_INSERT_TAIL (&list->fields, node, link);
+-    }
+-  free (liststr);
+-  return list;
+-
+- cleanup:
+-  if (list)
+-    conf_free_list (list);
+-  if (liststr)
+-    free (liststr);
+-  return 0;
+-}
+-
+-struct conf_list *
+-conf_get_tag_list (char *section)
+-{
+-  struct conf_list *list = 0;
+-  struct conf_list_node *node;
+-  struct conf_binding *cb;
+-
+-  list = malloc (sizeof *list);
+-  if (!list)
+-    goto cleanup;
+-  TAILQ_INIT (&list->fields);
+-  list->cnt = 0;
+-  for (cb = LIST_FIRST (&conf_bindings[conf_hash (section)]); cb;
+-       cb = LIST_NEXT (cb, link))
+-    if (strcasecmp (section, cb->section) == 0)
+-      {
+-	list->cnt++;
+-	node = calloc (1, sizeof *node);
+-	if (!node)
+-	  goto cleanup;
+-	node->field = strdup (cb->tag);
+-	if (!node->field) {
+-	  free(node);
+-	  goto cleanup;
+-	}
+-	TAILQ_INSERT_TAIL (&list->fields, node, link);
+-      }
+-  return list;
+-
+- cleanup:
+-  if (list)
+-    conf_free_list (list);
+-  return 0;
+-}
+-
+-/* Decode a PEM encoded buffer.  */
+-int
+-conf_decode_base64 (u_int8_t *out, u_int32_t *len, u_char *buf)
+-{
+-  u_int32_t c = 0;
+-  u_int8_t c1, c2, c3, c4;
+-
+-  while (*buf)
+-    {
+-      if (*buf > 127 || (c1 = asc2bin[*buf]) == 255)
+-	return 0;
+-      buf++;
+-
+-      if (*buf > 127 || (c2 = asc2bin[*buf]) == 255)
+-	return 0;
+-      buf++;
+-
+-      if (*buf == '=')
+-	{
+-	  c3 = c4 = 0;
+-	  c++;
+-
+-	  /* Check last four bit */
+-	  if (c2 & 0xF)
+-	    return 0;
+-
+-	  if (strcmp ((char *)buf, "==") == 0)
+-	    buf++;
+-	  else
+-	    return 0;
+-	}
+-      else if (*buf > 127 || (c3 = asc2bin[*buf]) == 255)
+-	return 0;
+-      else
+-	{
+-	  if (*++buf == '=')
+-	    {
+-	      c4 = 0;
+-	      c += 2;
+-
+-	      /* Check last two bit */
+-	      if (c3 & 3)
+-		return 0;
+-
+-	      if (strcmp ((char *)buf, "="))
+-		return 0;
+-
+-	    }
+-	  else if (*buf > 127 || (c4 = asc2bin[*buf]) == 255)
+-	      return 0;
+-	  else
+-	      c += 3;
+-	}
+-
+-      buf++;
+-      *out++ = (c1 << 2) | (c2 >> 4);
+-      *out++ = (c2 << 4) | (c3 >> 2);
+-      *out++ = (c3 << 6) | c4;
+-    }
+-
+-  *len = c;
+-  return 1;
+-
+-}
+-
+-void
+-conf_free_list (struct conf_list *list)
+-{
+-  struct conf_list_node *node = TAILQ_FIRST (&list->fields);
+-
+-  while (node)
+-    {
+-      TAILQ_REMOVE (&list->fields, node, link);
+-      if (node->field)
+-	free (node->field);
+-      free (node);
+-      node = TAILQ_FIRST (&list->fields);
+-    }
+-  free (list);
+-}
+-
+-int
+-conf_begin (void)
+-{
+-  static int seq = 0;
+-
+-  return ++seq;
+-}
+-
+-static struct conf_trans *
+-conf_trans_node (int transaction, enum conf_op op)
+-{
+-  struct conf_trans *node;
+-
+-  node = calloc (1, sizeof *node);
+-  if (!node)
+-    {
+-      warnx("conf_trans_node: calloc (1, %lu) failed",
+-	(unsigned long)sizeof *node);
+-      return 0;
+-    }
+-  node->trans = transaction;
+-  node->op = op;
+-  TAILQ_INSERT_TAIL (&conf_trans_queue, node, link);
+-  return node;
+-}
+-
+-/* Queue a set operation.  */
+-int
+-conf_set (int transaction, char *section, char *tag, char *value, int override,
+-	  int is_default)
+-{
+-  struct conf_trans *node;
+-
+-  node = conf_trans_node (transaction, CONF_SET);
+-  if (!node)
+-    return 1;
+-  node->section = strdup (section);
+-  if (!node->section)
+-    {
+-      warnx("conf_set: strdup (\"%s\") failed", section);
+-      goto fail;
+-    }
+-  node->tag = strdup (tag);
+-  if (!node->tag)
+-    {
+-      warnx("conf_set: strdup (\"%s\") failed", tag);
+-      goto fail;
+-    }
+-  node->value = strdup (value);
+-  if (!node->value)
+-    {
+-      warnx("conf_set: strdup (\"%s\") failed", value);
+-      goto fail;
+-    }
+-  node->override = override;
+-  node->is_default = is_default;
+-  return 0;
+-
+- fail:
+-  if (node->tag)
+-    free (node->tag);
+-  if (node->section)
+-    free (node->section);
+-  if (node)
+-    free (node);
+-  return 1;
+-}
+-
+-/* Queue a remove operation.  */
+-int
+-conf_remove (int transaction, char *section, char *tag)
+-{
+-  struct conf_trans *node;
+-
+-  node = conf_trans_node (transaction, CONF_REMOVE);
+-  if (!node)
+-    goto fail;
+-  node->section = strdup (section);
+-  if (!node->section)
+-    {
+-      warnx("conf_remove: strdup (\"%s\") failed", section);
+-      goto fail;
+-    }
+-  node->tag = strdup (tag);
+-  if (!node->tag)
+-    {
+-      warnx("conf_remove: strdup (\"%s\") failed", tag);
+-      goto fail;
+-    }
+-  return 0;
+-
+- fail:
+-  if (node && node->section)
+-    free (node->section);
+-  if (node)
+-    free (node);
+-  return 1;
+-}
+-
+-/* Queue a remove section operation.  */
+-int
+-conf_remove_section (int transaction, char *section)
+-{
+-  struct conf_trans *node;
+-
+-  node = conf_trans_node (transaction, CONF_REMOVE_SECTION);
+-  if (!node)
+-    goto fail;
+-  node->section = strdup (section);
+-  if (!node->section)
+-    {
+-      warnx("conf_remove_section: strdup (\"%s\") failed", section);
+-      goto fail;
+-    }
+-  return 0;
+-
+- fail:
+-  if (node)
+-    free (node);
+-  return 1;
+-}
+-
+-/* Execute all queued operations for this transaction.  Cleanup.  */
+-int
+-conf_end (int transaction, int commit)
+-{
+-  struct conf_trans *node, *next;
+-
+-  for (node = TAILQ_FIRST (&conf_trans_queue); node; node = next)
+-    {
+-      next = TAILQ_NEXT (node, link);
+-      if (node->trans == transaction)
+-	{
+-	  if (commit)
+-	    switch (node->op)
+-	      {
+-	      case CONF_SET:
+-		conf_set_now (node->section, node->tag, node->value,
+-			      node->override, node->is_default);
+-		break;
+-	      case CONF_REMOVE:
+-		conf_remove_now (node->section, node->tag);
+-		break;
+-	      case CONF_REMOVE_SECTION:
+-		conf_remove_section_now (node->section);
+-		break;
+-	      default:
+-		warnx("conf_end: unknown operation: %d", node->op);
+-	      }
+-	  TAILQ_REMOVE (&conf_trans_queue, node, link);
+-	  if (node->section)
+-	    free (node->section);
+-	  if (node->tag)
+-	    free (node->tag);
+-	  if (node->value)
+-	    free (node->value);
+-	  free (node);
+-	}
+-    }
+-  return 0;
+-}
+-
+-/*
+- * Dump running configuration upon SIGUSR1.
+- * Configuration is "stored in reverse order", so reverse it again.
+- */
+-struct dumper {
+-  char *s, *v;
+-  struct dumper *next;
+-};
+-
+-static void
+-conf_report_dump (struct dumper *node)
+-{
+-  /* Recursive, cleanup when we're done.  */
+-
+-  if (node->next)
+-    conf_report_dump (node->next);
+-
+-  if (node->v)
+-    warnx("%s=\t%s", node->s, node->v);
+-  else if (node->s)
+-    {
+-      warnx("%s", node->s);
+-      if (strlen (node->s) > 0)
+-	free (node->s);
+-    }
+-
+-  free (node);
+-}
+-
+-void
+-conf_report (void)
+-{
+-  struct conf_binding *cb, *last = 0;
+-  unsigned int i, len;
+-  char *current_section = (char *)0;
+-  struct dumper *dumper, *dnode;
+-
+-  dumper = dnode = (struct dumper *)calloc (1, sizeof *dumper);
+-  if (!dumper)
+-    goto mem_fail;
+-
+-  warnx("conf_report: dumping running configuration");
+-
+-  for (i = 0; i < sizeof conf_bindings / sizeof conf_bindings[0]; i++)
+-    for (cb = LIST_FIRST (&conf_bindings[i]); cb;
+-	 cb = LIST_NEXT (cb, link))
+-      {
+-	if (!cb->is_default)
+-	  {
+-	    /* Dump this entry.  */
+-	    if (!current_section || strcmp (cb->section, current_section))
+-	      {
+-		if (current_section)
+-		  {
+-		    len = strlen (current_section) + 3;
+-		    dnode->s = malloc (len);
+-		    if (!dnode->s)
+-		      goto mem_fail;
+-
+-		    snprintf (dnode->s, len, "[%s]", current_section);
+-		    dnode->next
+-		      = (struct dumper *)calloc (1, sizeof (struct dumper));
+-		    dnode = dnode->next;
+-		    if (!dnode)
+-		      goto mem_fail;
+-
+-		    dnode->s = "";
+-		    dnode->next
+-		      = (struct dumper *)calloc (1, sizeof (struct dumper));
+-		    dnode = dnode->next;
+-		    if (!dnode)
+-		      goto mem_fail;
+-		  }
+-		current_section = cb->section;
+-	      }
+-	    dnode->s = cb->tag;
+-	    dnode->v = cb->value;
+-	    dnode->next = (struct dumper *)calloc (1, sizeof (struct dumper));
+-	    dnode = dnode->next;
+-	    if (!dnode)
+-	      goto mem_fail;
+-	    last = cb;
+-	  }
+-      }
+-
+-  if (last)
+-    {
+-      len = strlen (last->section) + 3;
+-      dnode->s = malloc (len);
+-      if (!dnode->s)
+-	goto mem_fail;
+-      snprintf (dnode->s, len, "[%s]", last->section);
+-    }
+-
+-  conf_report_dump (dumper);
+-
+-  return;
+-
+- mem_fail:
+-  warnx("conf_report: malloc/calloc failed");
+-  while ((dnode = dumper) != 0)
+-    {
+-      dumper = dumper->next;
+-      if (dnode->s)
+-	free (dnode->s);
+-      free (dnode);
+-    }
+-  return;
+-}
+diff --git a/utils/idmapd/cfg.h b/utils/idmapd/cfg.h
+deleted file mode 100644
+index c1ca940..0000000
+--- a/utils/idmapd/cfg.h
++++ /dev/null
+@@ -1,67 +0,0 @@
+-/* $OpenBSD: conf.h,v 1.30 2004/06/25 20:25:34 hshoexer Exp $	 */
+-/* $EOM: conf.h,v 1.13 2000/09/18 00:01:47 ho Exp $	 */
+-
+-/*
+- * Copyright (c) 1998, 1999, 2001 Niklas Hallqvist.  All rights reserved.
+- * Copyright (c) 2000, 2003 Håkan Olsson.  All rights reserved.
+- *
+- * Redistribution and use in source and binary forms, with or without
+- * modification, are permitted provided that the following conditions
+- * are met:
+- * 1. Redistributions of source code must retain the above copyright
+- *    notice, this list of conditions and the following disclaimer.
+- * 2. Redistributions in binary form must reproduce the above copyright
+- *    notice, this list of conditions and the following disclaimer in the
+- *    documentation and/or other materials provided with the distribution.
+- *
+- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+- */
+-
+-/*
+- * This code was written under funding by Ericsson Radio Systems.
+- */
+-
+-#ifndef _CONF_H_
+-#define _CONF_H_
+-
+-#include "queue.h"
+-
+-struct conf_list_node {
+-	TAILQ_ENTRY(conf_list_node) link;
+-	char	*field;
+-};
+-
+-struct conf_list {
+-	size_t	cnt;
+-	TAILQ_HEAD(conf_list_fields_head, conf_list_node) fields;
+-};
+-
+-extern char    *conf_path;
+-
+-extern int      conf_begin(void);
+-extern int      conf_decode_base64(u_int8_t *, u_int32_t *, u_char *);
+-extern int      conf_end(int, int);
+-extern void     conf_free_list(struct conf_list *);
+-extern struct sockaddr *conf_get_address(char *, char *);
+-extern struct conf_list *conf_get_list(char *, char *);
+-extern struct conf_list *conf_get_tag_list(char *);
+-extern int      conf_get_num(char *, char *, int);
+-extern char    *conf_get_str(char *, char *);
+-extern void     conf_init(void);
+-extern int      conf_match_num(char *, char *, int);
+-extern void     conf_reinit(void);
+-extern int      conf_remove(int, char *, char *);
+-extern int      conf_remove_section(int, char *);
+-extern int      conf_set(int, char *, char *, char *, int, int);
+-extern void     conf_report(void);
+-
+-#endif				/* _CONF_H_ */
+diff --git a/utils/idmapd/idmapd.c b/utils/idmapd/idmapd.c
+index 9cbe96c..65a6a2a 100644
+--- a/utils/idmapd/idmapd.c
++++ b/utils/idmapd/idmapd.c
+@@ -66,7 +66,7 @@
+ #endif /* HAVE_CONFIG_H */
+ 
+ #include "xlog.h"
+-#include "cfg.h"
++#include "conffile.h"
+ #include "queue.h"
+ #include "nfslib.h"
+ 
+@@ -156,7 +156,7 @@ static char *nobodyuser, *nobodygroup;
+ static uid_t nobodyuid;
+ static gid_t nobodygid;
+ 
+-/* Used by cfg.c */
++/* Used by conffile.c in libnfs.a */
+ char *conf_path;
+ 
+ static int
+diff --git a/utils/mount/Makefile.am b/utils/mount/Makefile.am
+index 459fa45..299384a 100644
+--- a/utils/mount/Makefile.am
++++ b/utils/mount/Makefile.am
+@@ -15,7 +15,14 @@ mount_nfs_SOURCES = mount.c error.c network.c fstab.c token.c \
+ 		    nfsumount.c \
+ 		    mount_constants.h error.h network.h fstab.h token.h \
+ 		    parse_opt.h parse_dev.h \
+-		    nfs4_mount.h nfs_mount4.h stropts.h version.h
++		    nfs4_mount.h nfs_mount4.h stropts.h version.h \
++			mount_config.h
++
++if MOUNT_CONFIG
++mount_nfs_SOURCES += configfile.c
++man5_MANS += nfsmount.conf.man
++EXTRA_DIST += nfsmount.conf
++endif
+ 
+ mount_nfs_LDADD = ../../support/nfs/libnfs.a \
+ 		  ../../support/export/libexport.a
+diff --git a/utils/mount/configfile.c b/utils/mount/configfile.c
+new file mode 100644
+index 0000000..e347b0e
+--- /dev/null
++++ b/utils/mount/configfile.c
+@@ -0,0 +1,320 @@
++/*
++ * configfile.c -- mount configuration file manipulation 
++ * Copyright (C) 2008 Red Hat, Inc <nfs@redhat.com>
++ *
++ * - Routines use to create mount options from the mount
++ *   configuration file.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2, or (at your option)
++ * any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ */
++#ifdef HAVE_CONFIG_H
++#include <config.h>
++#endif
++#include <sys/types.h>
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <ctype.h>
++
++#include "xlog.h"
++#include "conffile.h"
++
++#define KBYTES(x)     ((x) * (1024))
++#define MEGABYTES(x)  ((x) * (1048576))
++#define GIGABYTES(x)  ((x) * (1073741824))
++
++#ifndef NFSMOUNT_GLOBAL_OPTS
++#define NFSMOUNT_GLOBAL_OPTS "NFSMount_Global_Options"
++#endif
++
++#ifndef NFSMOUNT_MOUNTPOINT
++#define NFSMOUNT_MOUNTPOINT "MountPoint"
++#endif
++
++#ifndef NFSMOUNT_SERVER
++#define NFSMOUNT_SERVER "Server"
++#endif
++
++#ifndef MOUNTOPTS_CONFFILE
++#define MOUNTOPTS_CONFFILE "/etc/nfsmount.conf"
++#endif
++char *conf_path = MOUNTOPTS_CONFFILE;
++enum {
++	MNT_NOARG=0,
++	MNT_INTARG,
++	MNT_STRARG,
++	MNT_SPEC,
++	MNT_UNSET
++};
++struct mnt_alias {
++	char *alias;
++	char *opt;
++	int  argtype;
++} mnt_alias_tab[] = {
++	{"background", "bg", MNT_NOARG},
++	{"foreground", "fg", MNT_NOARG},
++	{"sloppy", "sloppy", MNT_NOARG},
++};
++int mnt_alias_sz = (sizeof(mnt_alias_tab)/sizeof(mnt_alias_tab[0]));
++
++/*
++ * See if the option is an alias, if so return the 
++ * real mount option along with the argument type.
++ */
++inline static 
++char *mountopts_alias(char *opt, int *argtype)
++{
++	int i;
++
++	*argtype = MNT_UNSET;
++	for (i=0; i < mnt_alias_sz; i++) {
++		if (strcasecmp(opt, mnt_alias_tab[i].alias) != 0)
++			continue;
++		*argtype = mnt_alias_tab[i].argtype;
++		return mnt_alias_tab[i].opt;
++	}
++	/* Make option names case-insensitive */
++	upper2lower(opt);
++
++	return opt;
++}
++/*
++ * Convert numeric strings that end with 'k', 'm' or 'g'
++ * into numeric strings with the real value. 
++ * Meaning '8k' becomes '8094'.
++ */
++char *mountopts_convert(char *value)
++{
++	unsigned long long factor, num;
++	static char buf[64];
++	char *ch;
++
++	ch = &value[strlen(value)-1];
++	switch (tolower(*ch)) {
++	case 'k':
++		factor = KBYTES(1);
++		break;
++	case 'm':
++		factor = MEGABYTES(1);
++		break;
++	case 'g':
++		factor = GIGABYTES(1);
++		break;
++	default:
++		return value;
++	}
++	*ch = '\0';
++	if (strncmp(value, "0x", 2) == 0) {
++		num = strtol(value, (char **)NULL, 16);
++	} else if (strncmp(value, "0", 1) == 0) {
++		num = strtol(value, (char **)NULL, 8);
++	} else {
++		num = strtol(value, (char **)NULL, 10);
++	}
++	num *= factor;
++	snprintf(buf, 64, "%lld", num);
++
++	return buf;
++}
++
++struct entry {
++	SLIST_ENTRY(entry) entries;
++	char *opt;
++};
++static SLIST_HEAD(shead, entry) head = SLIST_HEAD_INITIALIZER(head);
++static int list_size;
++
++/*
++ * Add option to the link list
++ */
++inline static void 
++add_entry(char *opt)
++{
++	struct entry *entry;
++
++	entry = calloc(1, sizeof(struct entry));
++	if (entry == NULL) {
++		xlog_warn("Unable calloc memory for mount configs"); 
++		return;
++	}
++	entry->opt = strdup(opt);
++	if (entry->opt == NULL) {
++		xlog_warn("Unable calloc memory for mount opts"); 
++		free(entry);
++		return;
++	}
++	SLIST_INSERT_HEAD(&head, entry, entries);
++}
++/*
++ * See if the given entry exists if the link list,
++ * if so return that entry
++ */
++inline static 
++char *lookup_entry(char *opt)
++{
++	struct entry *entry;
++
++	SLIST_FOREACH(entry, &head, entries) {
++		if (strcasecmp(entry->opt, opt) == 0)
++			return opt;
++	}
++	return NULL;
++}
++/*
++ * Free all entries on the link list
++ */
++inline static 
++void free_all(void)
++{
++	struct entry *entry;
++
++	while (!SLIST_EMPTY(&head)) {
++		entry = SLIST_FIRST(&head);
++		SLIST_REMOVE_HEAD(&head, entries);
++		free(entry->opt);
++		free(entry);
++	}
++}
++/*
++ * Parse the given section of the configuration 
++ * file to if there are any mount options set.
++ * If so, added them to link list.
++ */
++static void 
++conf_parse_mntopts(char *section, char *arg, char *opts)
++{
++	struct conf_list *list;
++	struct conf_list_node *node;
++	char buf[BUFSIZ], *value, *field;
++	char *nvalue, *ptr;
++	int argtype;
++
++	list = conf_get_tag_list(section);
++	TAILQ_FOREACH(node, &list->fields, link) {
++		/*
++		 * Do not overwrite options if already exists 
++		 */
++		snprintf(buf, BUFSIZ, "%s=", node->field);
++		if (opts && strcasestr(opts, buf) != NULL)
++			continue;
++		if (lookup_entry(node->field) != NULL)
++			continue;
++		buf[0] = '\0';
++		value = conf_get_section(section, arg, node->field);
++		if (value == NULL)
++			continue;
++		field = mountopts_alias(node->field, &argtype);
++		if (strcasecmp(value, "false") == 0) {
++			if (argtype != MNT_NOARG)
++				snprintf(buf, BUFSIZ, "no%s", field);
++		} else if (strcasecmp(value, "true") == 0) {
++			snprintf(buf, BUFSIZ, "%s", field);
++		} else {
++			nvalue = strdup(value);
++			ptr = mountopts_convert(nvalue);
++			snprintf(buf, BUFSIZ, "%s=%s", field, ptr);
++			free(nvalue);
++		}
++		if (buf[0] == '\0')
++			continue;
++		/* 
++		 * Keep a running tally of the list size adding 
++		 * one for the ',' that will be appened later
++		 */
++		list_size += strlen(buf) + 1;
++		add_entry(buf);
++	}
++	conf_free_list(list);
++}
++
++/*
++ * Concatenate options from the configuration file with the 
++ * given options by building a link list of options from the
++ * different sections in the conf file. Options that exists 
++ * in the either the given options or link list are not 
++ * overwritten so it matter which when each section is
++ * parsed. 
++ */
++char *conf_get_mntopts(char *spec, char *mount_point, 
++	char *mount_opts)
++{
++	struct entry *entry;
++	char *ptr, *server, *config_opts;
++	int optlen = 0;
++
++	SLIST_INIT(&head);
++	list_size = 0;
++	/*
++	 * First see if there are any mount options relative 
++	 * to the mount point.
++	 */
++	conf_parse_mntopts(NFSMOUNT_MOUNTPOINT, mount_point, mount_opts);
++
++	/* 
++	 * Next, see if there are any mount options relative
++	 * to the server
++	 */
++	server = strdup(spec);
++	if (server == NULL) {
++		xlog_warn("conf_get_mountops: Unable calloc memory for server"); 
++		free_all();
++		return mount_opts;
++	}
++	if ((ptr = strchr(server, ':')) != NULL)
++		*ptr='\0';
++	conf_parse_mntopts(NFSMOUNT_SERVER, server, mount_opts);
++	free(server);
++
++	/*
++	 * Finally process all the global mount options. 
++	 */
++	conf_parse_mntopts(NFSMOUNT_GLOBAL_OPTS, NULL, mount_opts);
++
++	/*
++	 * If no mount options were found in the configuration file
++	 * just return what was passed in .
++	 */
++	if (SLIST_EMPTY(&head))
++		return mount_opts;
++
++	/*
++	 * Found options in the configuration file. So
++	 * concatenate the configuration options with the 
++	 * options that were passed in
++	 */
++	if (mount_opts)
++		optlen = strlen(mount_opts);
++
++	/* list_size + optlen + ',' + '\0' */
++	config_opts = calloc(1, (list_size+optlen+2));
++	if (server == NULL) {
++		xlog_warn("conf_get_mountops: Unable calloc memory for config_opts"); 
++		free_all();
++		return mount_opts;
++	}
++	if (mount_opts) {
++		strcpy(config_opts, mount_opts);
++		strcat(config_opts, ",");
++	}
++	SLIST_FOREACH(entry, &head, entries) {
++		strcat(config_opts, entry->opt);
++		strcat(config_opts, ",");
++	}
++	*(strrchr(config_opts, ',')) = '\0';
++
++	free_all();
++	if (mount_opts)
++		free(mount_opts);
++
++	return config_opts;
++}
+diff --git a/utils/mount/mount.c b/utils/mount/mount.c
+index a668cd9..355df79 100644
+--- a/utils/mount/mount.c
++++ b/utils/mount/mount.c
+@@ -37,6 +37,7 @@
+ #include "xcommon.h"
+ #include "nls.h"
+ #include "mount_constants.h"
++#include "mount_config.h"
+ #include "nfs_paths.h"
+ #include "nfs_mntent.h"
+ 
+@@ -474,6 +475,8 @@ int main(int argc, char *argv[])
+ 	spec = argv[1];
+ 	mount_point = argv[2];
+ 
++	mount_config_init(progname);
++
+ 	argv[2] = argv[0]; /* so that getopt error messages are correct */
+ 	while ((c = getopt_long(argc - 2, argv + 2, "rvVwfno:hs",
+ 				longopts, NULL)) != -1) {
+@@ -559,6 +562,10 @@ int main(int argc, char *argv[])
+ 		mnt_err = EX_USAGE;
+ 		goto out;
+ 	}
++	/*
++	 * Concatenate mount options from the configuration file
++	 */
++	mount_opts = mount_config_opts(spec, mount_point, mount_opts);
+ 
+ 	parse_opts(mount_opts, &flags, &extra_opts);
+ 
+diff --git a/utils/mount/mount_config.h b/utils/mount/mount_config.h
+new file mode 100644
+index 0000000..9a885a9
+--- /dev/null
++++ b/utils/mount/mount_config.h
+@@ -0,0 +1,48 @@
++#ifndef _LINUX_MOUNT__CONFIG_H
++#define _LINUX_MOUNT_CONFIG__H
++/*
++ * mount_config.h -- mount configuration file routines 
++ * Copyright (C) 2008 Red Hat, Inc <nfs@redhat.com>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2, or (at your option)
++ * any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ */
++
++inline void mount_config_init(char *);
++
++#ifdef MOUNT_CONFIG
++#include "conffile.h"
++extern char *conf_get_mntopts(char *, char *, char *);
++
++inline void mount_config_init(char *program)
++{
++	xlog_open(program);
++	/*
++	 * Read the the default mount options
++	 */
++	conf_init();
++}
++inline char *mount_config_opts(char *spec, 
++		char *mount_point, char *mount_opts)
++{
++	return conf_get_mntopts(spec, mount_point, mount_opts);
++}
++#else /* MOUNT_CONFIG */
++
++inline void mount_config_init(char *program) { }
++
++inline char *mount_config_opts(char *spec, 
++		char *mount_point, char *mount_opts)
++{
++	return mount_opts;
++}
++#endif /* MOUNT_CONFIG */
++#endif
+diff --git a/utils/mount/nfs.man b/utils/mount/nfs.man
+index 13de524..2299637 100644
+--- a/utils/mount/nfs.man
++++ b/utils/mount/nfs.man
+@@ -28,7 +28,7 @@ The
+ file describes how
+ .BR mount (8)
+ should assemble a system's file name hierarchy
+-from various independent file systems 
++from various independent file systems
+ (including file systems exported by NFS servers).
+ Each line in the
+ .I /etc/fstab
+@@ -56,7 +56,7 @@ by NFS, thus conventionally each contain the digit zero. For example:
+ .P
+ The server's hostname and export pathname
+ are separated by a colon, while
+-the mount options are separated by commas. The remaining fields 
++the mount options are separated by commas. The remaining fields
+ are separated by blanks or tabs.
+ The server's hostname can be an unqualified hostname,
+ a fully qualified domain name,
+@@ -70,17 +70,16 @@ The
+ and
+ .B nfs4
+ file system types share similar mount options,
+-which are described below. 
++which are described below.
+ .SH "MOUNT OPTIONS"
+-Refer to 
++Refer to
+ .BR mount (8)
+ for a description of generic mount options
+-available for all file systems. If you do not need to 
+-specify any mount options, use the generic option 
++available for all file systems. If you do not need to
++specify any mount options, use the generic option
+ .B defaults
+ in
+ .IR /etc/fstab .
+-. 
+ .DT
+ .SS "Valid options for either the nfs or nfs4 file system type"
+ These options are valid to use when mounting either
+@@ -100,7 +99,7 @@ option is specified), NFS requests are retried indefinitely.
+ If the
+ .B soft
+ option is specified, then the NFS client fails an NFS request
+-after 
++after
+ .B retrans
+ retransmissions have been sent,
+ causing the NFS client to return an error
+@@ -119,8 +118,8 @@ option may mitigate some of the risks of using the
+ option.
+ .TP 1.5i
+ .BI timeo= n
+-The time (in tenths of a second) the NFS client waits for a 
+-response before it retries an NFS request. If this 
++The time (in tenths of a second) the NFS client waits for a
++response before it retries an NFS request. If this
+ option is not specified, requests are retried every
+ 60 seconds for NFS over TCP.
+ The NFS client does not perform any kind of timeout backoff
+@@ -128,7 +127,7 @@ for NFS over TCP.
+ .IP
+ However, for NFS over UDP, the client uses an adaptive
+ algorithm to estimate an appropriate timeout value for frequently used
+-request types (such as READ and WRITE requests), but uses the 
++request types (such as READ and WRITE requests), but uses the
+ .B timeo
+ setting for infrequently used request types (such as FSINFO requests).
+ If the
+@@ -141,13 +140,13 @@ up to a maximum timeout length of 60 seconds.
+ .TP 1.5i
+ .BI retrans= n
+ The number of times the NFS client retries a request before
+-it attempts further recovery action. If the 
++it attempts further recovery action. If the
+ .B retrans
+-option is not specified, the NFS client tries each request 
++option is not specified, the NFS client tries each request
+ three times.
+ .IP
+ The NFS client generates a "server not responding" message
+-after 
++after
+ .B retrans
+ retries, then attempts further recovery (depending on whether the
+ .B hard
+@@ -166,21 +165,21 @@ is 1,048,576 bytes (one megabyte).
+ The
+ .B rsize
+ value is a positive integral multiple of 1024.
+-Specified 
++Specified
+ .B rsize
+ values lower than 1024 are replaced with 4096; values larger than
+ 1048576 are replaced with 1048576. If a specified value is within the supported
+-range but not a multiple of 1024, it is rounded down to the nearest 
++range but not a multiple of 1024, it is rounded down to the nearest
+ multiple of 1024.
+ .IP
+ If an
+ .B rsize
+-value is not specified, or if the specified 
+-.B rsize 
++value is not specified, or if the specified
++.B rsize
+ value is larger than the maximum that either client or server can support,
+ the client and server negotiate the largest
+ .B rsize
+-value that they can both support. 
++value that they can both support.
+ .IP
+ The
+ .B rsize
+@@ -197,7 +196,7 @@ file.
+ .BI wsize= n
+ The maximum number of bytes per network WRITE request
+ that the NFS client can send when writing data to a file
+-on an NFS server. The actual data payload size of each 
++on an NFS server. The actual data payload size of each
+ NFS WRITE request is equal to
+ or smaller than the
+ .B wsize
+@@ -207,19 +206,19 @@ is 1,048,576 bytes (one megabyte).
+ Similar to
+ .B rsize
+ , the
+-.B wsize 
++.B wsize
+ value is a positive integral multiple of 1024.
+-Specified 
++Specified
+ .B wsize
+ values lower than 1024 are replaced with 4096; values larger than
+ 1048576 are replaced with 1048576. If a specified value is within the supported
+-range but not a multiple of 1024, it is rounded down to the nearest 
++range but not a multiple of 1024, it is rounded down to the nearest
+ multiple of 1024.
+ .IP
+ If a
+ .B wsize
+-value is not specified, or if the specified 
+-.B wsize 
++value is not specified, or if the specified
++.B wsize
+ value is larger than the maximum that either client or server can support,
+ the client and server negotiate the largest
+ .B wsize
+@@ -235,31 +234,31 @@ file. However, the effective
+ .B wsize
+ value negotiated by the client and server is reported in the
+ .I /proc/mounts
+-file. 
++file.
+ .TP 1.5i
+ .BR ac " / " noac
+-Selects whether the client may cache file attributes. If neither  
+-option is specified (or if 
++Selects whether the client may cache file attributes. If neither
++option is specified (or if
+ .B ac
+-is specified), the client caches file  
+-attributes.  
++is specified), the client caches file
++attributes.
+ .IP
+-To improve performance, NFS clients cache file  
+-attributes. Every few seconds, an NFS client checks the server's version of each  
+-file's attributes for updates.  Changes that occur on the server in  
+-those small intervals remain undetected until the client checks the  
+-server again. The 
++To improve performance, NFS clients cache file
++attributes. Every few seconds, an NFS client checks the server's version of each
++file's attributes for updates.  Changes that occur on the server in
++those small intervals remain undetected until the client checks the
++server again. The
+ .B noac
+-option prevents clients from caching file  
+-attributes so that applications can more quickly detect file changes  
++option prevents clients from caching file
++attributes so that applications can more quickly detect file changes
+ on the server.
+ .IP
+-In addition to preventing the client from caching file attributes,  
+-the 
++In addition to preventing the client from caching file attributes,
++the
+ .B noac
+-option forces application writes to become synchronous so  
+-that local changes to a file become visible on the server  
+-immediately.  That way, other clients can quickly detect recent  
++option forces application writes to become synchronous so
++that local changes to a file become visible on the server
++immediately.  That way, other clients can quickly detect recent
+ writes when they check the file's attributes.
+ .IP
+ Using the
+@@ -383,20 +382,20 @@ Refer to the SECURITY CONSIDERATIONS section for details.
+ .TP 1.5i
+ .BR sharecache " / " nosharecache
+ Determines how the client's data cache and attribute cache are shared
+-when mounting the same export more than once concurrently.  Using the  
+-same cache reduces memory requirements on the client and presents  
+-identical file contents to applications when the same remote file is  
++when mounting the same export more than once concurrently.  Using the
++same cache reduces memory requirements on the client and presents
++identical file contents to applications when the same remote file is
+ accessed via different mount points.
+ .IP
+-If neither option is specified, or if the 
++If neither option is specified, or if the
+ .B sharecache
+-option is  
+-specified, then a single cache is used for all mount points that  
+-access the same export.  If the 
++option is
++specified, then a single cache is used for all mount points that
++access the same export.  If the
+ .B nosharecache
+-option is specified,  
+-then that mount point gets a unique cache.  Note that when data and  
+-attribute caches are shared, the mount options from the first mount  
++option is specified,
++then that mount point gets a unique cache.  Note that when data and
++attribute caches are shared, the mount options from the first mount
+ point take effect for subsequent concurrent mounts of the same export.
+ .IP
+ As of kernel 2.6.18, the behavior specified by
+@@ -422,6 +421,49 @@ NFS mount points allowed on a client, but NFS servers must be configured
+ to allow clients to connect via non-privileged source ports.
+ .IP
+ Refer to the SECURITY CONSIDERATIONS section for important details.
++.TP 1.5i
++.BI lookupcache= mode
++Specifies how the kernel manages its cache of directory entries
++for a given mount point.
++.I mode
++can be one of
++.BR all ,
++.BR none ,
++.BR pos ,
++or
++.BR positive .
++This option is supported in kernels 2.6.28 and later.
++.IP
++The Linux NFS client caches the result of all NFS LOOKUP requests.
++If the requested directory entry exists on the server,
++the result is referred to as
++.IR positive .
++If the requested directory entry does not exist on the server,
++the result is referred to as
++.IR negative .
++.IP
++If this option is not specified, or if
++.B all
++is specified, the client assumes both types of directory cache entries
++are valid until their parent directory's cached attributes expire.
++.IP
++If
++.BR pos " or " positive
++is specified, the client assumes positive entries are valid
++until their parent directory's cached attributes expire, but
++always revalidates negative entires before an application
++can use them.
++.IP
++If
++.B none
++is specified,
++the client revalidates both types of directory cache entries
++before an application can use them.
++This permits quick detection of files that were created or removed
++by other clients, but can impact application and server performance.
++.IP
++The DATA AND METADATA COHERENCE section contains a
++detailed discussion of these trade-offs.
+ .SS "Valid options for the nfs file system type"
+ Use these options, along with the options in the above subsection,
+ for mounting the
+@@ -446,9 +488,9 @@ In addition to controlling how the NFS client transmits requests to
+ the server, this mount option also controls how the
+ .BR mount (8)
+ command communicates with the server's rpcbind and mountd services.
+-Specifying 
++Specifying
+ .B proto=tcp
+-forces all traffic from the 
++forces all traffic from the
+ .BR mount (8)
+ command and the NFS client to use TCP.
+ Specifying
+@@ -574,9 +616,9 @@ It is included for compatibility with other operating systems.
+ .TP 1.5i
+ .BR lock " / " nolock
+ Selects whether to use the NLM sideband protocol to lock files on the server.
+-If neither option is specified (or if 
+-.B lock 
+-is specified), NLM locking is used for this mount point. 
++If neither option is specified (or if
++.B lock
++is specified), NLM locking is used for this mount point.
+ When using the
+ .B nolock
+ option, applications can lock files,
+@@ -598,13 +640,13 @@ that do not support the NLM protocol.
+ .TP 1.5i
+ .BR intr " / " nointr
+ Selects whether to allow signals to interrupt file operations
+-on this mount point. If neither option 
+-is specified (or if 
++on this mount point. If neither option
++is specified (or if
+ .B nointr
+ is specified),
+ signals do not interrupt NFS file operations. If
+-.B intr 
+-is specified, system calls return EINTR if an in-progress NFS operation is interrupted by 
++.B intr
++is specified, system calls return EINTR if an in-progress NFS operation is interrupted by
+ a signal.
+ .IP
+ Using the
+@@ -622,13 +664,13 @@ compatibility with older kernels.
+ .TP 1.5i
+ .BR cto " / " nocto
+ Selects whether to use close-to-open cache coherence semantics.
+-If neither option is specified (or if 
++If neither option is specified (or if
+ .B cto
+ is specified), the client uses close-to-open
+-cache coherence semantics. If the 
+-.B nocto 
++cache coherence semantics. If the
++.B nocto
+ option is specified, the client uses a non-standard heuristic to determine when
+-files on the server have changed. 
++files on the server have changed.
+ .IP
+ Using the
+ .B nocto
+@@ -640,13 +682,13 @@ of this option in more detail.
+ .BR acl " / " noacl
+ Selects whether to use the NFSACL sideband protocol on this mount point.
+ The NFSACL sideband protocol is a proprietary protocol
+-implemented in Solaris that manages Access Control Lists. NFSACL was never 
++implemented in Solaris that manages Access Control Lists. NFSACL was never
+ made a standard part of the NFS protocol specification.
+ .IP
+-If neither 
++If neither
+ .B acl
+-nor 
+-.B noacl 
++nor
++.B noacl
+ option is specified,
+ the NFS client negotiates with the server
+ to see if the NFSACL protocol is supported,
+@@ -660,7 +702,7 @@ Selects whether to use NFS version 3 READDIRPLUS requests.
+ If this option is not specified, the NFS client uses READDIRPLUS requests
+ on NFS version 3 mounts to read small directories.
+ Some applications perform better if the client uses only READDIR requests
+-for all directories.  
++for all directories.
+ .SS "Valid options for the nfs4 file system type"
+ Use these options, along with the options in the first subsection above,
+ for mounting the
+@@ -676,8 +718,8 @@ can be either
+ or
+ .BR tcp .
+ All NFS version 4 servers are required to support TCP,
+-so if this mount option is not specified, the NFS version 4 client 
+-uses the TCP transport protocol. 
++so if this mount option is not specified, the NFS version 4 client
++uses the TCP transport protocol.
+ Refer to the TRANSPORT METHODS section for more details.
+ .TP 1.5i
+ .BI port= n
+@@ -700,12 +742,12 @@ or the server's NFS service is not available on the advertised port.
+ .TP 1.5i
+ .BR intr " / " nointr
+ Selects whether to allow signals to interrupt file operations
+-on this mount point. If neither option is specified (or if 
+-.B intr 
+-is specified), system calls return EINTR if an in-progress NFS operation  
+-is interrupted by a signal.  If 
++on this mount point. If neither option is specified (or if
++.B intr
++is specified), system calls return EINTR if an in-progress NFS operation
++is interrupted by a signal.  If
+ .B nointr
+-is specified, signals do not  
++is specified, signals do not
+ interrupt NFS operations.
+ .IP
+ Using the
+@@ -727,7 +769,7 @@ for NFS directories on this mount point.
+ If neither
+ .B cto
+ nor
+-.B nocto 
++.B nocto
+ is specified,
+ the default is to use close-to-open cache coherence
+ semantics for directories.
+@@ -737,11 +779,11 @@ The DATA AND METADATA COHERENCE section discusses
+ the behavior of this option in more detail.
+ .TP 1.5i
+ .BI clientaddr= n.n.n.n
+-Specifies  a  single  IPv4  address  (in dotted-quad form) 
+-that the NFS client advertises to allow servers 
+-to perform NFS version 4 callback requests against 
+-files on this mount point. If  the  server is unable to 
+-establish callback connections to clients, performance 
++Specifies  a  single  IPv4  address  (in dotted-quad form)
++that the NFS client advertises to allow servers
++to perform NFS version 4 callback requests against
++files on this mount point. If  the  server is unable to
++establish callback connections to clients, performance
+ may degrade, or accesses to files may temporarily hang.
+ .IP
+ If this option is not specified, the
+@@ -751,7 +793,14 @@ The automatic discovery process is not perfect, however.
+ In the presence of multiple client network interfaces,
+ special routing policies,
+ or atypical network topologies,
+-the exact address to use for callbacks may be nontrivial to determine. 
++the exact address to use for callbacks may be nontrivial to determine.
++.SH MOUNT CONFIGURATION FILE
++If the mount command is configured to do so, all of the mount options 
++described in the previous section can also be configured in the 
++.I /etc/nfsmount.conf 
++file. See 
++.BR nfsmount.conf(5)
++for details.
+ .SH EXAMPLES
+ To mount an export using NFS version 2,
+ use the
+@@ -824,33 +873,33 @@ and data transfer size settings for a mount point.
+ In some cases, however, it pays to specify
+ these settings explicitly using mount options.
+ .P
+-Traditionally, NFS clients used the UDP transport exclusively for  
+-transmitting requests to servers.  Though its implementation is  
+-simple, NFS over UDP has many limitations that prevent smooth  
+-operation and good performance in some common deployment  
+-environments.  Even an insignificant packet loss rate results in the  
+-loss of whole NFS requests; as such, retransmit timeouts are usually  
+-in the subsecond range to allow clients to recover quickly from  
+-dropped requests, but this can result in extraneous network traffic  
++Traditionally, NFS clients used the UDP transport exclusively for
++transmitting requests to servers.  Though its implementation is
++simple, NFS over UDP has many limitations that prevent smooth
++operation and good performance in some common deployment
++environments.  Even an insignificant packet loss rate results in the
++loss of whole NFS requests; as such, retransmit timeouts are usually
++in the subsecond range to allow clients to recover quickly from
++dropped requests, but this can result in extraneous network traffic
+ and server load.
+ .P
+-However, UDP can be quite effective in specialized settings where  
+-the networkâ€™s MTU is large relative to NFSâ€™s data transfer size (such  
+-as network environments that enable jumbo Ethernet frames).  In such  
+-environments, trimming the 
+-.B rsize 
+-and 
+-.B wsize 
+-settings so that each  
+-NFS read or write request fits in just a few network frames (or even  
+-in  a single  frame) is advised.  This reduces the probability that  
+-the loss of a single MTU-sized network frame results in the loss of  
++However, UDP can be quite effective in specialized settings where
++the networks MTU is large relative to NFSs data transfer size (such
++as network environments that enable jumbo Ethernet frames).  In such
++environments, trimming the
++.B rsize
++and
++.B wsize
++settings so that each
++NFS read or write request fits in just a few network frames (or even
++in  a single  frame) is advised.  This reduces the probability that
++the loss of a single MTU-sized network frame results in the loss of
+ an entire large read or write request.
+ .P
+-TCP is the default transport protocol used for all modern NFS 
++TCP is the default transport protocol used for all modern NFS
+ implementations.  It performs well in almost every conceivable
+-network environment and provides excellent guarantees against data 
+-corruption caused by network unreliability.  TCP is often a  
++network environment and provides excellent guarantees against data
++corruption caused by network unreliability.  TCP is often a
+ requirement for mounting a server through a network firewall.
+ .P
+ Under normal circumstances, networks drop packets much more
+@@ -861,11 +910,11 @@ After  the client exhausts its retransmits (the value of the
+ .B retrans
+ mount option), it assumes a network partition has occurred,
+ and attempts to reconnect to the server on a fresh socket. Since
+-TCP itself makes network data transfer reliable, 
++TCP itself makes network data transfer reliable,
+ .B rsize
+-and 
++and
+ .B wsize
+-can safely be allowed to default to the largest values supported by  
++can safely be allowed to default to the largest values supported by
+ both client and server, independent of the network's MTU size.
+ .SS "Using the mountproto mount option"
+ This section applies only to NFS version 2 and version 3 mounts
+@@ -950,8 +999,8 @@ Some modern cluster file systems provide
+ perfect cache coherence among their clients.
+ Perfect cache coherence among disparate NFS clients
+ is expensive to achieve, especially on wide area networks.
+-As such, NFS settles for weaker cache coherence that 
+-satisfies the requirements of most file sharing types. Normally, 
++As such, NFS settles for weaker cache coherence that
++satisfies the requirements of most file sharing types. Normally,
+ file sharing is completely sequential:
+ first client A opens a file, writes something to it, then closes it;
+ then client B opens the same file, and reads the changes.
+@@ -985,7 +1034,7 @@ it is still difficult to tell whether it was
+ that client's updates or some other client's updates
+ that altered the file.
+ .SS "Attribute caching"
+-Use the 
++Use the
+ .B noac
+ mount option to achieve attribute cache coherence
+ among multiple clients.
+@@ -1014,14 +1063,67 @@ The NFS protocol is not designed to support
+ true cluster file system cache coherence
+ without some type of application serialization.
+ If absolute cache coherence among clients is required,
+-applications should use file locking. Alternatively, applications 
++applications should use file locking. Alternatively, applications
+ can also open their files with the O_DIRECT flag
+ to disable data caching entirely.
++.SS "Directory entry caching"
++The Linux NFS client caches the result of all NFS LOOKUP requests.
++If the requested directory entry exists on the server,
++the result is referred to as a
++.IR positive " lookup result.
++If the requested directory entry does not exist on the server
++(that is, the server returned ENOENT),
++the result is referred to as
++.IR negative " lookup result.
++.P
++To detect when directory entries have been added or removed
++on the server,
++the Linux NFS client watches a directory's mtime.
++If the client detects a change in a directory's mtime,
++the client drops all cached LOOKUP results for that directory.
++Since the directory's mtime is a cached attribute, it may
++take some time before a client notices it has changed.
++See the descriptions of the
++.BR acdirmin ", " acdirmax ", and " noac
++mount options for more information about
++how long a directory's mtime is cached.
++.P
++Caching directory entries improves the performance of applications that
++do not share files with applications on other clients.
++Using cached information about directories can interfere
++with applications that run concurrently on multiple clients and
++need to detect the creation or removal of files quickly, however.
++The
++.B lookupcache
++mount option allows some tuning of directory entry caching behavior.
++.P
++Before kernel release 2.6.28,
++the Linux NFS client tracked only positive lookup results.
++This permitted applications to detect new directory entries
++created by other clients quickly while still providing some of the
++performance benefits of caching.
++If an application depends on the previous lookup caching behavior
++of the Linux NFS client, you can use
++.BR lookupcache=positive .
++.P
++If the client ignores its cache and validates every application
++lookup request with the server,
++that client can immediately detect when a new directory
++entry has been either created or removed by another client.
++You can specify this behavior using
++.BR lookupcache=none .
++The extra NFS requests needed if the client does not
++cache directory entries can exact a performance penalty.
++Disabling lookup caching
++should result in less of a performance penalty than using
++.BR noac ,
++and has no effect on how the NFS client caches the attributes of files.
++.P
+ .SS "The sync mount option"
+ The NFS client treats the
+ .B sync
+ mount option differently than some other file systems
+-(refer to 
++(refer to
+ .BR mount (8)
+ for a description of the generic
+ .B sync
+@@ -1032,16 +1134,16 @@ If neither
+ .B sync
+ nor
+ .B async
+-is specified (or if the 
+-.B async 
++is specified (or if the
++.B async
+ option is specified),
+ the NFS client delays sending application
+ writes to the server
+-until any of these events occur: 
++until any of these events occur:
+ .IP
+ Memory pressure forces reclamation of system memory resources.
+ .IP
+-An application flushes file data explicitly with 
++An application flushes file data explicitly with
+ .BR sync (2),
+ .BR msync (2),
+ or
+@@ -1069,7 +1171,7 @@ but at a significant performance cost.
+ Applications can use the O_SYNC open flag to force application
+ writes to individual files to go to the server immediately without
+ the use of the
+-.B sync 
++.B sync
+ mount option.
+ .SS "Using file locks with NFS"
+ The Network Lock Manager protocol is a separate sideband protocol
+@@ -1104,15 +1206,15 @@ mount option. NLM locking must be disabled with the
+ .B nolock
+ option when using NFS to mount
+ .I /var
+-because 
+-.I /var 
++because
++.I /var
+ contains files used by the NLM implementation on Linux.
+ .P
+ Specifying the
+ .B nolock
+ option may also be advised to improve the performance
+ of a proprietary application which runs on a single client
+-and uses file locks extensively. 
++and uses file locks extensively.
+ .SS "NFS version 4 caching features"
+ The data and metadata caching behavior of NFS version 4
+ clients is similar to that of earlier versions.
+@@ -1196,7 +1298,7 @@ authentication, and in-transit data protection.
+ The NFS version 4 specification mandates NFSv4 ACLs,
+ RPCGSS authentication, and RPCGSS security flavors
+ that provide per-RPC integrity checking and encryption.
+-Because NFS version 4 combines the  
++Because NFS version 4 combines the
+ function of the sideband protocols into the main NFS protocol,
+ the new security features apply to all NFS version 4 operations
+ including mounting, file locking, and so on.
+@@ -1210,11 +1312,11 @@ that is in effect on a given NFS mount point.
+ Specifying
+ .B sec=krb5
+ provides cryptographic proof of a user's identity in each RPC request.
+-This provides strong verification of the identity of users 
++This provides strong verification of the identity of users
+ accessing data on the server.
+ Note that additional configuration besides adding this mount option
+ is required in order to enable Kerberos security.
+-Refer to the 
++Refer to the
+ .BR rpc.gssd (8)
+ man page for details.
+ .P
+@@ -1299,15 +1401,15 @@ filter rules.
+ It is still possible to mount an NFS server through a firewall,
+ though some of the
+ .BR mount (8)
+-command's automatic service endpoint discovery mechanisms may not work; this 
++command's automatic service endpoint discovery mechanisms may not work; this
+ requires you to provide specific endpoint details via NFS mount options.
+ .P
+ NFS servers normally run a portmapper or rpcbind daemon to advertise
+-their service endpoints to clients. Clients use the rpcbind daemon to determine: 
++their service endpoints to clients. Clients use the rpcbind daemon to determine:
+ .IP
+ What network port each RPC-based service is using
+ .IP
+-What transport protocols each RPC-based service supports 
++What transport protocols each RPC-based service supports
+ .P
+ The rpcbind daemon uses a well-known port number (111) to help clients find a service endpoint.
+ Although NFS often uses a standard port number (2049),
+@@ -1339,9 +1441,9 @@ of the NFS version 3 specification, however.
+ .P
+ The NFS version 4 specification mandates a new version
+ of Access Control Lists that are semantically richer than POSIX ACLs.
+-NFS version 4 ACLs are not fully compatible with POSIX ACLs; as such, 
++NFS version 4 ACLs are not fully compatible with POSIX ACLs; as such,
+ some translation between the two is required
+-in an environment that mixes POSIX ACLs and NFS version 4. 
++in an environment that mixes POSIX ACLs and NFS version 4.
+ .SH FILES
+ .TP 1.5i
+ .I /etc/fstab
+@@ -1418,4 +1520,4 @@ RFC 1833 for the RPC bind specification.
+ .br
+ RFC 2203 for the RPCSEC GSS API protocol specification.
+ .br
+-RFC 3530 for the NFS version 4 specification. 
++RFC 3530 for the NFS version 4 specification.
+diff --git a/utils/mount/nfsmount.conf b/utils/mount/nfsmount.conf
+new file mode 100644
+index 0000000..f9fcfcb
+--- /dev/null
++++ b/utils/mount/nfsmount.conf
+@@ -0,0 +1,120 @@
++#
++# /etc/nfsmount.conf - see nfsmount.conf(5) for details
++#
++# This is an NFS mount configuration file. This file can be broken
++# up into three different sections: Mount, Server and Global
++# 
++# [ MountPoint "Mount_point" ] 
++# This section defines all the mount options that
++# should be used on a particular mount point. The '<Mount_Point>'
++# string need to be an exact match of the path in the mount 
++# command. Example:
++#     [ MountPoint "/export/home" ]
++#       background=True
++# Would cause all mount to /export/home would be done in
++# the background
++#
++# [ Server "Server_Name" ]
++# This section defines all the mount options that
++# should be used on mounts to a particular NFS server. 
++# Example:
++#     [ Server "nfsserver.foo.com" ]
++#       rsize=32k
++#       wsize=32k
++# All reads and writes to the 'nfsserver.foo.com' server 
++# will be done with 32k (32768 bytes) block sizes.
++#
++#[ NFSMount_Global_Options ]
++# This statically named section defines global mount 
++# options that can be applied on all NFS mount.
++#
++# Protocol Version [2,3]
++# Nfsvers=3
++# Network Transport [Udp,Tcp,Rdma]
++# Proto=Tcp
++#
++# The number of times a request will be retired before 
++# generating a timeout 
++# Retrans=2
++#
++# The number of minutes that will retry mount
++# Retry=2
++#
++# The minimum time (in seconds) file attributes are cached
++# acregmin=30
++#
++# The Maximum time (in seconds) file attributes are cached
++# acregmin=60
++#
++# The minimum time (in seconds) directory attributes are cached
++# acregmin=30
++#
++# The Maximum time (in seconds) directory attributes are cached
++# acregmin=60
++#
++# Enable Access  Control  Lists
++# Acl=False
++#
++# Enable Attribute Caching
++# Ac=True
++#
++# Do mounts in background (i.e. asynchronously)
++# Background=False
++#
++# Close-To-Open cache coherence
++# Cto=True
++#
++# Do mounts in foreground (i.e. synchronously)
++# Foreground=True
++#
++# How to handle times out from servers (Hard is STRONGLY suggested)
++# Hard=True
++# Soft=False
++#
++# Enable File Locking
++# Lock=True
++#
++# Enable READDIRPLUS on NFS version 3 mounts
++# Rdirplus=True
++#
++# Maximum Read Size (in Bytes)
++# Rsize=8k
++#
++# Maximum Write Size (in Bytes)
++# Wsize=8k
++#
++# Maximum Server Block Size (in Bytes)
++# Bsize=8k
++#
++# Ignore unknown mount options
++# Sloppy=False
++#
++# Share Data and Attribute Caches
++# Sharecache=True
++#
++# The amount of time, in tenths of a seconds, the client
++# will wait for a response from the server before retransmitting
++# the request.
++# Timeo=600
++#
++# Sets all attributes times to the same time (in seconds)
++# actimeo=30
++#
++# Server Mountd port mountport
++# mountport=4001
++#
++# Server Mountd Protocol
++# mountproto=tcp
++#
++# Server Mountd Version
++# mounvers=3
++#
++# Server Mountd Host
++# mounthost=hostname
++#
++# Server Port
++# Port=2049
++#
++# RPCGSS security flavors 
++# [none, sys, krb5, krb5i, krb5p ]
++# Sec=sys
+diff --git a/utils/mount/nfsmount.conf.man b/utils/mount/nfsmount.conf.man
+new file mode 100644
+index 0000000..12a3fe7
+--- /dev/null
++++ b/utils/mount/nfsmount.conf.man
+@@ -0,0 +1,87 @@
++.\"@(#)nfsmount.conf.5"
++.TH NFSMOUNT.CONF 5 "9 Mar 2008"
++.SH NAME
++nfsmount.conf - Configuration file for NFS mounts
++.SH SYNOPSIS
++Configuration file for NFS mounts that allows options
++to be set globally, per server or per mount point.
++.SH DESCRIPTION
++The configuration file is made up of multiple sections 
++followed by variables associated with that section.
++A section is defined by a string enclosed by 
++.BR [
++and 
++.BR ]
++branches.
++Variables are assignment statements that assign values 
++to particular variables using the  
++.BR = 
++operator, as in 
++.BR Proto=Tcp .
++Sections are broken up into three basic categories:
++Global options, Server options and Mount Point options.
++.HP
++.B [ NFSMount_Global_Options ]
++- This statically named section
++defines all of the global mount options that can be 
++applied to every NFS mount.
++.HP
++.B [ Server \(lqServer_Name\(rq ] 
++- This section defines all the mount options that should 
++be used on mounts to a particular NFS server. The 
++.I \(lqServer_Name\(rq
++strings needs to be surrounded by '\(lq' and 
++be an exact match of the server name used in the 
++.B mount
++command. 
++.HP
++.B [ MountPoint \(lqMount_Point\(rq ]
++- This section defines all the mount options that 
++should be used on a particular mount point.
++The 
++.I \(lqMount_Point\(rq
++string needs to be surrounded by '\(lq' and be an 
++exact match of the mount point used in the 
++.BR mount 
++command.
++.SH EXAMPLES
++.PP
++These are some example lines of how sections and variables
++are defined in the configuration file.
++.PP
++[ NFSMount_Global_Options ]
++.br
++    Proto=Tcp
++.RS
++.HP
++The TCP protocol will be used on every NFS mount.
++.HP
++.RE
++[ Server \(lqnfsserver.foo.com\(rq ]
++.br
++    rsize=32k
++.br
++    wsize=32k
++.HP
++.RS
++A 33k (32768 bytes) block size will be used as the read and write
++size on all mounts to the 'nfsserver.foo.com' server.
++.HP
++.RE
++.BR 
++[ MountPoint \(lq/export/home\(rq ]
++.br
++    Background=True
++.RS
++.HP
++All mounts to the '/export/home' export will be performed in
++the background (i.e. done asynchronously).
++.HP
++.SH FILES
++.TP 10n
++.I /etc/nfsmount.conf
++Default NFS mount configuration file
++.PD
++.SH SEE ALSO
++.BR nfs (5),
++.BR mount (8),
+diff --git a/utils/mountd/cache.c b/utils/mountd/cache.c
+index 9bbbfb3..e4e2f22 100644
+--- a/utils/mountd/cache.c
++++ b/utils/mountd/cache.c
+@@ -564,7 +564,7 @@ static void write_fsloc(FILE *f, struct exportent *ep, char *path)
+ 	release_replicas(servers);
+ }
+ 
+-static void write_secinfo(FILE *f, struct exportent *ep)
++static void write_secinfo(FILE *f, struct exportent *ep, int flag_mask)
+ {
+ 	struct sec_entry *p;
+ 
+@@ -578,7 +578,7 @@ static void write_secinfo(FILE *f, struct exportent *ep)
+ 	qword_printint(f, p - ep->e_secinfo);
+ 	for (p = ep->e_secinfo; p->flav; p++) {
+ 		qword_printint(f, p->flav->fnum);
+-		qword_printint(f, p->flags);
++		qword_printint(f, p->flags & flag_mask);
+ 	}
+ 
+ }
+@@ -590,16 +590,14 @@ static int dump_to_cache(FILE *f, char *domain, char *path, struct exportent *ex
+ 	qword_printint(f, time(0)+30*60);
+ 	if (exp) {
+ 		int different_fs = strcmp(path, exp->e_path) != 0;
+-		
+-		if (different_fs)
+-			qword_printint(f, exp->e_flags & ~NFSEXP_FSID);
+-		else
+-			qword_printint(f, exp->e_flags);
++		int flag_mask = different_fs ? ~NFSEXP_FSID : ~0;
++
++		qword_printint(f, exp->e_flags & flag_mask);
+ 		qword_printint(f, exp->e_anonuid);
+ 		qword_printint(f, exp->e_anongid);
+ 		qword_printint(f, exp->e_fsid);
+ 		write_fsloc(f, exp, path);
+-		write_secinfo(f, exp);
++		write_secinfo(f, exp, flag_mask);
+  		if (exp->e_uuid == NULL || different_fs) {
+  			char u[16];
+  			if (get_uuid(path, NULL, 16, u)) {
+diff --git a/utils/nfsstat/nfsstat.c b/utils/nfsstat/nfsstat.c
+index 7e9f327..fa46d5d 100644
+--- a/utils/nfsstat/nfsstat.c
++++ b/utils/nfsstat/nfsstat.c
+@@ -30,8 +30,8 @@ static unsigned int	cltproc2info[20], cltproc2info_old[20];	/* NFSv2 call counts
+ static unsigned int	srvproc3info[24], srvproc3info_old[24];	/* NFSv3 call counts ([0] == 22) */
+ static unsigned int	cltproc3info[24], cltproc3info_old[24];	/* NFSv3 call counts ([0] == 22) */
+ static unsigned int	srvproc4info[4], srvproc4info_old[4];	/* NFSv4 call counts ([0] == 2) */
+-static unsigned int	cltproc4info[37], cltproc4info_old[37];	/* NFSv4 call counts ([0] == 35) */
+-static unsigned int	srvproc4opsinfo[42], srvproc4opsinfo_old[42];	/* NFSv4 call counts ([0] == 40) */
++static unsigned int	cltproc4info[49], cltproc4info_old[49];	/* NFSv4 call counts ([0] == 35) */
++static unsigned int	srvproc4opsinfo[61], srvproc4opsinfo_old[61];	/* NFSv4 call counts ([0] == 40) */
+ static unsigned int	srvnetinfo[5], srvnetinfo_old[5];	/* 0  # of received packets
+ 								 * 1  UDP packets
+ 								 * 2  TCP packets
+@@ -93,24 +93,58 @@ static const char *	nfssrvproc4name[2] = {
+ 	"compound",
+ };
+ 
+-static const char *	nfscltproc4name[35] = {
++static const char *	nfscltproc4name[47] = {
+ 	"null",      "read",      "write",   "commit",      "open",        "open_conf",
+ 	"open_noat", "open_dgrd", "close",   "setattr",     "fsinfo",      "renew",
+ 	"setclntid", "confirm",   "lock",
+ 	"lockt",     "locku",     "access",  "getattr",     "lookup",      "lookup_root",
+ 	"remove",    "rename",    "link",    "symlink",     "create",      "pathconf",
+ 	"statfs",    "readlink",  "readdir", "server_caps", "delegreturn", "getacl",
+-	"setacl",    "fs_locations"
++	"setacl",    "fs_locations",
++	/* nfsv4.1 client ops */
++	"exchange_id",
++	"create_ses",
++	"destroy_ses",
++	"sequence",
++	"get_lease_t",
++	"layoutget",
++	"layoutcommit",
++	"layoutreturn",
++	"getdevlist",
++	"getdevinfo",
++	/* nfsv4.1 pnfs client ops to data server only */
++	"ds_write",
++	"ds_commit",
+ };
+ 
+-static const char *     nfssrvproc4opname[40] = {
++static const char *     nfssrvproc4opname[59] = {
+         "op0-unused",   "op1-unused", "op2-future",  "access",     "close",       "commit",
+         "create",       "delegpurge", "delegreturn", "getattr",    "getfh",       "link",
+         "lock",         "lockt",      "locku",       "lookup",     "lookup_root", "nverify",
+         "open",         "openattr",   "open_conf",   "open_dgrd",  "putfh",       "putpubfh",
+         "putrootfh",    "read",       "readdir",     "readlink",   "remove",      "rename",
+         "renew",        "restorefh",  "savefh",      "secinfo",    "setattr",     "setcltid",
+-        "setcltidconf", "verify",     "write",       "rellockowner"
++        "setcltidconf", "verify",     "write",       "rellockowner",
++	/* nfsv4.1 server ops */
++	"bc_ctl",
++	"bind_conn",
++	"exchange_id",
++	"create_ses",
++	"destroy_ses",
++	"free_stateid",
++	"getdirdeleg",
++	"getdevinfo",
++	"getdevlist",
++	"layoutcommit",
++	"layoutget",
++	"layoutreturn",
++	"secinfononam",
++	"sequence",
++	"set_ssv",
++	"test_stateid",
++	"want_deleg",
++	"destroy_clid",
++	"reclaim_comp",
+ };
+ 
+ #define LABEL_srvnet		"Server packet stats:\n"

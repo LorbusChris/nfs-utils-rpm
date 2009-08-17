@@ -1,6 +1,6 @@
-diff -up nfs-utils-1.2.0/support/export/xtab.c.save nfs-utils-1.2.0/support/export/xtab.c
---- nfs-utils-1.2.0/support/export/xtab.c.save	2009-07-13 13:49:23.000000000 -0400
-+++ nfs-utils-1.2.0/support/export/xtab.c	2009-07-13 13:50:38.000000000 -0400
+diff -up nfs-utils-1.2.0/support/export/xtab.c.orig nfs-utils-1.2.0/support/export/xtab.c
+--- nfs-utils-1.2.0/support/export/xtab.c.orig	2009-06-02 10:43:05.000000000 -0400
++++ nfs-utils-1.2.0/support/export/xtab.c	2009-08-17 07:33:13.000000000 -0400
 @@ -19,7 +19,9 @@
  #include "exportfs.h"
  #include "xio.h"
@@ -29,9 +29,9 @@ diff -up nfs-utils-1.2.0/support/export/xtab.c.save nfs-utils-1.2.0/support/expo
  			break;
  		case 2:
  			exp->m_exported = -1;/* may be exported */
-diff -up nfs-utils-1.2.0/support/include/exportfs.h.save nfs-utils-1.2.0/support/include/exportfs.h
---- nfs-utils-1.2.0/support/include/exportfs.h.save	2009-07-13 13:49:23.000000000 -0400
-+++ nfs-utils-1.2.0/support/include/exportfs.h	2009-07-13 13:49:51.000000000 -0400
+diff -up nfs-utils-1.2.0/support/include/exportfs.h.orig nfs-utils-1.2.0/support/include/exportfs.h
+--- nfs-utils-1.2.0/support/include/exportfs.h.orig	2009-06-02 10:43:05.000000000 -0400
++++ nfs-utils-1.2.0/support/include/exportfs.h	2009-08-17 07:33:13.000000000 -0400
 @@ -12,6 +12,17 @@
  #include <netdb.h>
  #include "nfslib.h"
@@ -50,9 +50,9 @@ diff -up nfs-utils-1.2.0/support/include/exportfs.h.save nfs-utils-1.2.0/support
  enum {
  	MCL_FQDN = 0,
  	MCL_SUBNETWORK,
-diff -up nfs-utils-1.2.0/support/include/nfs/export.h.save nfs-utils-1.2.0/support/include/nfs/export.h
---- nfs-utils-1.2.0/support/include/nfs/export.h.save	2009-07-13 13:49:23.000000000 -0400
-+++ nfs-utils-1.2.0/support/include/nfs/export.h	2009-07-13 13:49:51.000000000 -0400
+diff -up nfs-utils-1.2.0/support/include/nfs/export.h.orig nfs-utils-1.2.0/support/include/nfs/export.h
+--- nfs-utils-1.2.0/support/include/nfs/export.h.orig	2009-06-02 10:43:05.000000000 -0400
++++ nfs-utils-1.2.0/support/include/nfs/export.h	2009-08-17 07:33:13.000000000 -0400
 @@ -24,6 +24,7 @@
  #define NFSEXP_FSID		0x2000
  #define	NFSEXP_CROSSMOUNT	0x4000
@@ -62,9 +62,9 @@ diff -up nfs-utils-1.2.0/support/include/nfs/export.h.save nfs-utils-1.2.0/suppo
 +#define NFSEXP_ALLFLAGS		0x1FFFF
  
  #endif /* _NSF_EXPORT_H */
-diff -up nfs-utils-1.2.0/support/include/nfslib.h.save nfs-utils-1.2.0/support/include/nfslib.h
---- nfs-utils-1.2.0/support/include/nfslib.h.save	2009-07-13 13:49:23.000000000 -0400
-+++ nfs-utils-1.2.0/support/include/nfslib.h	2009-07-13 13:49:51.000000000 -0400
+diff -up nfs-utils-1.2.0/support/include/nfslib.h.orig nfs-utils-1.2.0/support/include/nfslib.h
+--- nfs-utils-1.2.0/support/include/nfslib.h.orig	2009-08-17 07:31:52.000000000 -0400
++++ nfs-utils-1.2.0/support/include/nfslib.h	2009-08-17 07:33:13.000000000 -0400
 @@ -88,6 +88,7 @@ struct exportent {
  	int             e_fslocmethod;
  	char *          e_fslocdata;
@@ -74,8 +74,8 @@ diff -up nfs-utils-1.2.0/support/include/nfslib.h.save nfs-utils-1.2.0/support/i
  };
  
 diff -up /dev/null nfs-utils-1.2.0/support/include/v4root.h
---- /dev/null	2009-07-13 07:44:43.606003629 -0400
-+++ nfs-utils-1.2.0/support/include/v4root.h	2009-07-13 13:49:57.000000000 -0400
+--- /dev/null	2009-08-13 17:25:29.612003011 -0400
++++ nfs-utils-1.2.0/support/include/v4root.h	2009-08-17 07:33:13.000000000 -0400
 @@ -0,0 +1,20 @@
 +/*
 + * Copyright (C) 2009 Red Hat <nfs@redhat.com>
@@ -97,9 +97,9 @@ diff -up /dev/null nfs-utils-1.2.0/support/include/v4root.h
 +extern void v4root_unset(void), v4root_set(void);
 +
 +#endif /* V4ROOT_H */
-diff -up nfs-utils-1.2.0/utils/mountd/auth.c.save nfs-utils-1.2.0/utils/mountd/auth.c
---- nfs-utils-1.2.0/utils/mountd/auth.c.save	2009-07-13 13:49:23.000000000 -0400
-+++ nfs-utils-1.2.0/utils/mountd/auth.c	2009-07-13 13:50:38.000000000 -0400
+diff -up nfs-utils-1.2.0/utils/mountd/auth.c.orig nfs-utils-1.2.0/utils/mountd/auth.c
+--- nfs-utils-1.2.0/utils/mountd/auth.c.orig	2009-06-02 10:43:05.000000000 -0400
++++ nfs-utils-1.2.0/utils/mountd/auth.c	2009-08-17 07:33:13.000000000 -0400
 @@ -20,6 +20,7 @@
  #include "exportfs.h"
  #include "mountd.h"
@@ -122,9 +122,9 @@ diff -up nfs-utils-1.2.0/utils/mountd/auth.c.save nfs-utils-1.2.0/utils/mountd/a
  	++counter;
  
  	return counter;
-diff -up nfs-utils-1.2.0/utils/mountd/cache.c.save nfs-utils-1.2.0/utils/mountd/cache.c
---- nfs-utils-1.2.0/utils/mountd/cache.c.save	2009-07-13 13:49:23.000000000 -0400
-+++ nfs-utils-1.2.0/utils/mountd/cache.c	2009-07-13 13:50:33.000000000 -0400
+diff -up nfs-utils-1.2.0/utils/mountd/cache.c.orig nfs-utils-1.2.0/utils/mountd/cache.c
+--- nfs-utils-1.2.0/utils/mountd/cache.c.orig	2009-08-17 07:31:52.000000000 -0400
++++ nfs-utils-1.2.0/utils/mountd/cache.c	2009-08-17 07:33:13.000000000 -0400
 @@ -32,23 +32,12 @@
  #include "xmalloc.h"
  #include "fsloc.h"
@@ -196,16 +196,7 @@ diff -up nfs-utils-1.2.0/utils/mountd/cache.c.save nfs-utils-1.2.0/utils/mountd/
  	if (found)
  		if (cache_export_ent(dom, found, found_path) < 0)
  			found = 0;
-@@ -590,7 +603,7 @@ static int dump_to_cache(FILE *f, char *
- 	qword_printint(f, time(0)+30*60);
- 	if (exp) {
- 		int different_fs = strcmp(path, exp->e_path) != 0;
--		
-+
- 		if (different_fs)
- 			qword_printint(f, exp->e_flags & ~NFSEXP_FSID);
- 		else
-@@ -631,6 +644,7 @@ void nfsd_export(FILE *f)
+@@ -629,6 +642,7 @@ void nfsd_export(FILE *f)
  	int found_type = 0;
  	struct in_addr addr;
  	struct hostent *he = NULL;
@@ -213,7 +204,7 @@ diff -up nfs-utils-1.2.0/utils/mountd/cache.c.save nfs-utils-1.2.0/utils/mountd/
  
  
  	if (readline(fileno(f), &lbuf, &lbuflen) != 1)
-@@ -665,10 +679,18 @@ void nfsd_export(FILE *f)
+@@ -663,10 +677,18 @@ void nfsd_export(FILE *f)
  				     path[l] == '/' &&
  				     is_mountpoint(path)))
  					/* ok */;
@@ -234,7 +225,7 @@ diff -up nfs-utils-1.2.0/utils/mountd/cache.c.save nfs-utils-1.2.0/utils/mountd/
  			if (use_ipaddr) {
  				if (he == NULL) {
  					if (!inet_aton(dom, &addr))
-@@ -707,17 +729,28 @@ void nfsd_export(FILE *f)
+@@ -705,17 +727,28 @@ void nfsd_export(FILE *f)
  	}
  
  	if (found) {
@@ -265,7 +256,7 @@ diff -up nfs-utils-1.2.0/utils/mountd/cache.c.save nfs-utils-1.2.0/utils/mountd/
  	if (dom) free(dom);
  	if (path) free(path);
  	if (he) free(he);
-@@ -745,7 +778,9 @@ void cache_open(void) 
+@@ -743,7 +776,9 @@ void cache_open(void) 
  		if (!manage_gids && cachelist[i].cache_handle == auth_unix_gid)
  			continue;
  		sprintf(path, "/proc/net/rpc/%s/channel", cachelist[i].cache_name);
@@ -276,9 +267,9 @@ diff -up nfs-utils-1.2.0/utils/mountd/cache.c.save nfs-utils-1.2.0/utils/mountd/
  	}
  }
  
-diff -up nfs-utils-1.2.0/utils/mountd/Makefile.am.save nfs-utils-1.2.0/utils/mountd/Makefile.am
---- nfs-utils-1.2.0/utils/mountd/Makefile.am.save	2009-07-13 13:49:23.000000000 -0400
-+++ nfs-utils-1.2.0/utils/mountd/Makefile.am	2009-07-13 13:49:57.000000000 -0400
+diff -up nfs-utils-1.2.0/utils/mountd/Makefile.am.orig nfs-utils-1.2.0/utils/mountd/Makefile.am
+--- nfs-utils-1.2.0/utils/mountd/Makefile.am.orig	2009-06-02 10:43:05.000000000 -0400
++++ nfs-utils-1.2.0/utils/mountd/Makefile.am	2009-08-17 07:33:13.000000000 -0400
 @@ -8,7 +8,7 @@ KPREFIX		= @kprefix@
  sbin_PROGRAMS	= mountd
  
@@ -289,8 +280,8 @@ diff -up nfs-utils-1.2.0/utils/mountd/Makefile.am.save nfs-utils-1.2.0/utils/mou
  	       ../../support/nfs/libnfs.a \
  	       ../../support/misc/libmisc.a \
 diff -up /dev/null nfs-utils-1.2.0/utils/mountd/v4root.c
---- /dev/null	2009-07-13 07:44:43.606003629 -0400
-+++ nfs-utils-1.2.0/utils/mountd/v4root.c	2009-07-13 13:50:44.000000000 -0400
+--- /dev/null	2009-08-13 17:25:29.612003011 -0400
++++ nfs-utils-1.2.0/utils/mountd/v4root.c	2009-08-17 07:33:13.000000000 -0400
 @@ -0,0 +1,409 @@
 +/*
 + * Copyright (C) 2009 Red Hat <nfs@redhat.com>
