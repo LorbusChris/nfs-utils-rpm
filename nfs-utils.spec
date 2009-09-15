@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.0
-Release: 10%{?dist}
+Release: 11%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -26,6 +26,7 @@ Patch100: nfs-utils-1.2.1-rc1.patch
 Patch101: nfs-utils-1.2.1-rc2.patch
 Patch102: nfs-utils-1.2.1-rc3.patch
 Patch103: nfs-utils-1.2.1-rc4.patch
+Patch104: nfs-utils-1.2.1-rc5.patch
 
 Patch200: nfs-utils-1.2.0-proots-rel5.patch
 
@@ -83,6 +84,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch101 -p1
 %patch102 -p1
 %patch103 -p1
+%patch104 -p1
 
 %patch200 -p1
 
@@ -256,6 +258,15 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Sep 15 2009 Steve Dickson <steved@redhat.com> 1.2.0-11
+- Added upstream 1.2.1-rc5 patch
+  - Added --sort --list functionality to nfs-iostat.py
+  - Fixed event handler in idmapd
+  - Added -o v4 support
+  - Disabled IPv6 support in nfsd
+  - Don't give client an empty flavor list
+  - Fixed gssed so it does not blindly caches machine credentials
+
 * Mon Aug 17 2009 Steve Dickson <steved@redhat.com> 1.2.0-10
 - Added upstream 1.2.1-rc4 patch
   - Fix bug when both crossmnt
