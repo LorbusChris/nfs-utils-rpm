@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.0
-Release: 11%{?dist}
+Release: 12%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -28,7 +28,7 @@ Patch102: nfs-utils-1.2.1-rc3.patch
 Patch103: nfs-utils-1.2.1-rc4.patch
 Patch104: nfs-utils-1.2.1-rc5.patch
 
-Patch200: nfs-utils-1.2.0-proots-rel5.patch
+Patch200: nfs-utils-1.2.0-v4root-rel6.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -258,6 +258,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Sep 23 2009 Steve Dickson <steved@redhat.com> 1.2.0-12
+- Updated to the latest pseudo root release (rel6).
+
 * Tue Sep 15 2009 Steve Dickson <steved@redhat.com> 1.2.0-11
 - Added upstream 1.2.1-rc5 patch
   - Added --sort --list functionality to nfs-iostat.py
