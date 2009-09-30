@@ -1,0 +1,307 @@
+diff --git a/utils/mount/parse_opt.c b/utils/mount/parse_opt.c
+index 1dfee8a..f0918f7 100644
+--- a/utils/mount/parse_opt.c
++++ b/utils/mount/parse_opt.c
+@@ -101,6 +101,37 @@ fail:
+ 	return NULL;
+ }
+ 
++static struct mount_option *option_dup(const struct mount_option *option)
++{
++	struct mount_option *new;
++
++	new = malloc(sizeof(*new));
++	if (!new)
++		return NULL;
++	
++	new->next = NULL;
++	new->prev = NULL;
++
++	new->keyword = strdup(option->keyword);
++	if (!new->keyword)
++		goto fail;
++
++	new->value = NULL;
++	if (option->value) {
++		new->value = strdup(option->value);
++		if (!new->value) {
++			free(new->keyword);
++			goto fail;
++		}
++	}
++
++	return new;
++
++fail:
++	free(new);
++	return NULL;
++}
++
+ static void option_destroy(struct mount_option *option)
+ {
+ 	free(option->keyword);
+@@ -229,6 +260,40 @@ fail:
+ }
+ 
+ /**
++ * po_dup - duplicate an existing list of options
++ * @options: pointer to mount options
++ *
++ */
++struct mount_options *po_dup(struct mount_options *source)
++{
++	struct mount_options *target;
++	struct mount_option *current;
++
++	if (!source)
++		return NULL;
++
++	target = options_create();
++	if (options_empty(source) || target == NULL)
++		return target;
++
++	current = source->head;
++	while (target->count < source->count) {
++		struct mount_option *option;
++
++		option = option_dup(current);
++		if (!option) {
++			po_destroy(target);
++			return NULL;
++		}
++
++		options_tail_insert(target, option);
++		current = current->next;
++	}
++
++	return target;
++}
++
++/**
+  * po_replace - replace mount options in one mount_options object with another
+  * @target: pointer to previously instantiated object to replace
+  * @source: pointer to object containing source mount options
+diff --git a/utils/mount/parse_opt.h b/utils/mount/parse_opt.h
+index f9243c3..2c0b5f4 100644
+--- a/utils/mount/parse_opt.h
++++ b/utils/mount/parse_opt.h
+@@ -38,6 +38,7 @@ typedef enum {
+ struct mount_options;
+ 
+ struct mount_options *	po_split(char *);
++struct mount_options *	po_dup(struct mount_options *);
+ void			po_replace(struct mount_options *,
+ 				   struct mount_options *);
+ po_return_t		po_join(struct mount_options *, char **);
+diff --git a/utils/mount/stropts.c b/utils/mount/stropts.c
+index 3eb661e..069bdc1 100644
+--- a/utils/mount/stropts.c
++++ b/utils/mount/stropts.c
+@@ -80,6 +80,8 @@ struct nfsmount_info {
+ 				*node,		/* mounted-on dir */
+ 				*type;		/* "nfs" or "nfs4" */
+ 	char			*hostname;	/* server's hostname */
++	struct sockaddr_storage	address;	/* server's address */
++	socklen_t		salen;		/* size of server's address */
+ 
+ 	struct mount_options	*options;	/* parsed mount options */
+ 	char			**extra_opts;	/* string for /etc/mtab */
+@@ -257,47 +259,35 @@ static int nfs_append_sloppy_option(struct mount_options *options)
+ }
+ 
+ /*
+- * Set up mandatory NFS mount options.
++ * Set up mandatory non-version specific NFS mount options.
+  *
+  * Returns 1 if successful; otherwise zero.
+  */
+ static int nfs_validate_options(struct nfsmount_info *mi)
+ {
+-	struct sockaddr_storage dummy;
+-	struct sockaddr *sap = (struct sockaddr *)&dummy;
+-	socklen_t salen = sizeof(dummy);
++	struct sockaddr *sap = (struct sockaddr *)&mi->address;
+ 
+ 	if (!nfs_parse_devname(mi->spec, &mi->hostname, NULL))
+ 		return 0;
+ 
+-	if (!nfs_name_to_address(mi->hostname, sap, &salen))
++	mi->salen = sizeof(mi->address);
++	if (!nfs_name_to_address(mi->hostname, sap, &mi->salen))
+ 		return 0;
+ 
+ 	if (!nfs_nfs_version(mi->options, &mi->version))
+ 		return 0;
+ 	if (strncmp(mi->type, "nfs4", 4) == 0)
+ 		mi->version = 4;
+-
+-	if (mi->version == 4) {
+-		if (!nfs_append_clientaddr_option(sap, salen, mi->options))
+-			return 0;
+-	} else {
+-		if (!nfs_fix_mounthost_option(mi->options))
+-			return 0;
+-		if (!mi->fake && !nfs_verify_lock_option(mi->options))
+-			return 0;
++	else {
++		char *option = po_get(mi->options, "proto");
++		if (option && strcmp(option, "rdma") == 0)
++			mi->version = 3;
+ 	}
+ 
+ 	if (!nfs_append_sloppy_option(mi->options))
+ 		return 0;
+ 
+-	if (!nfs_append_addr_option(sap, salen, mi->options))
+-		return 0;
+-
+-	/*
+-	 * Update option string to be recorded in /etc/mnttab
+-	 */
+-	if (po_join(mi->options, mi->extra_opts) == PO_FAILED)
++	if (!nfs_append_addr_option(sap, mi->salen, mi->options))
+ 		return 0;
+ 
+ 	return 1;
+@@ -489,17 +479,12 @@ out:
+  * Returns TRUE if successful, otherwise FALSE.
+  * "errno" is set to reflect the individual error.
+  */
+-static int nfs_try_mount(struct nfsmount_info *mi)
++static int nfs_sys_mount(struct nfsmount_info *mi, struct mount_options *opts)
+ {
+ 	char *options = NULL;
+ 	int result;
+ 
+-	if (mi->version != 4) {
+-		if (!nfs_rewrite_pmap_mount_options(mi->options))
+-			return 0;
+-	}
+-
+-	if (po_join(mi->options, &options) == PO_FAILED) {
++	if (po_join(opts, &options) == PO_FAILED) {
+ 		errno = EIO;
+ 		return 0;
+ 	}
+@@ -522,6 +507,121 @@ static int nfs_try_mount(struct nfsmount_info *mi)
+ }
+ 
+ /*
++ * For "-t nfs vers=2" or "-t nfs vers=3" mounts.
++ */
++static int nfs_try_mount_v3v2(struct nfsmount_info *mi)
++{
++	struct mount_options *options = po_dup(mi->options);
++	int result = 0;
++
++	if (!options) {
++		errno = ENOMEM;
++		return result;
++	}
++
++	if (!nfs_fix_mounthost_option(options)) {
++		errno = EINVAL;
++		goto out_fail;
++	}
++	if (!mi->fake && !nfs_verify_lock_option(options)) {
++		errno = EINVAL;
++		goto out_fail;
++	}
++
++	/*
++	 * Options we negotiate below may be stale by the time this
++	 * file system is unmounted.  In order to force umount.nfs
++	 * to renegotiate with the server, only write the user-
++	 * specified options, and not negotiated options, to /etc/mtab.
++	 */
++	if (po_join(options, mi->extra_opts) == PO_FAILED) {
++		errno = ENOMEM;
++		goto out_fail;
++	}
++
++	if (!nfs_rewrite_pmap_mount_options(options))
++		goto out_fail;
++
++	result = nfs_sys_mount(mi, options);
++
++out_fail:
++	po_destroy(options);
++	return result;
++}
++
++/*
++ * For "-t nfs -o vers=4" or "-t nfs4" mounts.
++ */
++static int nfs_try_mount_v4(struct nfsmount_info *mi)
++{
++	struct sockaddr *sap = (struct sockaddr *)&mi->address;
++	struct mount_options *options = po_dup(mi->options);
++	int result = 0;
++
++	if (!options) {
++		errno = ENOMEM;
++		return result;
++	}
++
++	if (mi->version == 0) {
++		if (po_append(options, "vers=4") == PO_FAILED) {
++			errno = EINVAL;
++			goto out_fail;
++		}
++	}
++
++	if (!nfs_append_clientaddr_option(sap, mi->salen, options)) {
++		errno = EINVAL;
++		goto out_fail;
++	}
++	/*
++	 * Update option string to be recorded in /etc/mtab.
++	 */
++	if (po_join(options, mi->extra_opts) == PO_FAILED) {
++		errno = ENOMEM;
++		return 0;
++	}
++
++	result = nfs_sys_mount(mi, options);
++
++out_fail:
++	po_destroy(options);
++	return result;
++}
++
++/*
++ * This is a single pass through the fg/bg loop.
++ *
++ * Returns TRUE if successful, otherwise FALSE.
++ * "errno" is set to reflect the individual error.
++ */
++static int nfs_try_mount(struct nfsmount_info *mi)
++{
++	int result = 0;
++
++	switch (mi->version) {
++	case 0:
++		if (linux_version_code() > MAKE_VERSION(2, 6, 31)) {
++			errno = 0;
++			result = nfs_try_mount_v4(mi);
++			if (errno != EPROTONOSUPPORT)
++				break;
++		}
++	case 2:
++	case 3:
++		result = nfs_try_mount_v3v2(mi);
++		break;
++	case 4:
++		result = nfs_try_mount_v4(mi);
++		break;
++	default:
++		errno = EIO;
++	}
++
++	return result;
++}
++
++/*
+  * Distinguish between permanent and temporary errors.
+  *
+  * Basically, we retry if communication with the server has

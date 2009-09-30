@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.0
-Release: 12%{?dist}
+Release: 13%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -27,6 +27,8 @@ Patch101: nfs-utils-1.2.1-rc2.patch
 Patch102: nfs-utils-1.2.1-rc3.patch
 Patch103: nfs-utils-1.2.1-rc4.patch
 Patch104: nfs-utils-1.2.1-rc5.patch
+Patch105: nfs-utils-1.2.1-rc6.patch
+Patch106: nfs-utils-1.2.0-mount-vers4.patch
 
 Patch200: nfs-utils-1.2.0-v4root-rel6.patch
 
@@ -85,6 +87,8 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch102 -p1
 %patch103 -p1
 %patch104 -p1
+%patch105 -p1
+%patch106 -p1
 
 %patch200 -p1
 
@@ -258,6 +262,13 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Sep 29 2009 Steve Dickson <steved@redhat.com> 1.2.0-13
+- Added upstream 1.2.1-rc5 patch
+  - mount.nfs: Support negotiation between v4, v3, and v2
+  - mount.nfs: Keep server's address in nfsmount_info
+  - mount.nfs: Sandbox each mount attempt
+  - mount.nfs: Support negotiation between v4, v3, and v2
+
 * Wed Sep 23 2009 Steve Dickson <steved@redhat.com> 1.2.0-12
 - Updated to the latest pseudo root release (rel6).
 
