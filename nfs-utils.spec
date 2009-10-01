@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.0
-Release: 13%{?dist}
+Release: 14%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -31,6 +31,9 @@ Patch105: nfs-utils-1.2.1-rc6.patch
 Patch106: nfs-utils-1.2.0-mount-vers4.patch
 
 Patch200: nfs-utils-1.2.0-v4root-rel6.patch
+
+Patch300: nfs-utils-1.2.0-mntconf-vers.patch
+Patch301: nfs-utils-1.2.0-mntconf-negation.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -91,6 +94,9 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch106 -p1
 
 %patch200 -p1
+
+%patch300 -p1
+%patch301 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -262,6 +268,14 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Sep 30 2009 Steve Dickson <steved@redhat.com> 1.2.0-14
+- Change the nfsmount.conf file to define v3 as the default 
+  protocol version.
+- Make sure versions set on the command line override version
+  set in nfsmount.conf
+- Make version rollbacks still work when versions are set in
+  nfsmount.conf
+
 * Tue Sep 29 2009 Steve Dickson <steved@redhat.com> 1.2.0-13
 - Added upstream 1.2.1-rc5 patch
   - mount.nfs: Support negotiation between v4, v3, and v2
