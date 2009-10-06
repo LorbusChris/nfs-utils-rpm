@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.0
-Release: 15%{?dist}
+Release: 16%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -268,6 +268,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Oct  5 2009 Steve Dickson <steved@redhat.com> 1.2.0-16
+- Fixed a whole where '-o v4' was not overriding the
+  version in the conf file.
+
 * Wed Sep 30 2009 Steve Dickson <steved@redhat.com> 1.2.0-15
 - Change the nfsmount.conf file to define v3 as the default 
   protocol version.
