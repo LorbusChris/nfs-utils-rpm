@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.0
-Release: 16%{?dist}
+Release: 17%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -28,12 +28,9 @@ Patch102: nfs-utils-1.2.1-rc3.patch
 Patch103: nfs-utils-1.2.1-rc4.patch
 Patch104: nfs-utils-1.2.1-rc5.patch
 Patch105: nfs-utils-1.2.1-rc6.patch
-Patch106: nfs-utils-1.2.0-mount-vers4.patch
+Patch106: nfs-utils-1.2.1-rc7.patch
 
-Patch200: nfs-utils-1.2.0-v4root-rel6.patch
-
-Patch300: nfs-utils-1.2.0-mntconf-vers.patch
-Patch301: nfs-utils-1.2.0-mntconf-negation.patch
+Patch200: nfs-utils-1.2.0-v4root-rel7.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -94,9 +91,6 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch106 -p1
 
 %patch200 -p1
-
-%patch300 -p1
-%patch301 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -268,6 +262,13 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Oct 26 09:23:45 EDT 2009
+- Updated to the latest pseudo root release (rel7).
+- Added upstream 1.2.1-rc7 patch which fixes:
+  - Stop ignoring the -o v4 option (bz 529407)
+  - Allow network protocol roll backs when proto is set
+    in the config file (bz 529864)
+
 * Mon Oct  5 2009 Steve Dickson <steved@redhat.com> 1.2.0-16
 - Fixed a whole where '-o v4' was not overriding the
   version in the conf file.

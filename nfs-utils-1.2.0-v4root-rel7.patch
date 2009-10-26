@@ -1,7 +1,6 @@
-diff --git a/support/export/xtab.c b/support/export/xtab.c
-index 3b1dcce..2a43193 100644
---- a/support/export/xtab.c
-+++ b/support/export/xtab.c
+diff -up nfs-utils-1.2.0/support/export/xtab.c.save nfs-utils-1.2.0/support/export/xtab.c
+--- nfs-utils-1.2.0/support/export/xtab.c.save	2009-10-20 08:46:50.000000000 -0400
++++ nfs-utils-1.2.0/support/export/xtab.c	2009-10-20 08:47:26.000000000 -0400
 @@ -19,7 +19,9 @@
  #include "exportfs.h"
  #include "xio.h"
@@ -12,7 +11,7 @@ index 3b1dcce..2a43193 100644
  static void cond_rename(char *newfile, char *oldfile);
  
  static int
-@@ -36,6 +38,8 @@ xtab_read(char *xtab, char *lockfn, int is_export)
+@@ -36,6 +38,8 @@ xtab_read(char *xtab, char *lockfn, int 
  	if ((lockid = xflock(lockfn, "r")) < 0)
  		return 0;
  	setexportent(xtab, "r");
@@ -21,7 +20,7 @@ index 3b1dcce..2a43193 100644
  	while ((xp = getexportent(is_export==0, 0)) != NULL) {
  		if (!(exp = export_lookup(xp->e_hostname, xp->e_path, is_export != 1)) &&
  		    !(exp = export_create(xp, is_export!=1))) {
-@@ -48,6 +52,8 @@ xtab_read(char *xtab, char *lockfn, int is_export)
+@@ -48,6 +52,8 @@ xtab_read(char *xtab, char *lockfn, int 
  		case 1:
  			exp->m_xtabent = 1;
  			exp->m_mayexport = 1;
@@ -30,10 +29,9 @@ index 3b1dcce..2a43193 100644
  			break;
  		case 2:
  			exp->m_exported = -1;/* may be exported */
-diff --git a/support/include/exportfs.h b/support/include/exportfs.h
-index a5cf482..1ad41e2 100644
---- a/support/include/exportfs.h
-+++ b/support/include/exportfs.h
+diff -up nfs-utils-1.2.0/support/include/exportfs.h.save nfs-utils-1.2.0/support/include/exportfs.h
+--- nfs-utils-1.2.0/support/include/exportfs.h.save	2009-10-20 08:46:50.000000000 -0400
++++ nfs-utils-1.2.0/support/include/exportfs.h	2009-10-20 08:47:07.000000000 -0400
 @@ -12,6 +12,17 @@
  #include <netdb.h>
  #include "nfslib.h"
@@ -52,10 +50,9 @@ index a5cf482..1ad41e2 100644
  enum {
  	MCL_FQDN = 0,
  	MCL_SUBNETWORK,
-diff --git a/support/include/nfs/export.h b/support/include/nfs/export.h
-index f7a99ba..76953ac 100644
---- a/support/include/nfs/export.h
-+++ b/support/include/nfs/export.h
+diff -up nfs-utils-1.2.0/support/include/nfs/export.h.save nfs-utils-1.2.0/support/include/nfs/export.h
+--- nfs-utils-1.2.0/support/include/nfs/export.h.save	2009-10-20 08:46:50.000000000 -0400
++++ nfs-utils-1.2.0/support/include/nfs/export.h	2009-10-20 08:47:07.000000000 -0400
 @@ -24,6 +24,7 @@
  #define NFSEXP_FSID		0x2000
  #define	NFSEXP_CROSSMOUNT	0x4000
@@ -65,10 +62,9 @@ index f7a99ba..76953ac 100644
 +#define NFSEXP_ALLFLAGS		0x1FFFF
  
  #endif /* _NSF_EXPORT_H */
-diff --git a/support/include/nfslib.h b/support/include/nfslib.h
-index 537a31e..e4777dd 100644
---- a/support/include/nfslib.h
-+++ b/support/include/nfslib.h
+diff -up nfs-utils-1.2.0/support/include/nfslib.h.save nfs-utils-1.2.0/support/include/nfslib.h
+--- nfs-utils-1.2.0/support/include/nfslib.h.save	2009-10-20 08:46:50.000000000 -0400
++++ nfs-utils-1.2.0/support/include/nfslib.h	2009-10-20 08:47:07.000000000 -0400
 @@ -88,6 +88,7 @@ struct exportent {
  	int             e_fslocmethod;
  	char *          e_fslocdata;
@@ -77,11 +73,9 @@ index 537a31e..e4777dd 100644
  	struct sec_entry e_secinfo[SECFLAVOR_COUNT+1];
  };
  
-diff --git a/support/include/v4root.h b/support/include/v4root.h
-new file mode 100644
-index 0000000..43b1d2e
---- /dev/null
-+++ b/support/include/v4root.h
+diff -up /dev/null nfs-utils-1.2.0/support/include/v4root.h
+--- /dev/null	2009-10-15 16:13:05.251004788 -0400
++++ nfs-utils-1.2.0/support/include/v4root.h	2009-10-20 08:47:16.000000000 -0400
 @@ -0,0 +1,20 @@
 +/*
 + * Copyright (C) 2009 Red Hat <nfs@redhat.com>
@@ -98,28 +92,14 @@ index 0000000..43b1d2e
 +
 +extern struct exportent *v4root_chkroot(int , unsigned int , char *);
 +extern struct exportent *v4root_export(char *, int);
-+extern struct exportent *v4root_create(char *, nfs_export *, int);
++extern struct exportent *v4root_lookup(char *, nfs_export *);
 +extern void v4root_free(struct exportent *);
 +extern void v4root_unset(void), v4root_set(void);
 +
 +#endif /* V4ROOT_H */
-diff --git a/utils/mountd/Makefile.am b/utils/mountd/Makefile.am
-index 1e76cf8..eba81fc 100644
---- a/utils/mountd/Makefile.am
-+++ b/utils/mountd/Makefile.am
-@@ -8,7 +8,7 @@ KPREFIX		= @kprefix@
- sbin_PROGRAMS	= mountd
- 
- mountd_SOURCES = mountd.c mount_dispatch.c auth.c rmtab.c cache.c \
--		 svc_run.c fsloc.c mountd.h
-+		 svc_run.c fsloc.c v4root.c mountd.h
- mountd_LDADD = ../../support/export/libexport.a \
- 	       ../../support/nfs/libnfs.a \
- 	       ../../support/misc/libmisc.a \
-diff --git a/utils/mountd/auth.c b/utils/mountd/auth.c
-index 575f207..041a745 100644
---- a/utils/mountd/auth.c
-+++ b/utils/mountd/auth.c
+diff -up nfs-utils-1.2.0/utils/mountd/auth.c.save nfs-utils-1.2.0/utils/mountd/auth.c
+--- nfs-utils-1.2.0/utils/mountd/auth.c.save	2009-10-20 08:46:50.000000000 -0400
++++ nfs-utils-1.2.0/utils/mountd/auth.c	2009-10-20 08:47:26.000000000 -0400
 @@ -20,6 +20,7 @@
  #include "exportfs.h"
  #include "mountd.h"
@@ -142,10 +122,9 @@ index 575f207..041a745 100644
  	++counter;
  
  	return counter;
-diff --git a/utils/mountd/cache.c b/utils/mountd/cache.c
-index e4e2f22..d631570 100644
---- a/utils/mountd/cache.c
-+++ b/utils/mountd/cache.c
+diff -up nfs-utils-1.2.0/utils/mountd/cache.c.save nfs-utils-1.2.0/utils/mountd/cache.c
+--- nfs-utils-1.2.0/utils/mountd/cache.c.save	2009-10-20 08:46:50.000000000 -0400
++++ nfs-utils-1.2.0/utils/mountd/cache.c	2009-10-20 08:47:21.000000000 -0400
 @@ -32,23 +32,12 @@
  #include "xmalloc.h"
  #include "fsloc.h"
@@ -233,14 +212,14 @@ index e4e2f22..d631570 100644
 +				else {
 +					/* See if the path is part of the psuedo root */
 +					if (v4root_needed && !v4root) 
-+						v4root = v4root_create(path, exp, TRUE); 
++						v4root = v4root_lookup(path, exp); 
  					continue;
 -			} else if (strcmp(path, exp->m_export.e_path) != 0)
 +				}
 +			} else if (strcmp(path, exp->m_export.e_path) != 0) {
 +				/* See if the path is part of the psuedo root */
 +				if (v4root_needed && !v4root) 
-+					v4root = v4root_create(path, exp, TRUE); 
++					v4root = v4root_lookup(path, exp); 
  				continue;
 +			}
  			if (use_ipaddr) {
@@ -277,7 +256,7 @@ index e4e2f22..d631570 100644
  	if (dom) free(dom);
  	if (path) free(path);
  	if (he) free(he);
-@@ -743,7 +776,9 @@ void cache_open(void)
+@@ -743,7 +776,9 @@ void cache_open(void) 
  		if (!manage_gids && cachelist[i].cache_handle == auth_unix_gid)
  			continue;
  		sprintf(path, "/proc/net/rpc/%s/channel", cachelist[i].cache_name);
@@ -288,12 +267,22 @@ index e4e2f22..d631570 100644
  	}
  }
  
-diff --git a/utils/mountd/v4root.c b/utils/mountd/v4root.c
-new file mode 100644
-index 0000000..8de2ab6
---- /dev/null
-+++ b/utils/mountd/v4root.c
-@@ -0,0 +1,420 @@
+diff -up nfs-utils-1.2.0/utils/mountd/Makefile.am.save nfs-utils-1.2.0/utils/mountd/Makefile.am
+--- nfs-utils-1.2.0/utils/mountd/Makefile.am.save	2009-10-20 08:46:50.000000000 -0400
++++ nfs-utils-1.2.0/utils/mountd/Makefile.am	2009-10-20 08:47:16.000000000 -0400
+@@ -8,7 +8,7 @@ KPREFIX		= @kprefix@
+ sbin_PROGRAMS	= mountd
+ 
+ mountd_SOURCES = mountd.c mount_dispatch.c auth.c rmtab.c cache.c \
+-		 svc_run.c fsloc.c mountd.h
++		 svc_run.c fsloc.c v4root.c mountd.h
+ mountd_LDADD = ../../support/export/libexport.a \
+ 	       ../../support/nfs/libnfs.a \
+ 	       ../../support/misc/libmisc.a \
+diff -up /dev/null nfs-utils-1.2.0/utils/mountd/v4root.c
+--- /dev/null	2009-10-15 16:13:05.251004788 -0400
++++ nfs-utils-1.2.0/utils/mountd/v4root.c	2009-10-20 08:47:33.000000000 -0400
+@@ -0,0 +1,414 @@
 +/*
 + * Copyright (C) 2009 Red Hat <nfs@redhat.com>
 + *
@@ -334,20 +323,21 @@ index 0000000..8de2ab6
 +
 +extern int get_uuid(char *path, char *uuid, int uuidlen, char *u);
 +
-+typedef struct _exports_t {
-+	TAILQ_ENTRY(_exports_t) list;
-+	char *path;
-+	void *head;
-+	char uuid_len;
-+	char uuid[sizeof(uuid_t)];
-+	struct exportent p_export;
-+} exports_t;
-+
 +#define HASH_TABLE_SIZE 1021
 +typedef struct _hash_head {
 +	TAILQ_HEAD(export_list, _exports_t) h_head;
 +} hash_head;
 +hash_head exports_tbl[HASH_TABLE_SIZE];
++
++typedef struct _exports_t {
++	TAILQ_ENTRY(_exports_t) list;
++	char *path;
++	hash_head *head;
++	char uuid_len;
++	char uuid[sizeof(uuid_t)];
++	struct exportent p_export;
++} exports_t;
++
 +
 +
 +static exports_t *hash_export_lookup(char *, unsigned int);
@@ -371,6 +361,8 @@ index 0000000..8de2ab6
 +void v4root_set(void);
 +void v4root_unset(void);
 +static int v4root_support(void);
++
++static struct exportent *v4root_create(char *, nfs_export *);
 +
 +int v4root_needed;
 +
@@ -467,8 +459,8 @@ index 0000000..8de2ab6
 +v4root_set()
 +{
 +	nfs_export	*exp, *nxt;
-+	int	i, slcnt;
-+	char *e_path, *path, *ptr, *comp;
++	int	i;
++	char *path, *ptr;
 +	char *hostname;
 +
 +	if (!v4root_needed)
@@ -482,42 +474,22 @@ index 0000000..8de2ab6
 +	for (i = 0; i < MCL_MAXTYPES; i++) {
 +		for (exp = exportlist[i].p_head; exp; exp = nxt) {
 +			nxt = exp->m_next;
-+			e_path = exp->m_export.e_path;
 +			hostname = exp->m_export.e_hostname;
 +
-+			slcnt = slash_count(e_path);
-+			if (slcnt == 1)
-+				continue;
-+			slcnt--; /* knock off the leanding '/' */
-+
-+			path = strdup(e_path);
-+			if (path == NULL) { 
-+				xlog(L_WARNING, "v4root_set: No memory for pseudo export");
-+				return;
-+			}
-+
-+			/*
-+			 * Run through each component of the path to
-+			 * see if a  pseudo export should be created.
-+			 */
-+			comp = path+1;
-+			do { 
-+				if ((ptr = strchr(comp, '/')) != NULL)
-+					*ptr = '\0';
-+
-+	  			if (export_lookup(hostname, path, 0) == NULL)
-+					if (v4root_create(path, exp, FALSE) == NULL) {
-+						xlog(L_WARNING, 
-+							"v4root_set: Unable to create pseudo export"
-+							"for '%s'", path);
++			path = strdup(exp->m_export.e_path);
++			ptr = path + 1;
++			while ((ptr = strchr(ptr, '/')) != NULL) {
++				*ptr = '\0';
++				if (export_lookup(hostname, path, 0) == NULL)
++					if (v4root_create(path, exp) == NULL) {
++						xlog(L_WARNING, "v4root_set: Unable to create"
++							"pseudo export for '%s'", path);
 +						break;
 +					}
++				*ptr = '/';
++				ptr++;
++			}
 +
-+				if (ptr) {
-+					*ptr = '/';
-+					comp = ptr+1; 
-+				}
-+			} while (--slcnt > 0);
 +			free(path);
 +		}
 +	}
@@ -541,52 +513,32 @@ index 0000000..8de2ab6
 +struct exportent *
 +v4root_chkroot(int fsidtype, unsigned int fsidnum, char *fhuuid)
 +{
-+	struct exportent *p_export = NULL;
-+
 +	if (pseudo_root == NULL)
 +		return NULL;
 +
-+	switch(fsidtype) {
-+		case FSID_NUM:
-+			if (fsidnum == _PSEUDO_ROOT_FSID) {
-+				p_export = &pseudo_root->m_export;
-+				strncpy(p_export->e_path, _PATH_PSEUDO_ROOT, 
-+					NFS_MAXPATHLEN);
-+			}
-+			break;
-+	}
++	if (fsidtype != FSID_NUM)
++		return NULL;
 +
-+	return p_export;
++	if (fsidnum != _PSEUDO_ROOT_FSID)
++		return NULL;
++
++	return &pseudo_root->m_export;
 +}
 +
 +/*
 + * Create a pseudo export, if one does not 
 + * already exist.
 + */
-+struct exportent *
-+v4root_create(char *path, nfs_export *exp, int docheck)
++static struct exportent *
++v4root_create(char *path, nfs_export *exp)
 +{
 +	static struct exportent *p_export = NULL;
 +	exports_t *pexp;
-+	char *epath = exp->m_export.e_path;
-+	int elen, plen;
 +	char uuid_len = sizeof(uuid_t);
 +	char uuid[sizeof(uuid_t)];
 +
 +	if (pseudo_root == NULL)
 +		return NULL;
-+
-+	if (docheck) {
-+
-+		/* Path needs to be a subset of e_path */
-+		elen = strlen(epath);
-+		plen = strlen(path);
-+		if (plen >= elen)
-+			return NULL;
-+
-+		if (memcmp(path, epath, plen) != 0)
-+			return NULL;
-+	}
 +
 +	/* Check to see if the export already exists */
 +	get_uuid(path, NULL, uuid_len, uuid);
@@ -616,6 +568,37 @@ index 0000000..8de2ab6
 +	hash_export_add(pexp, HASH(pexp->uuid, sizeof(uuid_t)));
 +
 +	xlog(D_CALL, "v4root_create: path '%s'", p_export->e_path);
++
++	return p_export;
++}
++
++/*
++ * See if the  pseudo export exists
++ */
++struct exportent *
++v4root_lookup(char *path, nfs_export *exp)
++{
++	static struct exportent *p_export = NULL;
++	char *epath = exp->m_export.e_path;
++	int elen, plen;
++	char uuid_len = sizeof(uuid_t);
++	char uuid[sizeof(uuid_t)];
++
++	if (pseudo_root == NULL)
++		return NULL;
++
++	/* Path needs to be a subset of e_path */
++	elen = strlen(epath);
++	plen = strlen(path);
++	if (plen >= elen)
++		return NULL;
++
++	if (memcmp(path, epath, plen) != 0)
++		return NULL;
++
++	/* Now to see if the export exists */
++	get_uuid(path, NULL, uuid_len, uuid);
++	p_export = v4root_export(uuid, uuid_len);
 +
 +	return p_export;
 +}
