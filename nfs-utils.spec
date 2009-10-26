@@ -262,7 +262,7 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
-* Mon Oct 26 09:23:45 EDT 2009
+* Mon Oct 26 2009 Steve Dickson <steved@redhat.com> 1.2.0-17
 - Updated to the latest pseudo root release (rel7).
 - Added upstream 1.2.1-rc7 patch which fixes:
   - Stop ignoring the -o v4 option (bz 529407)
