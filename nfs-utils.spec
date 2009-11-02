@@ -31,6 +31,7 @@ Patch105: nfs-utils-1.2.1-rc6.patch
 Patch106: nfs-utils-1.2.1-rc7.patch
 
 Patch200: nfs-utils-1.2.0-v4root-rel7.patch
+Patch201: nfs-utils-1.2.0-v4-enoent.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -91,6 +92,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch106 -p1
 
 %patch200 -p1
+%patch201 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -262,12 +264,14 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
-* Mon Oct 26 2009 Steve Dickson <steved@redhat.com> 1.2.0-17
+* Mon Nov 2 2009 Steve Dickson <steved@redhat.com> 1.2.0-17
 - Updated to the latest pseudo root release (rel7).
 - Added upstream 1.2.1-rc7 patch which fixes:
   - Stop ignoring the -o v4 option (bz 529407)
   - Allow network protocol roll backs when proto is set
     in the config file (bz 529864)
+- v4 mounts will roll back to v3 mounts when the mount
+  fails with ENOENT. 
 
 * Mon Oct  5 2009 Steve Dickson <steved@redhat.com> 1.2.0-16
 - Fixed a whole where '-o v4' was not overriding the
