@@ -10,7 +10,7 @@
 # Provides: rpcidmapd
 # Required-Start: $network $syslog
 # Required-Stop: $network $syslog
-# Default-Start: 2 3 4 5
+# Default-Start: 3 4 5
 # Default-Stop: 0 1 6
 # Short-Description: Starts the NFSv4 id mapping daemon
 # Description: NFS is a popular protocol for file sharing across \

@@ -2,7 +2,7 @@
 #
 # rpcsvcgssd    Start up and shut down RPCSEC GSS daemon
 #
-# chkconfig: - 19 69
+# chkconfig: - 31 69
 # description: Starts user-level daemon that manages RPCSEC GSS contexts \
 #	       for the NFS server.
 
@@ -10,7 +10,6 @@
 # Provides: rpcsvcgssd
 # Required-Start: $network $syslog
 # Required-Stop: $network $syslog
-# Default-Start: 2 3 4 5
 # Default-Stop: 0 1 6
 # Short-Description: Starts the RPCSEC GSS server daemon
 # Description: NFS is a popular protocol for file sharing across \
