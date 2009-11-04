@@ -1,8 +1,8 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
-Version: 1.2.0
-Release: 18%{?dist}
+Version: 1.2.1
+Release: 1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -22,16 +22,7 @@ Patch00: nfs-utils-1.0.5-statdpath.patch
 Patch01: nfs-utils-1.1.0-smnotify-path.patch
 Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 
-Patch100: nfs-utils-1.2.1-rc1.patch
-Patch101: nfs-utils-1.2.1-rc2.patch
-Patch102: nfs-utils-1.2.1-rc3.patch
-Patch103: nfs-utils-1.2.1-rc4.patch
-Patch104: nfs-utils-1.2.1-rc5.patch
-Patch105: nfs-utils-1.2.1-rc6.patch
-Patch106: nfs-utils-1.2.1-rc7.patch
-
 Patch200: nfs-utils-1.2.0-v4root-rel7.patch
-Patch201: nfs-utils-1.2.0-v4-enoent.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -83,16 +74,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch01 -p1
 %patch02 -p1
 
-%patch100 -p1
-%patch101 -p1
-%patch102 -p1
-%patch103 -p1
-%patch104 -p1
-%patch105 -p1
-%patch106 -p1
-
 %patch200 -p1
-%patch201 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -264,6 +246,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Nov 4 2009 Steve Dickson <steved@redhat.com> 1.2.1-1
+- Updated to latest upstream release: 1.2.0
+
 * Tue Nov 3 2009 Steve Dickson <steved@redhat.com> 1.2.0-18
 - Reworked and remove some of the Default-Start/Stop stanzas
   in the init scripts (bz 531425)
