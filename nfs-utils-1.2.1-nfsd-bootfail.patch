@@ -1,0 +1,25 @@
+commit 2905358524c0835311501bad04c521479b0525ff
+Author: Steve Dickson <steved@redhat.com>
+Date:   Thu Nov 12 14:16:12 2009 -0500
+
+    Remove the AI_ADDRCONFIG hint flag to getaddrinfo() when it's
+    call by nfsd to set up the file descriptors that are
+    sent to the kernel. The flag causes the getaddrinfo()
+    to fail, with EAI_NONAME, when there is not a non-loopback
+    network interface configured.
+    
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff --git a/utils/nfsd/nfssvc.c b/utils/nfsd/nfssvc.c
+index 12d3253..b8028bb 100644
+--- a/utils/nfsd/nfssvc.c
++++ b/utils/nfsd/nfssvc.c
+@@ -212,7 +212,7 @@ int
+ nfssvc_set_sockets(const int family, const unsigned int protobits,
+ 		   const char *host, const char *port)
+ {
+-	struct addrinfo hints = { .ai_flags = AI_PASSIVE | AI_ADDRCONFIG };
++	struct addrinfo hints = { .ai_flags = AI_PASSIVE };
+ 
+ 	hints.ai_family = family;
+ 
