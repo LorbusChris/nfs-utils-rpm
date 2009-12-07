@@ -24,6 +24,7 @@ Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 
 Patch200: nfs-utils-1.2.0-v4root-rel9.patch
 Patch201: nfs-utils-1.2.1-nfsd-bootfail.patch
+Patch202: nfs-utils-1.2.1-mount-eperm.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -77,6 +78,7 @@ This package also contains the mount.nfs and umount.nfs program.
 
 %patch200 -p1
 %patch201 -p1
+%patch202 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -249,7 +251,8 @@ fi
 
 %changelog
 * Mon Dec  7 2009 Steve Dickson <steved@redhat.com> 1.2.1-4
-- Updated to the latest pseudo root release (rel9).
+- Updated to the latest pseudo root release (rel9) (bz 538609).
+- mount.nfs: Retry v4 mounts with v3 on ENOENT errors
 
 * Thu Nov 12 2009 Steve Dickson <steved@redhat.com> 1.2.1-3
 - Stop rpc.nfsd from failing to startup when the network
