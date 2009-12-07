@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.1
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -22,7 +22,7 @@ Patch00: nfs-utils-1.0.5-statdpath.patch
 Patch01: nfs-utils-1.1.0-smnotify-path.patch
 Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 
-Patch200: nfs-utils-1.2.0-v4root-rel8.patch
+Patch200: nfs-utils-1.2.0-v4root-rel9.patch
 Patch201: nfs-utils-1.2.1-nfsd-bootfail.patch
 
 Group: System Environment/Daemons
@@ -248,6 +248,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Dec  7 2009 Steve Dickson <steved@redhat.com> 1.2.1-4
+- Updated to the latest pseudo root release (rel9).
+
 * Thu Nov 12 2009 Steve Dickson <steved@redhat.com> 1.2.1-3
 - Stop rpc.nfsd from failing to startup when the network
   is down (bz 532270)
