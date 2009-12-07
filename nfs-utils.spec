@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.1
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -250,9 +250,11 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Dec  7 2009 Steve Dickson <steved@redhat.com> 1.2.1-5
+- mount.nfs: Retry v4 mounts with v3 on ENOENT errors
+
 * Mon Dec  7 2009 Steve Dickson <steved@redhat.com> 1.2.1-4
 - Updated to the latest pseudo root release (rel9) (bz 538609).
-- mount.nfs: Retry v4 mounts with v3 on ENOENT errors
 
 * Thu Nov 12 2009 Steve Dickson <steved@redhat.com> 1.2.1-3
 - Stop rpc.nfsd from failing to startup when the network
