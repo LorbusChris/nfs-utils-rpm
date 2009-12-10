@@ -172,10 +172,10 @@ index 888fd8c..179ef17 100644
  					break;
 diff --git a/utils/mountd/v4root.c b/utils/mountd/v4root.c
 new file mode 100644
-index 0000000..817dfb4
+index 0000000..b1e483a
 --- /dev/null
 +++ b/utils/mountd/v4root.c
-@@ -0,0 +1,228 @@
+@@ -0,0 +1,218 @@
 +/*
 + * Copyright (C) 2009 Red Hat <nfs@redhat.com>
 + *
@@ -375,12 +375,6 @@ index 0000000..817dfb4
 +		}
 +	}
 +
-+	if (insecure && secflavors) {
-+		xlog(L_WARNING, "WARNING: The 'sec=' and 'insecure' export options "
-+			"are incompatible, causing the security flavors set by "
-+			"'sec=' to be ignored on V4 exports");
-+	}
-+
 +	/*
 +	 * If there are any insecure exports, the pseudo root
 +	 * also has to be insecure
@@ -391,16 +385,12 @@ index 0000000..817dfb4
 +
 +	/*
 +	 * Make sure the pseudo root is accessible from all
-+	 * security flavors unless the insecure port is set,
-+	 * which cause the kernel to silently fail v4 mounts 
-+	 * with security flavors set.
++	 * security flavors when it needs to be.
 +	 */
-+	if (secflavors && !insecure) {
-+		if (!flavors_setall(proot)) {
-+			xlog(L_WARNING, "v4root_set: Unable to set security "
-+				"flavors on pseudo root");
-+		}
++	if (secflavors && !flavors_setall(proot)) {
++		xlog(L_WARNING, "v4root_set: Unable to set security "
++			"flavors on pseudo root");
 +	}
-+}
 +
++}
 +
