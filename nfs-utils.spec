@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.1
-Release: 6%{?dist}
+Release: 7%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -22,9 +22,9 @@ Patch00: nfs-utils-1.0.5-statdpath.patch
 Patch01: nfs-utils-1.1.0-smnotify-path.patch
 Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 
+Patch100: nfs-utils-1.2.2-rc3.patch
+
 Patch200: nfs-utils-1.2.0-v4root-rel9.patch
-Patch201: nfs-utils-1.2.1-nfsd-bootfail.patch
-Patch202: nfs-utils-1.2.1-mount-eperm.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -76,9 +76,9 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch01 -p1
 %patch02 -p1
 
+%patch100 -p1
+
 %patch200 -p1
-%patch201 -p1
-%patch202 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -250,6 +250,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Dec 14 2009 Steve Dickson <steved@redhat.com> 1.2.1-7
+- Updated to latest upstream RC release: nfs-utils-1-2-2-rc3
+
 * Thu Dec 10 2009 Steve Dickson <steved@redhat.com> 1.2.1-6
 - Update the  pseudo root to handle security flavors better.
 
