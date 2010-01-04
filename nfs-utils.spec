@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.1
-Release: 7%{?dist}
+Release: 8%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -23,6 +23,7 @@ Patch01: nfs-utils-1.1.0-smnotify-path.patch
 Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 
 Patch100: nfs-utils-1.2.2-rc3.patch
+Patch101: nfs-utils-1.2.1-mount-ipv6-typo.patch
 
 Patch200: nfs-utils-1.2.0-v4root-rel9.patch
 
@@ -77,6 +78,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch02 -p1
 
 %patch100 -p1
+%patch101 -p1
 
 %patch200 -p1
 
@@ -250,6 +252,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Jan  4 2010 Steve Dickson <steved@redhat.com> 1.2.1-8
+- mount.nfs: don't use IPv6 unless IPV6_SUPPORTED is set
+
 * Mon Dec 14 2009 Steve Dickson <steved@redhat.com> 1.2.1-7
 - Updated to latest upstream RC release: nfs-utils-1-2-2-rc3
 
