@@ -1,6 +1,6 @@
 diff -up nfs-utils-1.2.1/configure.ac.orig nfs-utils-1.2.1/configure.ac
 --- nfs-utils-1.2.1/configure.ac.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/configure.ac	2010-01-12 06:07:40.754815941 -0500
++++ nfs-utils-1.2.1/configure.ac	2010-01-12 07:38:06.661005448 -0500
 @@ -402,6 +402,7 @@ AC_CONFIG_FILES([
  	support/include/Makefile
  	support/misc/Makefile
@@ -21,7 +21,7 @@ diff -up nfs-utils-1.2.1/configure.ac.orig nfs-utils-1.2.1/configure.ac
  
 diff -up nfs-utils-1.2.1/.gitignore.orig nfs-utils-1.2.1/.gitignore
 --- nfs-utils-1.2.1/.gitignore.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/.gitignore	2010-01-12 06:07:40.753815840 -0500
++++ nfs-utils-1.2.1/.gitignore	2010-01-12 07:38:06.660003996 -0500
 @@ -55,10 +55,15 @@ support/export/mount.h
  support/export/mount_clnt.c
  support/export/mount_xdr.c
@@ -44,7 +44,7 @@ diff -up nfs-utils-1.2.1/.gitignore.orig nfs-utils-1.2.1/.gitignore
  # generic editor backup et al
 diff -up nfs-utils-1.2.1/Makefile.am.orig nfs-utils-1.2.1/Makefile.am
 --- nfs-utils-1.2.1/Makefile.am.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/Makefile.am	2010-01-12 06:07:40.753815840 -0500
++++ nfs-utils-1.2.1/Makefile.am	2010-01-12 07:38:06.661005448 -0500
 @@ -2,7 +2,7 @@
  
  AUTOMAKE_OPTIONS = foreign
@@ -56,7 +56,7 @@ diff -up nfs-utils-1.2.1/Makefile.am.orig nfs-utils-1.2.1/Makefile.am
  
 diff -up nfs-utils-1.2.1/support/export/client.c.orig nfs-utils-1.2.1/support/export/client.c
 --- nfs-utils-1.2.1/support/export/client.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/support/export/client.c	2010-01-12 06:07:40.755815903 -0500
++++ nfs-utils-1.2.1/support/export/client.c	2010-01-12 07:38:06.662981799 -0500
 @@ -297,7 +297,7 @@ name_cmp(char *a, char *b)
  	/* compare strings a and b, but only upto ',' in a */
  	while (*a && *b && *a != ',' && *a == *b)
@@ -68,7 +68,7 @@ diff -up nfs-utils-1.2.1/support/export/client.c.orig nfs-utils-1.2.1/support/ex
  	if (!*a || *a == ',') return -1;
 diff -up nfs-utils-1.2.1/support/include/ha-callout.h.orig nfs-utils-1.2.1/support/include/ha-callout.h
 --- nfs-utils-1.2.1/support/include/ha-callout.h.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/support/include/ha-callout.h	2010-01-12 06:07:40.756815715 -0500
++++ nfs-utils-1.2.1/support/include/ha-callout.h	2010-01-12 07:38:06.663961173 -0500
 @@ -53,11 +53,7 @@ ha_callout(char *event, char *arg1, char
  		default: pid = waitpid(pid, &ret, 0);
    	}
@@ -83,7 +83,7 @@ diff -up nfs-utils-1.2.1/support/include/ha-callout.h.orig nfs-utils-1.2.1/suppo
  #endif
 diff -up nfs-utils-1.2.1/support/include/Makefile.am.orig nfs-utils-1.2.1/support/include/Makefile.am
 --- nfs-utils-1.2.1/support/include/Makefile.am.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/support/include/Makefile.am	2010-01-12 06:07:40.756815715 -0500
++++ nfs-utils-1.2.1/support/include/Makefile.am	2010-01-12 07:38:06.662981799 -0500
 @@ -9,6 +9,8 @@ noinst_HEADERS = \
  	nfs_mntent.h \
  	nfs_paths.h \
@@ -95,7 +95,7 @@ diff -up nfs-utils-1.2.1/support/include/Makefile.am.orig nfs-utils-1.2.1/suppor
  	xio.h \
 diff -up nfs-utils-1.2.1/support/include/nfsrpc.h.orig nfs-utils-1.2.1/support/include/nfsrpc.h
 --- nfs-utils-1.2.1/support/include/nfsrpc.h.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/support/include/nfsrpc.h	2010-01-12 06:07:40.757815668 -0500
++++ nfs-utils-1.2.1/support/include/nfsrpc.h	2010-01-12 07:38:06.663961173 -0500
 @@ -90,6 +90,18 @@ extern CLIENT		*nfs_get_priv_rpcclient( 
  				struct timeval *);
  
@@ -116,8 +116,8 @@ diff -up nfs-utils-1.2.1/support/include/nfsrpc.h.orig nfs-utils-1.2.1/support/i
   */
  extern char		*nfs_sockaddr2universal(const struct sockaddr *);
 diff -up nfs-utils-1.2.1/support/include/nsm.h.orig nfs-utils-1.2.1/support/include/nsm.h
---- nfs-utils-1.2.1/support/include/nsm.h.orig	2010-01-12 06:07:40.757815668 -0500
-+++ nfs-utils-1.2.1/support/include/nsm.h	2010-01-12 06:07:40.758815846 -0500
+--- nfs-utils-1.2.1/support/include/nsm.h.orig	2010-01-12 07:38:06.664904773 -0500
++++ nfs-utils-1.2.1/support/include/nsm.h	2010-01-12 07:38:06.664904773 -0500
 @@ -0,0 +1,66 @@
 +/*
 + * Copyright 2009 Oracle.  All rights reserved.
@@ -187,7 +187,7 @@ diff -up nfs-utils-1.2.1/support/include/nsm.h.orig nfs-utils-1.2.1/support/incl
 +#endif	/* !NFS_UTILS_SUPPORT_NSM_H */
 diff -up nfs-utils-1.2.1/support/Makefile.am.orig nfs-utils-1.2.1/support/Makefile.am
 --- nfs-utils-1.2.1/support/Makefile.am.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/support/Makefile.am	2010-01-12 06:07:40.755815903 -0500
++++ nfs-utils-1.2.1/support/Makefile.am	2010-01-12 07:38:06.661819419 -0500
 @@ -1,6 +1,6 @@
  ## Process this file with automake to produce Makefile.in
  
@@ -198,7 +198,7 @@ diff -up nfs-utils-1.2.1/support/Makefile.am.orig nfs-utils-1.2.1/support/Makefi
  
 diff -up nfs-utils-1.2.1/support/nfs/getport.c.orig nfs-utils-1.2.1/support/nfs/getport.c
 --- nfs-utils-1.2.1/support/nfs/getport.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/support/nfs/getport.c	2010-01-12 06:07:40.758815846 -0500
++++ nfs-utils-1.2.1/support/nfs/getport.c	2010-01-12 07:38:06.665932138 -0500
 @@ -199,7 +199,63 @@ static CLIENT *nfs_gp_get_rpcbclient(str
  	return clnt;
  }
@@ -331,8 +331,8 @@ diff -up nfs-utils-1.2.1/support/nfs/getport.c.orig nfs-utils-1.2.1/support/nfs/
  		return 0;
  
 diff -up nfs-utils-1.2.1/support/nsm/file.c.orig nfs-utils-1.2.1/support/nsm/file.c
---- nfs-utils-1.2.1/support/nsm/file.c.orig	2010-01-12 06:07:40.760815569 -0500
-+++ nfs-utils-1.2.1/support/nsm/file.c	2010-01-12 06:07:40.760815569 -0500
+--- nfs-utils-1.2.1/support/nsm/file.c.orig	2010-01-12 07:38:06.667961138 -0500
++++ nfs-utils-1.2.1/support/nsm/file.c	2010-01-12 07:38:06.667961138 -0500
 @@ -0,0 +1,843 @@
 +/*
 + * Copyright 2009 Oracle.  All rights reserved.
@@ -1178,8 +1178,8 @@ diff -up nfs-utils-1.2.1/support/nsm/file.c.orig nfs-utils-1.2.1/support/nsm/fil
 +	nsm_delete_host(NSM_NOTIFY_DIR, hostname);
 +}
 diff -up nfs-utils-1.2.1/support/nsm/Makefile.am.orig nfs-utils-1.2.1/support/nsm/Makefile.am
---- nfs-utils-1.2.1/support/nsm/Makefile.am.orig	2010-01-12 06:07:40.759815628 -0500
-+++ nfs-utils-1.2.1/support/nsm/Makefile.am	2010-01-12 06:07:40.759815628 -0500
+--- nfs-utils-1.2.1/support/nsm/Makefile.am.orig	2010-01-12 07:38:06.666961126 -0500
++++ nfs-utils-1.2.1/support/nsm/Makefile.am	2010-01-12 07:38:06.666961126 -0500
 @@ -0,0 +1,45 @@
 +## Process this file with automake to produce Makefile.in
 +
@@ -1227,8 +1227,8 @@ diff -up nfs-utils-1.2.1/support/nsm/Makefile.am.orig nfs-utils-1.2.1/support/ns
 +
 +CLEANFILES = $(GENFILES) $(top_builddir)/support/include/sm_inter.h
 diff -up nfs-utils-1.2.1/support/nsm/sm_inter.x.orig nfs-utils-1.2.1/support/nsm/sm_inter.x
---- nfs-utils-1.2.1/support/nsm/sm_inter.x.orig	2010-01-12 06:07:40.761826674 -0500
-+++ nfs-utils-1.2.1/support/nsm/sm_inter.x	2010-01-12 06:07:40.761826674 -0500
+--- nfs-utils-1.2.1/support/nsm/sm_inter.x.orig	2010-01-12 07:38:06.667961138 -0500
++++ nfs-utils-1.2.1/support/nsm/sm_inter.x	2010-01-12 07:38:06.667961138 -0500
 @@ -0,0 +1,131 @@
 +/*
 + * Copyright (C) 1986 Sun Microsystems, Inc.
@@ -1362,8 +1362,8 @@ diff -up nfs-utils-1.2.1/support/nsm/sm_inter.x.orig nfs-utils-1.2.1/support/nsm
 +
 +%#define SM_INTER_X
 diff -up nfs-utils-1.2.1/tests/Makefile.am.orig nfs-utils-1.2.1/tests/Makefile.am
---- nfs-utils-1.2.1/tests/Makefile.am.orig	2010-01-12 06:07:40.761826674 -0500
-+++ nfs-utils-1.2.1/tests/Makefile.am	2010-01-12 06:07:40.762888773 -0500
+--- nfs-utils-1.2.1/tests/Makefile.am.orig	2010-01-12 07:38:06.669034349 -0500
++++ nfs-utils-1.2.1/tests/Makefile.am	2010-01-12 07:38:06.669034349 -0500
 @@ -0,0 +1,13 @@
 +## Process this file with automake to produce Makefile.in
 +
@@ -1379,8 +1379,8 @@ diff -up nfs-utils-1.2.1/tests/Makefile.am.orig nfs-utils-1.2.1/tests/Makefile.a
 +
 +TESTS = t0001-statd-basic-mon-unmon.sh
 diff -up nfs-utils-1.2.1/tests/nsm_client/Makefile.am.orig nfs-utils-1.2.1/tests/nsm_client/Makefile.am
---- nfs-utils-1.2.1/tests/nsm_client/Makefile.am.orig	2010-01-12 06:07:40.762888773 -0500
-+++ nfs-utils-1.2.1/tests/nsm_client/Makefile.am	2010-01-12 06:07:40.762888773 -0500
+--- nfs-utils-1.2.1/tests/nsm_client/Makefile.am.orig	2010-01-12 07:38:06.669818335 -0500
++++ nfs-utils-1.2.1/tests/nsm_client/Makefile.am	2010-01-12 07:38:06.669818335 -0500
 @@ -0,0 +1,45 @@
 +## Process this file with automake to produce Makefile.in
 +
@@ -1428,8 +1428,8 @@ diff -up nfs-utils-1.2.1/tests/nsm_client/Makefile.am.orig nfs-utils-1.2.1/tests
 +CLEANFILES = $(GENFILES)
 +
 diff -up nfs-utils-1.2.1/tests/nsm_client/nlm_sm_inter.x.orig nfs-utils-1.2.1/tests/nsm_client/nlm_sm_inter.x
---- nfs-utils-1.2.1/tests/nsm_client/nlm_sm_inter.x.orig	2010-01-12 06:07:40.763888991 -0500
-+++ nfs-utils-1.2.1/tests/nsm_client/nlm_sm_inter.x	2010-01-12 06:07:40.763888991 -0500
+--- nfs-utils-1.2.1/tests/nsm_client/nlm_sm_inter.x.orig	2010-01-12 07:38:06.670828605 -0500
++++ nfs-utils-1.2.1/tests/nsm_client/nlm_sm_inter.x	2010-01-12 07:38:06.670828605 -0500
 @@ -0,0 +1,43 @@
 +/*
 + * Copyright (C) 1995, 1997-1999 Jeffrey A. Uphoff
@@ -1475,8 +1475,8 @@ diff -up nfs-utils-1.2.1/tests/nsm_client/nlm_sm_inter.x.orig nfs-utils-1.2.1/te
 +	opaque priv[SM_PRIV_SIZE]; /* stored private information */
 +};
 diff -up nfs-utils-1.2.1/tests/nsm_client/nsm_client.c.orig nfs-utils-1.2.1/tests/nsm_client/nsm_client.c
---- nfs-utils-1.2.1/tests/nsm_client/nsm_client.c.orig	2010-01-12 06:07:40.764889070 -0500
-+++ nfs-utils-1.2.1/tests/nsm_client/nsm_client.c	2010-01-12 06:07:40.764889070 -0500
+--- nfs-utils-1.2.1/tests/nsm_client/nsm_client.c.orig	2010-01-12 07:38:06.671856553 -0500
++++ nfs-utils-1.2.1/tests/nsm_client/nsm_client.c	2010-01-12 07:38:06.671856553 -0500
 @@ -0,0 +1,465 @@
 +/*
 + * nsm_client.c -- synthetic client and lockd simulator for testing statd
@@ -1944,8 +1944,8 @@ diff -up nfs-utils-1.2.1/tests/nsm_client/nsm_client.c.orig nfs-utils-1.2.1/test
 +	return nlm_sm_notify_4_svc(argp, rqstp);
 +}
 diff -up nfs-utils-1.2.1/tests/nsm_client/README.orig nfs-utils-1.2.1/tests/nsm_client/README
---- nfs-utils-1.2.1/tests/nsm_client/README.orig	2010-01-12 06:07:40.763888991 -0500
-+++ nfs-utils-1.2.1/tests/nsm_client/README	2010-01-12 06:07:40.763888991 -0500
+--- nfs-utils-1.2.1/tests/nsm_client/README.orig	2010-01-12 07:38:06.669818335 -0500
++++ nfs-utils-1.2.1/tests/nsm_client/README	2010-01-12 07:38:06.669818335 -0500
 @@ -0,0 +1,12 @@
 +The nsm_client program is intended for testing statd. It has the ability
 +to act as a synthetic NSM client for sending artificial NSM calls to any
@@ -1960,8 +1960,8 @@ diff -up nfs-utils-1.2.1/tests/nsm_client/README.orig nfs-utils-1.2.1/tests/nsm_
 +also does not implement the entire NLM protocol and is only really
 +useful for testing statd's downcall.
 diff -up nfs-utils-1.2.1/tests/statdb_dump.c.orig nfs-utils-1.2.1/tests/statdb_dump.c
---- nfs-utils-1.2.1/tests/statdb_dump.c.orig	2010-01-12 06:07:40.765878933 -0500
-+++ nfs-utils-1.2.1/tests/statdb_dump.c	2010-01-12 06:07:40.765878933 -0500
+--- nfs-utils-1.2.1/tests/statdb_dump.c.orig	2010-01-12 07:38:06.671856553 -0500
++++ nfs-utils-1.2.1/tests/statdb_dump.c	2010-01-12 07:38:06.671856553 -0500
 @@ -0,0 +1,99 @@
 +/*
 + * statdb_dump.c -- dump contents of statd's monitor DB
@@ -2063,8 +2063,8 @@ diff -up nfs-utils-1.2.1/tests/statdb_dump.c.orig nfs-utils-1.2.1/tests/statdb_d
 +	return 0;
 +}
 diff -up nfs-utils-1.2.1/tests/t0001-statd-basic-mon-unmon.sh.orig nfs-utils-1.2.1/tests/t0001-statd-basic-mon-unmon.sh
---- nfs-utils-1.2.1/tests/t0001-statd-basic-mon-unmon.sh.orig	2010-01-12 06:07:40.765878933 -0500
-+++ nfs-utils-1.2.1/tests/t0001-statd-basic-mon-unmon.sh	2010-01-12 06:07:40.765878933 -0500
+--- nfs-utils-1.2.1/tests/t0001-statd-basic-mon-unmon.sh.orig	2010-01-12 07:38:06.672884652 -0500
++++ nfs-utils-1.2.1/tests/t0001-statd-basic-mon-unmon.sh	2010-01-12 07:38:06.672884652 -0500
 @@ -0,0 +1,58 @@
 +#!/bin/bash
 +#
@@ -2125,8 +2125,8 @@ diff -up nfs-utils-1.2.1/tests/t0001-statd-basic-mon-unmon.sh.orig nfs-utils-1.2
 +kill_statd
 +
 diff -up nfs-utils-1.2.1/tests/test-lib.sh.orig nfs-utils-1.2.1/tests/test-lib.sh
---- nfs-utils-1.2.1/tests/test-lib.sh.orig	2010-01-12 06:07:40.766878219 -0500
-+++ nfs-utils-1.2.1/tests/test-lib.sh	2010-01-12 06:07:40.766878219 -0500
+--- nfs-utils-1.2.1/tests/test-lib.sh.orig	2010-01-12 07:38:06.672884652 -0500
++++ nfs-utils-1.2.1/tests/test-lib.sh	2010-01-12 07:38:06.672884652 -0500
 @@ -0,0 +1,60 @@
 +#!/bin/bash
 +#
@@ -2190,7 +2190,7 @@ diff -up nfs-utils-1.2.1/tests/test-lib.sh.orig nfs-utils-1.2.1/tests/test-lib.s
 +}
 diff -up nfs-utils-1.2.1/utils/gssd/gssd.c.orig nfs-utils-1.2.1/utils/gssd/gssd.c
 --- nfs-utils-1.2.1/utils/gssd/gssd.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/gssd/gssd.c	2010-01-12 06:07:40.766878219 -0500
++++ nfs-utils-1.2.1/utils/gssd/gssd.c	2010-01-12 07:38:06.673922916 -0500
 @@ -56,7 +56,6 @@
  #include "krb5_util.h"
  
@@ -2213,7 +2213,7 @@ diff -up nfs-utils-1.2.1/utils/gssd/gssd.c.orig nfs-utils-1.2.1/utils/gssd/gssd.
  	else
 diff -up nfs-utils-1.2.1/utils/gssd/gssd.h.orig nfs-utils-1.2.1/utils/gssd/gssd.h
 --- nfs-utils-1.2.1/utils/gssd/gssd.h.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/gssd/gssd.h	2010-01-12 06:07:40.767886262 -0500
++++ nfs-utils-1.2.1/utils/gssd/gssd.h	2010-01-12 07:38:06.673922916 -0500
 @@ -60,7 +60,6 @@ enum {AUTHTYPE_KRB5, AUTHTYPE_SPKM3, AUT
  
  
@@ -2249,7 +2249,7 @@ diff -up nfs-utils-1.2.1/utils/gssd/gssd.h.orig nfs-utils-1.2.1/utils/gssd/gssd.
  
 diff -up nfs-utils-1.2.1/utils/gssd/gssd_main_loop.c.orig nfs-utils-1.2.1/utils/gssd/gssd_main_loop.c
 --- nfs-utils-1.2.1/utils/gssd/gssd_main_loop.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/gssd/gssd_main_loop.c	2010-01-12 06:07:40.768888711 -0500
++++ nfs-utils-1.2.1/utils/gssd/gssd_main_loop.c	2010-01-12 07:38:06.674960725 -0500
 @@ -49,6 +49,7 @@
  #include <fcntl.h>
  #include <signal.h>
@@ -2400,7 +2400,7 @@ diff -up nfs-utils-1.2.1/utils/gssd/gssd_main_loop.c.orig nfs-utils-1.2.1/utils/
  }
 diff -up nfs-utils-1.2.1/utils/gssd/gssd_proc.c.orig nfs-utils-1.2.1/utils/gssd/gssd_proc.c
 --- nfs-utils-1.2.1/utils/gssd/gssd_proc.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/gssd/gssd_proc.c	2010-01-12 06:07:40.769878502 -0500
++++ nfs-utils-1.2.1/utils/gssd/gssd_proc.c	2010-01-12 07:38:06.675988538 -0500
 @@ -73,6 +73,7 @@
  #include "krb5_util.h"
  #include "context.h"
@@ -2799,9 +2799,11 @@ diff -up nfs-utils-1.2.1/utils/gssd/gssd_proc.c.orig nfs-utils-1.2.1/utils/gssd/
  	CLIENT			*rpc_clnt = NULL;
  	AUTH			*auth = NULL;
  	struct authgss_private_data pd;
-@@ -816,19 +905,43 @@ handle_krb5_upcall(struct clnt_info *clp
+@@ -815,23 +904,51 @@ handle_krb5_upcall(struct clnt_info *clp
+ 	char			**ccname;
  	char			**dirname;
  	int			create_resp = -1;
++	int			err, downcall_err = -EACCES;
  
 -	printerr(1, "handling krb5 upcall\n");
 +	printerr(1, "handling krb5 upcall (%s)\n", clp->dirname);
@@ -2850,8 +2852,15 @@ diff -up nfs-utils-1.2.1/utils/gssd/gssd_proc.c.orig nfs-utils-1.2.1/utils/gssd/
 +				service == NULL)) {
  		/* Tell krb5 gss which credentials cache to use */
  		for (dirname = ccachesearch; *dirname != NULL; dirname++) {
- 			if (gssd_setup_krb5_user_gss_ccache(uid, clp->servername, *dirname) == 0)
-@@ -839,12 +952,13 @@ handle_krb5_upcall(struct clnt_info *clp
+-			if (gssd_setup_krb5_user_gss_ccache(uid, clp->servername, *dirname) == 0)
++			err = gssd_setup_krb5_user_gss_ccache(uid, clp->servername, *dirname);
++			if (err == -EKEYEXPIRED)
++				downcall_err = -EKEYEXPIRED;
++			else if (!err)
+ 				create_resp = create_auth_rpc_client(clp, &rpc_clnt, &auth, uid,
+ 							     AUTHTYPE_KRB5);
+ 			if (create_resp == 0)
+@@ -839,12 +956,13 @@ handle_krb5_upcall(struct clnt_info *clp
  		}
  	}
  	if (create_resp != 0) {
@@ -2867,7 +2876,7 @@ diff -up nfs-utils-1.2.1/utils/gssd/gssd_proc.c.orig nfs-utils-1.2.1/utils/gssd/
  				/*
  				 * Get a list of credential cache names and try each
  				 * of them until one works or we've tried them all
-@@ -904,7 +1018,7 @@ handle_krb5_upcall(struct clnt_info *clp
+@@ -904,7 +1022,7 @@ handle_krb5_upcall(struct clnt_info *clp
  		goto out_return_error;
  	}
  
@@ -2876,16 +2885,16 @@ diff -up nfs-utils-1.2.1/utils/gssd/gssd_proc.c.orig nfs-utils-1.2.1/utils/gssd/
  
  out:
  	if (token.value)
-@@ -920,7 +1034,7 @@ out:
+@@ -920,7 +1038,7 @@ out:
  	return;
  
  out_return_error:
 -	do_error_downcall(clp->krb5_fd, uid, -1);
-+	do_error_downcall(fd, uid, -1);
++	do_error_downcall(fd, uid, downcall_err);
  	goto out;
  }
  
-@@ -928,26 +1042,19 @@ out_return_error:
+@@ -928,26 +1046,19 @@ out_return_error:
   * this code uses the userland rpcsec gss library to create an spkm3
   * context on behalf of the kernel
   */
@@ -2915,7 +2924,7 @@ diff -up nfs-utils-1.2.1/utils/gssd/gssd_proc.c.orig nfs-utils-1.2.1/utils/gssd/
  	if (create_auth_rpc_client(clp, &rpc_clnt, &auth, uid, AUTHTYPE_SPKM3)) {
  		printerr(0, "WARNING: Failed to create spkm3 context for "
  			    "user with uid %d\n", uid);
-@@ -968,7 +1075,7 @@ handle_spkm3_upcall(struct clnt_info *cl
+@@ -968,7 +1079,7 @@ handle_spkm3_upcall(struct clnt_info *cl
  		goto out_return_error;
  	}
  
@@ -2924,7 +2933,7 @@ diff -up nfs-utils-1.2.1/utils/gssd/gssd_proc.c.orig nfs-utils-1.2.1/utils/gssd/
  
  out:
  	if (token.value)
-@@ -980,6 +1087,139 @@ out:
+@@ -980,6 +1091,139 @@ out:
  	return;
  
  out_return_error:
@@ -3067,8 +3076,53 @@ diff -up nfs-utils-1.2.1/utils/gssd/gssd_proc.c.orig nfs-utils-1.2.1/utils/gssd/
 +
 diff -up nfs-utils-1.2.1/utils/gssd/krb5_util.c.orig nfs-utils-1.2.1/utils/gssd/krb5_util.c
 --- nfs-utils-1.2.1/utils/gssd/krb5_util.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/gssd/krb5_util.c	2010-01-12 06:07:40.770878533 -0500
-@@ -797,10 +797,9 @@ gssd_search_krb5_keytab(krb5_context con
++++ nfs-utils-1.2.1/utils/gssd/krb5_util.c	2010-01-12 07:38:06.677006110 -0500
+@@ -170,9 +170,8 @@ select_krb5_ccache(const struct dirent *
+  * what we want. Otherwise, return zero and no dirent pointer.
+  * The caller is responsible for freeing the dirent if one is returned.
+  *
+- * Returns:
+- *	0 => could not find an existing entry
+- *	1 => found an existing entry
++ * Returns 0 if a valid-looking entry was found and a non-zero error
++ * code otherwise.
+  */
+ static int
+ gssd_find_existing_krb5_ccache(uid_t uid, char *dirname, struct dirent **d)
+@@ -186,7 +185,7 @@ gssd_find_existing_krb5_ccache(uid_t uid
+ 	char buf[1030];
+ 	char *princname = NULL;
+ 	char *realm = NULL;
+-	int score, best_match_score = 0;
++	int score, best_match_score = 0, err = -EACCES;
+ 
+ 	memset(&best_match_stat, 0, sizeof(best_match_stat));
+ 	*d = NULL;
+@@ -229,6 +228,7 @@ gssd_find_existing_krb5_ccache(uid_t uid
+ 				printerr(3, "CC file '%s' is expired or corrupt\n",
+ 					 statname);
+ 				free(namelist[i]);
++				err = -EKEYEXPIRED;
+ 				continue;
+ 			}
+ 
+@@ -284,11 +284,12 @@ gssd_find_existing_krb5_ccache(uid_t uid
+ 		}
+ 		free(namelist);
+ 	}
+-	if (found)
+-	{
++	if (found) {
+ 		*d = best_match_dir;
++		return 0;
+ 	}
+-	return found;
++
++	return err;
+ }
+ 
+ 
+@@ -797,10 +798,9 @@ gssd_search_krb5_keytab(krb5_context con
   */
  static int
  find_keytab_entry(krb5_context context, krb5_keytab kt, const char *hostname,
@@ -3080,7 +3134,47 @@ diff -up nfs-utils-1.2.1/utils/gssd/krb5_util.c.orig nfs-utils-1.2.1/utils/gssd/
  	char **realmnames = NULL;
  	char myhostname[NI_MAXHOST], targethostname[NI_MAXHOST];
  	int i, j, retval;
-@@ -1096,7 +1095,8 @@ gssd_get_krb5_machine_cred_list(char ***
+@@ -1025,29 +1025,29 @@ err_cache:
+  * given only a UID.  We really need more information, but we
+  * do the best we can.
+  *
+- * Returns:
+- *	0 => a ccache was found
+- *	1 => no ccache was found
++ * Returns 0 if a ccache was found, and a non-zero error code otherwise.
+  */
+ int
+ gssd_setup_krb5_user_gss_ccache(uid_t uid, char *servername, char *dirname)
+ {
+ 	char			buf[MAX_NETOBJ_SZ];
+ 	struct dirent		*d;
++	int			err;
+ 
+ 	printerr(2, "getting credentials for client with uid %u for "
+ 		    "server %s\n", uid, servername);
+ 	memset(buf, 0, sizeof(buf));
+-	if (gssd_find_existing_krb5_ccache(uid, dirname, &d)) {
+-		snprintf(buf, sizeof(buf), "FILE:%s/%s", dirname, d->d_name);
+-		free(d);
+-	}
+-	else
+-		return 1;
++	err = gssd_find_existing_krb5_ccache(uid, dirname, &d);
++	if (err)
++		return err;
++
++	snprintf(buf, sizeof(buf), "FILE:%s/%s", dirname, d->d_name);
++	free(d);
++
+ 	printerr(2, "using %s as credentials cache for client with "
+ 		    "uid %u for server %s\n", buf, uid, servername);
+ 	gssd_set_krb5_ccache_name(buf);
+-	return 0;
++	return err;
+ }
+ 
+ /*
+@@ -1096,7 +1096,8 @@ gssd_get_krb5_machine_cred_list(char ***
  	for (ple = gssd_k5_kt_princ_list; ple; ple = ple->next) {
  		if (ple->ccname) {
  			/* Make sure cred is up-to-date before returning it */
@@ -3090,7 +3184,7 @@ diff -up nfs-utils-1.2.1/utils/gssd/krb5_util.c.orig nfs-utils-1.2.1/utils/gssd/
  			if (retval)
  				continue;
  			if (i + 1 > listsize) {
-@@ -1186,14 +1186,24 @@ gssd_destroy_krb5_machine_creds(void)
+@@ -1186,14 +1187,24 @@ gssd_destroy_krb5_machine_creds(void)
   */
  int
  gssd_refresh_krb5_machine_credential(char *hostname,
@@ -3116,7 +3210,7 @@ diff -up nfs-utils-1.2.1/utils/gssd/krb5_util.c.orig nfs-utils-1.2.1/utils/gssd/
  	if (hostname == NULL && ple == NULL)
  		return EINVAL;
  
-@@ -1216,7 +1226,7 @@ gssd_refresh_krb5_machine_credential(cha
+@@ -1216,7 +1227,7 @@ gssd_refresh_krb5_machine_credential(cha
  	if (ple == NULL) {
  		krb5_keytab_entry kte;
  
@@ -3125,7 +3219,7 @@ diff -up nfs-utils-1.2.1/utils/gssd/krb5_util.c.orig nfs-utils-1.2.1/utils/gssd/
  		if (code) {
  			printerr(0, "ERROR: %s: no usable keytab entry found "
  				 "in keytab %s for connection with host %s\n",
-@@ -1241,7 +1251,7 @@ gssd_refresh_krb5_machine_credential(cha
+@@ -1241,7 +1252,7 @@ gssd_refresh_krb5_machine_credential(cha
  			goto out;
  		}
  	}
@@ -3136,7 +3230,7 @@ diff -up nfs-utils-1.2.1/utils/gssd/krb5_util.c.orig nfs-utils-1.2.1/utils/gssd/
  		krb5_kt_close(context, kt);
 diff -up nfs-utils-1.2.1/utils/gssd/krb5_util.h.orig nfs-utils-1.2.1/utils/gssd/krb5_util.h
 --- nfs-utils-1.2.1/utils/gssd/krb5_util.h.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/gssd/krb5_util.h	2010-01-12 06:07:40.771878946 -0500
++++ nfs-utils-1.2.1/utils/gssd/krb5_util.h	2010-01-12 07:38:06.678033842 -0500
 @@ -30,7 +30,8 @@ void gssd_free_krb5_machine_cred_list(ch
  void gssd_setup_krb5_machine_gss_ccache(char *servername);
  void gssd_destroy_krb5_machine_creds(void);
@@ -3149,7 +3243,7 @@ diff -up nfs-utils-1.2.1/utils/gssd/krb5_util.h.orig nfs-utils-1.2.1/utils/gssd/
  
 diff -up nfs-utils-1.2.1/utils/gssd/svcgssd_proc.c.orig nfs-utils-1.2.1/utils/gssd/svcgssd_proc.c
 --- nfs-utils-1.2.1/utils/gssd/svcgssd_proc.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/gssd/svcgssd_proc.c	2010-01-12 06:07:40.772878601 -0500
++++ nfs-utils-1.2.1/utils/gssd/svcgssd_proc.c	2010-01-12 07:38:06.679044049 -0500
 @@ -56,6 +56,7 @@
  #include "gss_util.h"
  #include "err_util.h"
@@ -3320,7 +3414,7 @@ diff -up nfs-utils-1.2.1/utils/gssd/svcgssd_proc.c.orig nfs-utils-1.2.1/utils/gs
  
 diff -up nfs-utils-1.2.1/utils/mountd/auth.c.orig nfs-utils-1.2.1/utils/mountd/auth.c
 --- nfs-utils-1.2.1/utils/mountd/auth.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/mountd/auth.c	2010-01-12 06:07:40.779888687 -0500
++++ nfs-utils-1.2.1/utils/mountd/auth.c	2010-01-12 07:38:06.687003503 -0500
 @@ -169,8 +169,7 @@ auth_authenticate_internal(char *what, s
  		}
  	}
@@ -3333,7 +3427,7 @@ diff -up nfs-utils-1.2.1/utils/mountd/auth.c.orig nfs-utils-1.2.1/utils/mountd/a
  	}
 diff -up nfs-utils-1.2.1/utils/mount/mount.c.orig nfs-utils-1.2.1/utils/mount/mount.c
 --- nfs-utils-1.2.1/utils/mount/mount.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/mount/mount.c	2010-01-12 06:07:40.772878601 -0500
++++ nfs-utils-1.2.1/utils/mount/mount.c	2010-01-12 07:38:06.680024171 -0500
 @@ -593,6 +593,9 @@ int main(int argc, char *argv[])
  	if (mnt_err == EX_BG) {
  		printf(_("%s: backgrounding \"%s\"\n"),
@@ -3346,7 +3440,7 @@ diff -up nfs-utils-1.2.1/utils/mount/mount.c.orig nfs-utils-1.2.1/utils/mount/mo
  		/*
 diff -up nfs-utils-1.2.1/utils/mount/network.c.orig nfs-utils-1.2.1/utils/mount/network.c
 --- nfs-utils-1.2.1/utils/mount/network.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/mount/network.c	2010-01-12 06:07:40.773889180 -0500
++++ nfs-utils-1.2.1/utils/mount/network.c	2010-01-12 07:38:06.681024003 -0500
 @@ -193,8 +193,18 @@ static const unsigned int *nfs_default_p
  }
  #endif /* MOUNT_CONFIG */
@@ -3536,7 +3630,7 @@ diff -up nfs-utils-1.2.1/utils/mount/network.c.orig nfs-utils-1.2.1/utils/mount/
   * @options: pointer to mount options
 diff -up nfs-utils-1.2.1/utils/mount/network.h.orig nfs-utils-1.2.1/utils/mount/network.h
 --- nfs-utils-1.2.1/utils/mount/network.h.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/mount/network.h	2010-01-12 06:07:40.774878676 -0500
++++ nfs-utils-1.2.1/utils/mount/network.h	2010-01-12 07:38:06.681024003 -0500
 @@ -44,7 +44,8 @@ int nfs_probe_bothports(const struct soc
  			struct pmap *, const struct sockaddr *,
  			const socklen_t, struct pmap *);
@@ -3558,7 +3652,7 @@ diff -up nfs-utils-1.2.1/utils/mount/network.h.orig nfs-utils-1.2.1/utils/mount/
  
 diff -up nfs-utils-1.2.1/utils/mount/nfs4mount.c.orig nfs-utils-1.2.1/utils/mount/nfs4mount.c
 --- nfs-utils-1.2.1/utils/mount/nfs4mount.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/mount/nfs4mount.c	2010-01-12 06:07:40.776889340 -0500
++++ nfs-utils-1.2.1/utils/mount/nfs4mount.c	2010-01-12 07:38:06.683013656 -0500
 @@ -217,8 +217,11 @@ int nfs4mount(const char *spec, const ch
  				progname);
  		goto fail;
@@ -3601,7 +3695,7 @@ diff -up nfs-utils-1.2.1/utils/mount/nfs4mount.c.orig nfs-utils-1.2.1/utils/moun
  		if (bg && !running_bg) {
 diff -up nfs-utils-1.2.1/utils/mount/nfs.man.orig nfs-utils-1.2.1/utils/mount/nfs.man
 --- nfs-utils-1.2.1/utils/mount/nfs.man.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/mount/nfs.man	2010-01-12 06:07:40.775888996 -0500
++++ nfs-utils-1.2.1/utils/mount/nfs.man	2010-01-12 07:38:06.682034140 -0500
 @@ -58,9 +58,17 @@ The server's hostname and export pathnam
  are separated by a colon, while
  the mount options are separated by commas. The remaining fields
@@ -3782,7 +3876,7 @@ diff -up nfs-utils-1.2.1/utils/mount/nfs.man.orig nfs-utils-1.2.1/utils/mount/nf
  .BR rpc.statd (8),
 diff -up nfs-utils-1.2.1/utils/mount/nfsmount.c.orig nfs-utils-1.2.1/utils/mount/nfsmount.c
 --- nfs-utils-1.2.1/utils/mount/nfsmount.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/mount/nfsmount.c	2010-01-12 06:07:40.777878312 -0500
++++ nfs-utils-1.2.1/utils/mount/nfsmount.c	2010-01-12 07:38:06.684003288 -0500
 @@ -170,7 +170,7 @@ parse_options(char *old_opts, struct nfs
  	struct pmap *mnt_pmap = &mnt_server->pmap;
  	struct pmap *nfs_pmap = &nfs_server->pmap;
@@ -3817,7 +3911,7 @@ diff -up nfs-utils-1.2.1/utils/mount/nfsmount.c.orig nfs-utils-1.2.1/utils/mount
  
 diff -up nfs-utils-1.2.1/utils/mount/nfsumount.c.orig nfs-utils-1.2.1/utils/mount/nfsumount.c
 --- nfs-utils-1.2.1/utils/mount/nfsumount.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/mount/nfsumount.c	2010-01-12 06:07:40.778899357 -0500
++++ nfs-utils-1.2.1/utils/mount/nfsumount.c	2010-01-12 07:38:06.685003534 -0500
 @@ -169,10 +169,15 @@ out:
  static int nfs_umount_do_umnt(struct mount_options *options,
  			      char **hostname, char **dirname)
@@ -3851,7 +3945,7 @@ diff -up nfs-utils-1.2.1/utils/mount/nfsumount.c.orig nfs-utils-1.2.1/utils/moun
  	if (nfs_advise_umount(sap, salen, &mnt_pmap, dirname) == 0)
 diff -up nfs-utils-1.2.1/utils/mount/stropts.c.orig nfs-utils-1.2.1/utils/mount/stropts.c
 --- nfs-utils-1.2.1/utils/mount/stropts.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/mount/stropts.c	2010-01-12 06:07:40.779888687 -0500
++++ nfs-utils-1.2.1/utils/mount/stropts.c	2010-01-12 07:38:06.685816549 -0500
 @@ -38,6 +38,7 @@
  #include "xcommon.h"
  #include "mount.h"
@@ -4106,7 +4200,7 @@ diff -up nfs-utils-1.2.1/utils/mount/stropts.c.orig nfs-utils-1.2.1/utils/mount/
  		}
 diff -up nfs-utils-1.2.1/utils/nfsd/nfssvc.c.orig nfs-utils-1.2.1/utils/nfsd/nfssvc.c
 --- nfs-utils-1.2.1/utils/nfsd/nfssvc.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/nfsd/nfssvc.c	2010-01-12 06:07:40.780888701 -0500
++++ nfs-utils-1.2.1/utils/nfsd/nfssvc.c	2010-01-12 07:38:06.687003503 -0500
 @@ -212,7 +212,7 @@ int
  nfssvc_set_sockets(const int family, const unsigned int protobits,
  		   const char *host, const char *port)
@@ -4118,7 +4212,7 @@ diff -up nfs-utils-1.2.1/utils/nfsd/nfssvc.c.orig nfs-utils-1.2.1/utils/nfsd/nfs
  
 diff -up nfs-utils-1.2.1/utils/showmount/showmount.c.orig nfs-utils-1.2.1/utils/showmount/showmount.c
 --- nfs-utils-1.2.1/utils/showmount/showmount.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/showmount/showmount.c	2010-01-12 06:07:40.781878678 -0500
++++ nfs-utils-1.2.1/utils/showmount/showmount.c	2010-01-12 07:38:06.688003719 -0500
 @@ -78,29 +78,36 @@ static void usage(FILE *fp, int n)
  	exit(n);
  }
@@ -4214,7 +4308,7 @@ diff -up nfs-utils-1.2.1/utils/showmount/showmount.c.orig nfs-utils-1.2.1/utils/
  		clnt_destroy(mclient);
 diff -up nfs-utils-1.2.1/utils/statd/callback.c.orig nfs-utils-1.2.1/utils/statd/callback.c
 --- nfs-utils-1.2.1/utils/statd/callback.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/statd/callback.c	2010-01-12 06:07:40.782830469 -0500
++++ nfs-utils-1.2.1/utils/statd/callback.c	2010-01-12 07:38:06.689003520 -0500
 @@ -35,12 +35,12 @@ sm_notify_1_svc(struct stat_chge *argp, 
  	struct sockaddr_in *sin = nfs_getrpccaller_in(rqstp->rq_xprt);
  	char *ip_addr = xstrdup(inet_ntoa(sin->sin_addr));
@@ -4232,7 +4326,7 @@ diff -up nfs-utils-1.2.1/utils/statd/callback.c.orig nfs-utils-1.2.1/utils/statd
  	}
 diff -up nfs-utils-1.2.1/utils/statd/Makefile.am.orig nfs-utils-1.2.1/utils/statd/Makefile.am
 --- nfs-utils-1.2.1/utils/statd/Makefile.am.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/statd/Makefile.am	2010-01-12 06:07:40.781878678 -0500
++++ nfs-utils-1.2.1/utils/statd/Makefile.am	2010-01-12 07:38:06.688003719 -0500
 @@ -2,31 +2,26 @@
  
  man8_MANS = statd.man sm-notify.man
@@ -4274,7 +4368,7 @@ diff -up nfs-utils-1.2.1/utils/statd/Makefile.am.orig nfs-utils-1.2.1/utils/stat
  RPCGEN	= $(top_builddir)/tools/rpcgen/rpcgen
 diff -up nfs-utils-1.2.1/utils/statd/misc.c.orig nfs-utils-1.2.1/utils/statd/misc.c
 --- nfs-utils-1.2.1/utils/statd/misc.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/statd/misc.c	2010-01-12 06:07:40.783888632 -0500
++++ nfs-utils-1.2.1/utils/statd/misc.c	2010-01-12 07:38:06.689975550 -0500
 @@ -29,8 +29,7 @@ xmalloc (size_t size)
      return ((void *)NULL);
  
@@ -4321,7 +4415,7 @@ diff -up nfs-utils-1.2.1/utils/statd/misc.c.orig nfs-utils-1.2.1/utils/statd/mis
 -}
 diff -up nfs-utils-1.2.1/utils/statd/monitor.c.orig nfs-utils-1.2.1/utils/statd/monitor.c
 --- nfs-utils-1.2.1/utils/statd/monitor.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/statd/monitor.c	2010-01-12 06:07:40.784878513 -0500
++++ nfs-utils-1.2.1/utils/statd/monitor.c	2010-01-12 07:38:06.691003597 -0500
 @@ -23,14 +23,13 @@
  
  #include "rpcmisc.h"
@@ -4676,7 +4770,7 @@ diff -up nfs-utils-1.2.1/utils/statd/monitor.c.orig nfs-utils-1.2.1/utils/statd/
   failure:
 diff -up nfs-utils-1.2.1/utils/statd/rmtcall.c.orig nfs-utils-1.2.1/utils/statd/rmtcall.c
 --- nfs-utils-1.2.1/utils/statd/rmtcall.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/statd/rmtcall.c	2010-01-12 06:07:40.784878513 -0500
++++ nfs-utils-1.2.1/utils/statd/rmtcall.c	2010-01-12 07:38:06.691003597 -0500
 @@ -43,7 +43,6 @@
  #include "sm_inter.h"
  #include "statd.h"
@@ -4817,7 +4911,7 @@ diff -up nfs-utils-1.2.1/utils/statd/rmtcall.c.orig nfs-utils-1.2.1/utils/statd/
  					NL_MY_PROG(entry),
 diff -up nfs-utils-1.2.1/utils/statd/simu.c.orig nfs-utils-1.2.1/utils/statd/simu.c
 --- nfs-utils-1.2.1/utils/statd/simu.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/statd/simu.c	2010-01-12 06:07:40.785889142 -0500
++++ nfs-utils-1.2.1/utils/statd/simu.c	2010-01-12 07:38:06.691827629 -0500
 @@ -27,24 +27,26 @@ sm_simu_crash_1_svc (void *argp, struct 
    static char *result = NULL;
    struct in_addr caller;
@@ -4851,7 +4945,7 @@ diff -up nfs-utils-1.2.1/utils/statd/simu.c.orig nfs-utils-1.2.1/utils/statd/sim
    if (rtnl)
 diff -up nfs-utils-1.2.1/utils/statd/simulate.c.orig nfs-utils-1.2.1/utils/statd/simulate.c
 --- nfs-utils-1.2.1/utils/statd/simulate.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/statd/simulate.c	2010-01-12 06:07:40.786878392 -0500
++++ nfs-utils-1.2.1/utils/statd/simulate.c	2010-01-12 07:38:06.692854633 -0500
 @@ -38,7 +38,9 @@ extern void svc_exit (void);
  void
  simulator (int argc, char **argv)
@@ -5017,8 +5111,8 @@ diff -up nfs-utils-1.2.1/utils/statd/simulate.c.orig nfs-utils-1.2.1/utils/statd
    svc_exit ();
    return ((void *)&result);
 diff -up nfs-utils-1.2.1/utils/statd/sm-notify.c.orig nfs-utils-1.2.1/utils/statd/sm-notify.c
---- nfs-utils-1.2.1/utils/statd/sm-notify.c.orig	2010-01-12 06:06:44.313836268 -0500
-+++ nfs-utils-1.2.1/utils/statd/sm-notify.c	2010-01-12 06:09:23.901815847 -0500
+--- nfs-utils-1.2.1/utils/statd/sm-notify.c.orig	2010-01-12 07:37:16.789941328 -0500
++++ nfs-utils-1.2.1/utils/statd/sm-notify.c	2010-01-12 07:38:43.732840211 -0500
 @@ -8,6 +8,7 @@
  #include <config.h>
  #endif
@@ -5731,8 +5825,8 @@ diff -up nfs-utils-1.2.1/utils/statd/sm-notify.c.orig nfs-utils-1.2.1/utils/stat
 +	return 1;
  }
 diff -up nfs-utils-1.2.1/utils/statd/sm-notify.man.orig nfs-utils-1.2.1/utils/statd/sm-notify.man
---- nfs-utils-1.2.1/utils/statd/sm-notify.man.orig	2010-01-12 06:06:44.313836268 -0500
-+++ nfs-utils-1.2.1/utils/statd/sm-notify.man	2010-01-12 06:07:40.788880334 -0500
+--- nfs-utils-1.2.1/utils/statd/sm-notify.man.orig	2010-01-12 07:37:16.789941328 -0500
++++ nfs-utils-1.2.1/utils/statd/sm-notify.man	2010-01-12 07:38:06.694907939 -0500
 @@ -6,7 +6,7 @@
  .SH NAME
  sm-notify \- Send out NSM reboot notifications
@@ -5755,7 +5849,7 @@ diff -up nfs-utils-1.2.1/utils/statd/sm-notify.man.orig nfs-utils-1.2.1/utils/st
  .B sm-notify
 diff -up nfs-utils-1.2.1/utils/statd/stat.c.orig nfs-utils-1.2.1/utils/statd/stat.c
 --- nfs-utils-1.2.1/utils/statd/stat.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/statd/stat.c	2010-01-12 06:07:40.789888702 -0500
++++ nfs-utils-1.2.1/utils/statd/stat.c	2010-01-12 07:38:06.694907939 -0500
 @@ -42,13 +42,15 @@ sm_stat_1_svc (struct sm_name *argp, str
  {
    static sm_stat_res result;
@@ -5777,7 +5871,7 @@ diff -up nfs-utils-1.2.1/utils/statd/stat.c.orig nfs-utils-1.2.1/utils/statd/sta
    return(&result);
 diff -up nfs-utils-1.2.1/utils/statd/statd.c.orig nfs-utils-1.2.1/utils/statd/statd.c
 --- nfs-utils-1.2.1/utils/statd/statd.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/statd/statd.c	2010-01-12 06:07:40.789888702 -0500
++++ nfs-utils-1.2.1/utils/statd/statd.c	2010-01-12 07:38:06.695955275 -0500
 @@ -25,33 +25,21 @@
  #include <sys/resource.h>
  #include <sys/wait.h>
@@ -6080,8 +6174,8 @@ diff -up nfs-utils-1.2.1/utils/statd/statd.c.orig nfs-utils-1.2.1/utils/statd/st
 -
 -}
 diff -up nfs-utils-1.2.1/utils/statd/statd.h.orig nfs-utils-1.2.1/utils/statd/statd.h
---- nfs-utils-1.2.1/utils/statd/statd.h.orig	2010-01-12 06:06:44.309847068 -0500
-+++ nfs-utils-1.2.1/utils/statd/statd.h	2010-01-12 06:10:04.934826422 -0500
+--- nfs-utils-1.2.1/utils/statd/statd.h.orig	2010-01-12 07:37:16.785971368 -0500
++++ nfs-utils-1.2.1/utils/statd/statd.h	2010-01-12 07:39:15.897815640 -0500
 @@ -11,30 +11,7 @@
  
  #include "sm_inter.h"
@@ -6135,7 +6229,7 @@ diff -up nfs-utils-1.2.1/utils/statd/statd.h.orig nfs-utils-1.2.1/utils/statd/st
 -
 diff -up nfs-utils-1.2.1/utils/statd/svc_run.c.orig nfs-utils-1.2.1/utils/statd/svc_run.c
 --- nfs-utils-1.2.1/utils/statd/svc_run.c.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/statd/svc_run.c	2010-01-12 06:07:40.791878936 -0500
++++ nfs-utils-1.2.1/utils/statd/svc_run.c	2010-01-12 07:38:06.696982188 -0500
 @@ -101,12 +101,12 @@ my_svc_run(void)
  
  			tv.tv_sec  = NL_WHEN(notify) - now;

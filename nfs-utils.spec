@@ -23,6 +23,7 @@ Patch01: nfs-utils-1.1.0-smnotify-path.patch
 Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 
 Patch100: nfs-utils-1.2.2-rc5.patch
+Patch101: nfs-utils-1.2.1-compile.patch
 
 Patch200: nfs-utils-1.2.0-v4root-rel9.patch
 
@@ -77,6 +78,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch02 -p1
 
 %patch100 -p1
+%patch101 -p1
 
 %patch200 -p1
 
