@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.1
-Release: 9%{?dist}
+Release: 10%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -18,14 +18,13 @@ Source13: rpcgssd.init
 Source14: rpcsvcgssd.init
 Source15: nfs.sysconfig
 
-Patch00: nfs-utils-1.0.5-statdpath.patch
 Patch01: nfs-utils-1.1.0-smnotify-path.patch
 Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
 
-Patch100: nfs-utils-1.2.2-rc5.patch
+Patch100: nfs-utils-1.2.2-rc6.patch
 Patch101: nfs-utils-1.2.1-compile.patch
 
-Patch200: nfs-utils-1.2.0-v4root-rel9.patch
+Patch200: nfs-utils-1.2.1-statdpath.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -73,7 +72,6 @@ This package also contains the mount.nfs and umount.nfs program.
 
 %prep
 %setup -q
-%patch00 -p1
 %patch01 -p1
 %patch02 -p1
 
@@ -102,7 +100,8 @@ CFLAGS="`echo $RPM_OPT_FLAGS $ARCH_OPT_FLAGS $PIE -D_FILE_OFFSET_BITS=64`"
     CPPFLAGS="$DEFINES" \
     LDFLAGS="-pie" \
     --enable-mount \
-    --enable-mountconfig
+    --enable-mountconfig \
+	--with-statdpath=/var/lib/nfs/statd
 
 make all
 
@@ -252,6 +251,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Thu Jan 14 2010 Steve Dickson <steved@redhat.com> 1.2.1-10
+- Updated to the latest pseudo root release (rel10) which
+  containts the upstream pseudo root release
+
 * Mon Jan 12 2010 Steve Dickson <steved@redhat.com> 1.2.1-9
 - Updated to latest upstream RC release: nfs-utils-1-2-2-rc5
 
