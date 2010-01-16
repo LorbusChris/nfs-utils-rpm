@@ -1,6 +1,6 @@
 diff -up nfs-utils-1.2.1/configure.ac.orig nfs-utils-1.2.1/configure.ac
---- nfs-utils-1.2.1/configure.ac.orig	2010-01-13 17:23:17.089961251 -0500
-+++ nfs-utils-1.2.1/configure.ac	2010-01-13 17:24:00.144003829 -0500
+--- nfs-utils-1.2.1/configure.ac.orig	2010-01-15 11:10:25.080854089 -0500
++++ nfs-utils-1.2.1/configure.ac	2010-01-15 11:11:03.872749424 -0500
 @@ -22,6 +22,14 @@ AC_ARG_WITH(statedir,
  	statedir=$withval,
  	statedir=/var/lib/nfs)
@@ -16,7 +16,7 @@ diff -up nfs-utils-1.2.1/configure.ac.orig nfs-utils-1.2.1/configure.ac
  AC_ARG_WITH(statduser,
  	[AC_HELP_STRING([--with-statduser=rpcuser],
                          [statd to run under @<:@rpcuser or nobody@:>@]
-@@ -347,6 +355,9 @@ dnl ************************************
+@@ -350,6 +358,9 @@ dnl ************************************
  dnl Export some path names to config.h
  dnl *************************************************************
  AC_DEFINE_UNQUOTED(NFS_STATEDIR, "$statedir", [This defines the location of the NFS state files. Warning: this must match definitions in config.mk!])
@@ -27,9 +27,9 @@ diff -up nfs-utils-1.2.1/configure.ac.orig nfs-utils-1.2.1/configure.ac
  if test "x$cross_compiling" = "xno"; then
  	CFLAGS_FOR_BUILD=${CFLAGS_FOR_BUILD-"$CFLAGS"}
 diff -up nfs-utils-1.2.1/support/nsm/file.c.orig nfs-utils-1.2.1/support/nsm/file.c
---- nfs-utils-1.2.1/support/nsm/file.c.orig	2010-01-13 17:23:17.099961228 -0500
-+++ nfs-utils-1.2.1/support/nsm/file.c	2010-01-13 17:26:44.476815932 -0500
-@@ -91,12 +91,13 @@
+--- nfs-utils-1.2.1/support/nsm/file.c.orig	2010-01-15 11:10:25.086884939 -0500
++++ nfs-utils-1.2.1/support/nsm/file.c	2010-01-15 11:11:03.873769833 -0500
+@@ -93,12 +93,13 @@
  #define NSM_KERNEL_STATE_FILE	"/proc/sys/fs/nfs/nsm_local_state"
  
  /*
@@ -48,30 +48,3 @@ diff -up nfs-utils-1.2.1/support/nsm/file.c.orig nfs-utils-1.2.1/support/nsm/fil
  
  static char nsm_base_dirname[PATH_MAX] = NSM_DEFAULT_STATEDIR;
  
-diff -up nfs-utils-1.2.1/utils/statd/statd.man.orig nfs-utils-1.2.1/utils/statd/statd.man
---- nfs-utils-1.2.1/utils/statd/statd.man.orig	2009-11-04 06:13:56.000000000 -0500
-+++ nfs-utils-1.2.1/utils/statd/statd.man	2010-01-13 17:23:41.110003469 -0500
-@@ -24,7 +24,7 @@ reboots.
- For each NFS client or server machine to be monitored,
- .B rpc.statd
- creates a file in
--.BR /var/lib/nfs/sm .
-+.BR /var/lib/nfs/statd/sm .
- When starting, it normally runs
- .B sm-notify
- to iterate through these files and notify the
-@@ -176,11 +176,11 @@ and send notifications to clients. This 
- of an NFS export from another server.
- 
- .SH FILES
--.BR /var/lib/nfs/state
-+.BR /var/lib/nfs/statd/sm/state
- .br
--.BR /var/lib/nfs/sm/*
-+.BR /var/lib/nfs/statd/sm/*
- .br
--.BR /var/lib/nfs/sm.bak/*
-+.BR /var/lib/nfs/statd/sm.bak/*
- .SH SEE ALSO
- .BR rpc.nfsd(8),
- .BR portmap(8)

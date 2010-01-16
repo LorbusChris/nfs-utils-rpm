@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.1
-Release: 10%{?dist}
+Release: 11%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -18,13 +18,12 @@ Source13: rpcgssd.init
 Source14: rpcsvcgssd.init
 Source15: nfs.sysconfig
 
-Patch01: nfs-utils-1.1.0-smnotify-path.patch
-Patch02: nfs-utils-1.1.0-exp-subtree-warn-off.patch
+Patch000: nfs-utils-1.2.2-rc7.patch
+Patch001: nfs-utils-1.2.1-compile.patch
+Patch002: nfs-utils-1.2.1-statdpath.patch
 
-Patch100: nfs-utils-1.2.2-rc6.patch
-Patch101: nfs-utils-1.2.1-compile.patch
-
-Patch200: nfs-utils-1.2.1-statdpath.patch
+Patch100: nfs-utils-1.2.1-statdpath-man.patch
+Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -48,7 +47,7 @@ License: MIT and GPLv2 and GPLv2+ and BSD
 Buildroot: %{_tmppath}/%{name}-%{version}-root
 Requires: rpcbind, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: modutils >= 2.4.26-9
-BuildRequires: libgssglue-devel libevent-devel
+BuildRequires: libgssglue-devel libevent-devel libcap-devel
 BuildRequires: nfs-utils-lib-devel >= 1.1.0-3 libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, glibc-headers
@@ -56,7 +55,7 @@ BuildRequires: e2fsprogs-devel, krb5-devel, tcp_wrappers-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
 Requires: nfs-utils-lib >= 1.1.0-3 libgssglue libevent
-Requires: libtirpc libblkid
+Requires: libtirpc libblkid libcap
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
@@ -72,13 +71,13 @@ This package also contains the mount.nfs and umount.nfs program.
 
 %prep
 %setup -q
-%patch01 -p1
-%patch02 -p1
+
+%patch000 -p1
+%patch001 -p1
+%patch002 -p1
 
 %patch100 -p1
 %patch101 -p1
-
-%patch200 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -251,6 +250,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Sat Jan 16 2010 Steve Dickson <steved@redhat.com> 1.2.1-11
+- Updated to latest upstream RC release: nfs-utils-1-2-2-rc7
+  which includes Ipv6 support for statd (disabled by default).
+
 * Thu Jan 14 2010 Steve Dickson <steved@redhat.com> 1.2.1-10
 - Updated to the latest pseudo root release (rel10) which
   containts the upstream pseudo root release
