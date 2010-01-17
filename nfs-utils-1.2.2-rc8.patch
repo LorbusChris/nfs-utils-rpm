@@ -35,6 +35,21 @@ index b3a6e91..ae7cd16 100644
  
  MAINTAINERCLEANFILES = Makefile.in
  
+diff --git a/aclocal/ipv6.m4 b/aclocal/ipv6.m4
+index 2490f3d..5ee8fb6 100644
+--- a/aclocal/ipv6.m4
++++ b/aclocal/ipv6.m4
+@@ -15,8 +15,8 @@ AC_DEFUN([AC_IPV6], [
+     fi
+ 
+     dnl IPv6-enabled networking functions required for IPv6
+-    AC_CHECK_FUNCS([getnameinfo bindresvport_sa], ,
+-                   [AC_MSG_ERROR([Missing functions needed for IPv6.])])
++    AC_CHECK_FUNCS([getifaddrs getnameinfo bindresvport_sa], ,
++                   [AC_MSG_ERROR([Missing library functions needed for IPv6.])])
+ 
+     dnl Need to detect presence of IPv6 networking at run time via
+     dnl getaddrinfo(3); old versions of glibc do not support ADDRCONFIG
 diff --git a/aclocal/libcap.m4 b/aclocal/libcap.m4
 new file mode 100644
 index 0000000..eabe507
@@ -57,7 +72,7 @@ index 0000000..eabe507
 +
 +])dnl
 diff --git a/configure.ac b/configure.ac
-index 3ad415c..c77c5ba 100644
+index 3ad415c..1dc4249 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -166,6 +166,9 @@ fi
@@ -70,6 +85,15 @@ index 3ad415c..c77c5ba 100644
  # Check whether user wants TCP wrappers support
  AC_TCP_WRAPPERS
  
+@@ -327,7 +330,7 @@ AC_FUNC_STAT
+ AC_FUNC_VPRINTF
+ AC_CHECK_FUNCS([alarm atexit dup2 fdatasync ftruncate getcwd \
+                gethostbyaddr gethostbyname gethostname getmntent \
+-               getnameinfo getrpcbyname \
++               getnameinfo getrpcbyname getifaddrs \
+                gettimeofday hasmntopt inet_ntoa innetgr memset mkdir pathconf \
+                realpath rmdir select socket strcasecmp strchr strdup \
+                strerror strrchr strtol strtoul sigprocmask])
 @@ -402,6 +405,7 @@ AC_CONFIG_FILES([
  	support/include/Makefile
  	support/misc/Makefile
@@ -687,6 +711,28 @@ index 0000000..732514b
 +}
 +
 +#endif	/* !NFS_UTILS_SOCKADDR_H */
+diff --git a/support/include/tcpwrapper.h b/support/include/tcpwrapper.h
+index 98cf806..f735106 100644
+--- a/support/include/tcpwrapper.h
++++ b/support/include/tcpwrapper.h
+@@ -5,14 +5,8 @@
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
+ 
+-extern int verboselog;
+-
+-extern int allow_severity;
+-extern int deny_severity;
+-
+-extern int good_client(char *daemon, struct sockaddr_in *addr);
+-extern int from_local (struct sockaddr_in *addr);
+-extern int check_default(char *daemon, struct sockaddr_in *addr,
+-			 u_long proc, u_long prog);
++extern int from_local(const struct sockaddr *sap);
++extern int check_default(char *name, struct sockaddr *sap,
++			const unsigned long program);
+ 
+ #endif /* TCP_WRAPPER_H */
 diff --git a/support/include/v4root.h b/support/include/v4root.h
 new file mode 100644
 index 0000000..706c15c
@@ -708,6 +754,512 @@ index 0000000..706c15c
 +extern void v4root_set(void);
 +
 +#endif /* V4ROOT_H */
+diff --git a/support/misc/from_local.c b/support/misc/from_local.c
+index 89ccc4a..e2de969 100644
+--- a/support/misc/from_local.c
++++ b/support/misc/from_local.c
+@@ -37,32 +37,100 @@
+ static char sccsid[] = "@(#) from_local.c 1.3 96/05/31 15:52:57";
+ #endif
+ 
+-#ifdef TEST
+-#undef perror
++#ifdef HAVE_CONFIG_H
++#include <config.h>
+ #endif
+ 
+ #include <sys/types.h>
+ #include <sys/socket.h>
++#include <stdbool.h>
+ #include <stdio.h>
+ #include <unistd.h>
+ #include <netdb.h>
+ #include <netinet/in.h>
+ #include <net/if.h>
+ #include <sys/ioctl.h>
+-#include <syslog.h>
+ #include <stdlib.h>
+ #include <string.h>
+ 
++#include "sockaddr.h"
++#include "tcpwrapper.h"
++#include "xlog.h"
++
+ #ifndef TRUE
+ #define	TRUE	1
+ #define FALSE	0
+ #endif
+ 
+- /*
+-  * With virtual hosting, each hardware network interface can have multiple
+-  * network addresses. On such machines the number of machine addresses can
+-  * be surprisingly large.
+-  */
++#ifdef HAVE_GETIFADDRS
++
++#include <ifaddrs.h>
++#include <time.h>
++
++/**
++ * from_local - determine whether request comes from the local system
++ * @sap: pointer to socket address to check
++ *
++ * With virtual hosting, each hardware network interface can have
++ * multiple network addresses. On such machines the number of machine
++ * addresses can be surprisingly large.
++ *
++ * We also expect the local network configuration to change over time,
++ * so call getifaddrs(3) more than once, but not too often.
++ *
++ * Returns TRUE if the sockaddr contains an address of one of the local
++ * network interfaces.  Otherwise FALSE is returned.
++ */
++int
++from_local(const struct sockaddr *sap)
++{
++	static struct ifaddrs *ifaddr = NULL;
++	static time_t last_update = 0;
++	struct ifaddrs *ifa;
++	unsigned int count;
++	time_t now;
++
++	if (time(&now) == ((time_t)-1)) {
++		xlog(L_ERROR, "%s: time(2): %m", __func__);
++
++		/* If we don't know what time it is, use the
++		 * existing ifaddr list, if one exists  */
++		now = last_update;
++		if (ifaddr == NULL)
++			now++;
++	}
++	if (now != last_update) {
++		xlog(D_GENERAL, "%s: updating local if addr list", __func__);
++
++		if (ifaddr)
++			freeifaddrs(ifaddr);
++
++		if (getifaddrs(&ifaddr) == -1) {
++			xlog(L_ERROR, "%s: getifaddrs(3): %m", __func__);
++			return FALSE;
++		}
++
++		last_update = now;
++	}
++
++	count = 0;
++	for (ifa = ifaddr; ifa; ifa = ifa->ifa_next) {
++		if ((ifa->ifa_flags & IFF_UP) &&
++		    nfs_compare_sockaddr(sap, ifa->ifa_addr)) {
++			xlog(D_GENERAL, "%s: incoming address matches "
++					"local interface address", __func__);
++			return TRUE;
++		} else
++			count++;
++	}
++
++	xlog(D_GENERAL, "%s: checked %u local if addrs; "
++			"incoming address not found", __func__, count);
++	return FALSE;
++}
++
++#else	/* !HAVE_GETIFADDRS */
++
+ static int num_local;
+ static int num_addrs;
+ static struct in_addr *addrs;
+@@ -81,7 +149,7 @@ static int grow_addrs(void)
+     new_num = (addrs == 0) ? 1 : num_addrs + num_addrs;
+     new_addrs = (struct in_addr *) malloc(sizeof(*addrs) * new_num);
+     if (new_addrs == 0) {
+-	perror("portmap: out of memory");
++	xlog_warn("%s: out of memory", __func__);
+ 	return (0);
+     } else {
+ 	if (addrs != 0) {
+@@ -112,13 +180,13 @@ find_local(void)
+      */
+ 
+     if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
+-	perror("socket");
++	xlog_warn("%s: socket(2): %m", __func__);
+ 	return (0);
+     }
+     ifc.ifc_len = sizeof(buf);
+     ifc.ifc_buf = buf;
+     if (ioctl(sock, SIOCGIFCONF, (char *) &ifc) < 0) {
+-	perror("SIOCGIFCONF");
++	xlog_warn("%s: ioctl(SIOCGIFCONF): %m", __func__);
+ 	(void) close(sock);
+ 	return (0);
+     }
+@@ -130,10 +198,10 @@ find_local(void)
+ 	if (ifr->ifr_addr.sa_family == AF_INET) {	/* IP net interface */
+ 	    ifreq = *ifr;
+ 	    if (ioctl(sock, SIOCGIFFLAGS, (char *) &ifreq) < 0) {
+-		perror("SIOCGIFFLAGS");
++		xlog_warn("%s: ioctl(SIOCGIFFLAGS): %m", __func__);
+ 	    } else if (ifreq.ifr_flags & IFF_UP) {	/* active interface */
+ 		if (ioctl(sock, SIOCGIFADDR, (char *) &ifreq) < 0) {
+-		    perror("SIOCGIFADDR");
++		    xlog_warn("%s: ioctl(SIOCGIFADDR): %m", __func__);
+ 		} else {
+ 		    if (num_local >= num_addrs)
+ 			if (grow_addrs() == 0)
+@@ -153,14 +221,28 @@ find_local(void)
+     return (num_local);
+ }
+ 
+-/* from_local - determine whether request comes from the local system */
++/**
++ * from_local - determine whether request comes from the local system
++ * @sap: pointer to socket address to check
++ *
++ * With virtual hosting, each hardware network interface can have
++ * multiple network addresses. On such machines the number of machine
++ * addresses can be surprisingly large.
++ *
++ * Returns TRUE if the sockaddr contains an address of one of the local
++ * network interfaces.  Otherwise FALSE is returned.
++ */
+ int
+-from_local(struct sockaddr_in *addr)
++from_local(const struct sockaddr *sap)
+ {
++    const struct sockaddr_in *addr = (const struct sockaddr_in *)sap;
+     int     i;
+ 
++    if (sap->sa_family != AF_INET)
++	return (FALSE);
++
+     if (addrs == 0 && find_local() == 0)
+-	syslog(LOG_ERR, "cannot find any active local network interfaces");
++	xlog(L_ERROR, "Cannot find any active local network interfaces");
+ 
+     for (i = 0; i < num_local; i++) {
+ 	if (memcmp((char *) &(addr->sin_addr), (char *) &(addrs[i]),
+@@ -172,9 +254,8 @@ from_local(struct sockaddr_in *addr)
+ 
+ #ifdef TEST
+ 
+-main()
++int main(void)
+ {
+-    char   *inet_ntoa();
+     int     i;
+ 
+     find_local();
+@@ -182,4 +263,6 @@ main()
+ 	printf("%s\n", inet_ntoa(addrs[i]));
+ }
+ 
+-#endif
++#endif	/* TEST */
++
++#endif	/* !HAVE_GETIFADDRS */
+diff --git a/support/misc/tcpwrapper.c b/support/misc/tcpwrapper.c
+index 1da6020..06b0a46 100644
+--- a/support/misc/tcpwrapper.c
++++ b/support/misc/tcpwrapper.c
+@@ -34,13 +34,12 @@
+ #ifdef HAVE_CONFIG_H
+ #include <config.h>
+ #endif
++
+ #ifdef HAVE_LIBWRAP
+-#include <tcpwrapper.h>
+ #include <unistd.h>
+ #include <string.h>
+ #include <rpc/rpc.h>
+ #include <rpc/pmap_prot.h>
+-#include <syslog.h>
+ #include <netdb.h>
+ #include <pwd.h>
+ #include <sys/types.h>
+@@ -49,108 +48,146 @@
+ #include <sys/stat.h>
+ #include <tcpd.h>
+ 
++#include "sockaddr.h"
++#include "tcpwrapper.h"
+ #include "xlog.h"
+ 
+ #ifdef SYSV40
+ #include <netinet/in.h>
+ #include <rpc/rpcent.h>
+-#endif
++#endif	/* SYSV40 */
+ 
+-static void logit(int severity, struct sockaddr_in *addr,
+-		  u_long procnum, u_long prognum, char *text);
+-static int check_files(void);
++#define ALLOW 1
++#define DENY 0
+ 
+-/*
+- * These need to exist since they are externed 
+- * public header files.
+- */
+-int     verboselog = 0;
+-int     allow_severity = LOG_INFO;
+-int     deny_severity = LOG_WARNING;
++#ifdef IPV6_SUPPORTED
++static void
++present_address(const struct sockaddr *sap, char *buf, const size_t buflen)
++{
++	const struct sockaddr_in *sin = (const struct sockaddr_in *)sap;
++	const struct sockaddr_in6 *sin6 = (const struct sockaddr_in6 *)sap;
++	socklen_t len = (socklen_t)buflen;
++
++	switch (sap->sa_family) {
++	case AF_INET:
++		if (inet_ntop(AF_INET, &sin->sin_addr, buf, len) != 0)
++			return;
++	case AF_INET6:
++		if (inet_ntop(AF_INET6, &sin6->sin6_addr, buf, len) != 0)
++			return;
++	}
+ 
+-#define log_bad_host(addr, proc, prog) \
+-  logit(deny_severity, addr, proc, prog, "request from unauthorized host")
++	memset(buf, 0, buflen);
++	strncpy(buf, "unrecognized caller", buflen);
++}
++#else	/* !IPV6_SUPPORTED */
++static void
++present_address(const struct sockaddr *sap, char *buf, const size_t buflen)
++{
++	const struct sockaddr_in *sin = (const struct sockaddr_in *)sap;
++	socklen_t len = (socklen_t)buflen;
+ 
+-#define ALLOW 1
+-#define DENY 0
++	if (sap->sa_family == AF_INET)
++		if (inet_ntop(AF_INET, &sin->sin_addr, buf, len) != 0)
++			return;
++
++	memset(buf, 0, buflen);
++	strncpy(buf, "unrecognized caller", (size_t)buflen);
++}
++#endif	/* !IPV6_SUPPORTED */
+ 
+ typedef struct _haccess_t {
+-	TAILQ_ENTRY(_haccess_t) list;
+-	int access;
+-    struct in_addr addr;
++	TAILQ_ENTRY(_haccess_t)	list;
++	int			allowed;
++	union nfs_sockaddr	address;
+ } haccess_t;
+ 
+ #define HASH_TABLE_SIZE 1021
+ typedef struct _hash_head {
+ 	TAILQ_HEAD(host_list, _haccess_t) h_head;
+ } hash_head;
+-hash_head haccess_tbl[HASH_TABLE_SIZE];
+-static haccess_t *haccess_lookup(struct sockaddr_in *addr, u_long);
+-static void haccess_add(struct sockaddr_in *addr, u_long, int);
+ 
+-inline unsigned int strtoint(char *str)
++static hash_head haccess_tbl[HASH_TABLE_SIZE];
++
++static unsigned long
++strtoint(const char *str)
+ {
+-	unsigned int n = 0;
+-	int len = strlen(str);
+-	int i;
++	unsigned long i, n = 0;
++	size_t len = strlen(str);
+ 
+-	for (i=0; i < len; i++)
+-		n+=((int)str[i])*i;
++	for (i = 0; i < len; i++)
++		n += (unsigned char)str[i] * i;
+ 
+ 	return n;
+ }
+-static inline int hashint(unsigned int num)
++
++static unsigned int
++hashint(const unsigned long num)
+ {
+-	return num % HASH_TABLE_SIZE;
++	return (unsigned int)(num % HASH_TABLE_SIZE);
+ }
+-#define HASH(_addr, _prog) \
+-	hashint((strtoint((_addr))+(_prog)))
+ 
+-void haccess_add(struct sockaddr_in *addr, u_long prog, int access)
++static unsigned int
++HASH(const char *addr, const unsigned long program)
++{
++	return hashint(strtoint(addr) + program);
++}
++
++static void
++haccess_add(const struct sockaddr *sap, const char *address,
++		const unsigned long program, const int allowed)
+ {
+ 	hash_head *head;
+- 	haccess_t *hptr;
+-	int hash;
++	haccess_t *hptr;
++	unsigned int hash;
+ 
+ 	hptr = (haccess_t *)malloc(sizeof(haccess_t));
+ 	if (hptr == NULL)
+ 		return;
+ 
+-	hash = HASH(inet_ntoa(addr->sin_addr), prog);
++	hash = HASH(address, program);
+ 	head = &(haccess_tbl[hash]);
+ 
+-	hptr->access = access;
+-	hptr->addr.s_addr = addr->sin_addr.s_addr;
++	hptr->allowed = allowed;
++	memcpy(&hptr->address, sap, (size_t)nfs_sockaddr_length(sap));
+ 
+ 	if (TAILQ_EMPTY(&head->h_head))
+ 		TAILQ_INSERT_HEAD(&head->h_head, hptr, list);
+ 	else
+ 		TAILQ_INSERT_TAIL(&head->h_head, hptr, list);
+ }
+-haccess_t *haccess_lookup(struct sockaddr_in *addr, u_long prog)
++
++static haccess_t *
++haccess_lookup(const struct sockaddr *sap, const char *address,
++		const unsigned long program)
+ {
+ 	hash_head *head;
+- 	haccess_t *hptr;
+-	int hash;
++	haccess_t *hptr;
++	unsigned int hash;
+ 
+-	hash = HASH(inet_ntoa(addr->sin_addr), prog);
++	hash = HASH(address, program);
+ 	head = &(haccess_tbl[hash]);
+ 
+ 	TAILQ_FOREACH(hptr, &head->h_head, list) {
+-		if (hptr->addr.s_addr == addr->sin_addr.s_addr)
++		if (nfs_compare_sockaddr(&hptr->address.sa, sap))
+ 			return hptr;
+ 	}
+ 	return NULL;
+ }
+ 
+-int
+-good_client(daemon, addr)
+-char *daemon;
+-struct sockaddr_in *addr;
++static void
++logit(const char *address)
++{
++	xlog_warn("connect from %s denied: request from unauthorized host",
++			address);
++}
++
++static int
++good_client(char *name, struct sockaddr *sap)
+ {
+ 	struct request_info req;
+ 
+-	request_init(&req, RQ_DAEMON, daemon, RQ_CLIENT_SIN, addr, 0);
++	request_init(&req, RQ_DAEMON, name, RQ_CLIENT_SIN, sap, 0);
+ 	sock_methods(&req);
+ 
+ 	if (hosts_access(&req)) 
+@@ -159,9 +196,8 @@ struct sockaddr_in *addr;
+ 	return DENY;
+ }
+ 
+-/* check_files - check to see if either access files have changed */
+-
+-static int check_files()
++static int
++check_files(void)
+ {
+ 	static time_t allow_mtime, deny_mtime;
+ 	struct stat astat, dstat;
+@@ -186,45 +222,48 @@ static int check_files()
+ 	return changed;
+ }
+ 
+-/* check_default - additional checks for NULL, DUMP, GETPORT and unknown */
+-
++/**
++ * check_default - additional checks for NULL, DUMP, GETPORT and unknown
++ * @name: pointer to '\0'-terminated ASCII string containing name of the
++ *		daemon requesting the access check
++ * @sap: pointer to sockaddr containing network address of caller
++ * @program: RPC program number caller is attempting to access
++ *
++ * Returns TRUE if the caller is allowed access; otherwise FALSE is returned.
++ */
+ int
+-check_default(daemon, addr, proc, prog)
+-char *daemon;
+-struct sockaddr_in *addr;
+-u_long  proc;
+-u_long  prog;
++check_default(char *name, struct sockaddr *sap, const unsigned long program)
+ {
+ 	haccess_t *acc = NULL;
+ 	int changed = check_files();
++	char buf[INET6_ADDRSTRLEN];
++
++	present_address(sap, buf, sizeof(buf));
+ 
+-	acc = haccess_lookup(addr, prog);
+-	if (acc && changed == 0)
+-		return (acc->access);
++	acc = haccess_lookup(sap, buf, program);
++	if (acc != NULL && changed == 0) {
++		xlog(D_GENERAL, "%s: access by %s %s (cached)", __func__,
++			buf, acc->allowed ? "ALLOWED" : "DENIED");
++		return acc->allowed;
++	}
+ 
+-	if (!(from_local(addr) || good_client(daemon, addr))) {
+-		log_bad_host(addr, proc, prog);
+-		if (acc)
+-			acc->access = FALSE;
+-		else 
+-			haccess_add(addr, prog, FALSE);
++	if (!(from_local(sap) || good_client(name, sap))) {
++		logit(buf);
++		if (acc != NULL)
++			acc->allowed = FALSE;
++		else
++			haccess_add(sap, buf, program, FALSE);
++		xlog(D_GENERAL, "%s: access by %s DENIED", __func__, buf);
+ 		return (FALSE);
+ 	}
+ 
+-	if (acc)
+-		acc->access = TRUE;
+-	else 
+-		haccess_add(addr, prog, TRUE);
++	if (acc != NULL)
++		acc->allowed = TRUE;
++	else
++		haccess_add(sap, buf, program, TRUE);
++	xlog(D_GENERAL, "%s: access by %s ALLOWED", __func__, buf);
+ 
+-    return (TRUE);
++	return (TRUE);
+ }
+ 
+-/* logit - report events of interest via the syslog daemon */
+-
+-static void logit(int severity, struct sockaddr_in *addr,
+-		  u_long procnum, u_long prognum, char *text)
+-{
+-	syslog(severity, "connect from %s denied: %s",
+-	       inet_ntoa(addr->sin_addr), text);
+-}
+-#endif
++#endif	/* HAVE_LIBWRAP */
 diff --git a/support/nfs/Makefile.am b/support/nfs/Makefile.am
 index e9462fc..60400b2 100644
 --- a/support/nfs/Makefile.am
@@ -6559,6 +7111,25 @@ index e4e2f22..d63e10a 100644
  
  	if (found) {
  		if (dump_to_cache(f, dom, path, &found->m_export) < 0) {
+diff --git a/utils/mountd/mount_dispatch.c b/utils/mountd/mount_dispatch.c
+index 199fcec..ba6981d 100644
+--- a/utils/mountd/mount_dispatch.c
++++ b/utils/mountd/mount_dispatch.c
+@@ -70,12 +70,10 @@ mount_dispatch(struct svc_req *rqstp, SVCXPRT *transp)
+ {
+ 	union mountd_arguments 	argument;
+ 	union mountd_results	result;
+-#ifdef HAVE_TCP_WRAPPER
+-	struct sockaddr_in *sin = nfs_getrpccaller_in(transp);
+ 
++#ifdef HAVE_TCP_WRAPPER
+ 	/* remote host authorization check */
+-	if (sin->sin_family == AF_INET &&
+-	    !check_default("mountd", sin, rqstp->rq_proc, MOUNTPROG)) {
++	if (!check_default("mountd", nfs_getrpccaller(transp), MOUNTPROG)) {
+ 		svcerr_auth (transp, AUTH_FAILED);
+ 		return;
+ 	}
 diff --git a/utils/mountd/mountd.c b/utils/mountd/mountd.c
 index 888fd8c..a0a1f2d 100644
 --- a/utils/mountd/mountd.c
@@ -10565,7 +11136,7 @@ index 799239f..8d8b65e 100644
    result.state = MY_STATE;
    return(&result);
 diff --git a/utils/statd/statd.c b/utils/statd/statd.c
-index 1c5247e..7be6454 100644
+index 1c5247e..01fdb41 100644
 --- a/utils/statd/statd.c
 +++ b/utils/statd/statd.c
 @@ -25,33 +25,21 @@
@@ -10613,7 +11184,20 @@ index 1c5247e..7be6454 100644
  
  #ifdef SIMULATIONS
  extern void simulator (int, char **);
-@@ -103,23 +90,26 @@ sm_prog_1_wrapper (struct svc_req *rqstp, register SVCXPRT *transp)
+@@ -88,11 +75,8 @@ extern void simulator (int, char **);
+ static void 
+ sm_prog_1_wrapper (struct svc_req *rqstp, register SVCXPRT *transp)
+ {
+-	struct sockaddr_in *sin = nfs_getrpccaller_in(transp);
+-
+ 	/* remote host authorization check */
+-	if (sin->sin_family == AF_INET &&
+-	    !check_default("statd", sin, rqstp->rq_proc, SM_PROG)) {
++	if (!check_default("statd", nfs_getrpccaller(transp), SM_PROG)) {
+ 		svcerr_auth (transp, AUTH_FAILED);
+ 		return;
+ 	}
+@@ -103,23 +87,26 @@ sm_prog_1_wrapper (struct svc_req *rqstp, register SVCXPRT *transp)
  #define sm_prog_1 sm_prog_1_wrapper
  #endif
  
@@ -10645,7 +11229,7 @@ index 1c5247e..7be6454 100644
  								MY_STATE);
  	my_svc_exit();
  }
-@@ -140,8 +130,11 @@ static void log_modes(void)
+@@ -140,8 +127,11 @@ static void log_modes(void)
  		strcat(buf,"No-Daemon ");
  	if (run_mode & MODE_LOG_STDERR)
  		strcat(buf,"Log-STDERR ");
@@ -10658,7 +11242,7 @@ index 1c5247e..7be6454 100644
  }
  
  /*
-@@ -175,13 +168,12 @@ static void create_pidfile(void)
+@@ -175,13 +165,12 @@ static void create_pidfile(void)
  	unlink(pidfile);
  	fp = fopen(pidfile, "w");
  	if (!fp)
@@ -10675,7 +11259,7 @@ index 1c5247e..7be6454 100644
  	}
  }
  
-@@ -189,42 +181,10 @@ static void truncate_pidfile(void)
+@@ -189,42 +178,10 @@ static void truncate_pidfile(void)
  {
  	if (pidfd >= 0) {
  		if (ftruncate(pidfd, 0) < 0) {
@@ -10720,7 +11304,7 @@ index 1c5247e..7be6454 100644
  }
  
  static void run_sm_notify(int outport)
-@@ -266,6 +226,8 @@ int main (int argc, char **argv)
+@@ -266,6 +223,8 @@ int main (int argc, char **argv)
  
  	/* Default: daemon mode, no other options */
  	run_mode = 0;
@@ -10729,7 +11313,7 @@ index 1c5247e..7be6454 100644
  
  	/* Set the basename */
  	if ((name_p = strrchr(argv[0],'/')) != NULL) {
-@@ -274,13 +236,6 @@ int main (int argc, char **argv)
+@@ -274,13 +233,6 @@ int main (int argc, char **argv)
  		name_p = argv[0];
  	}
  
@@ -10743,7 +11327,7 @@ index 1c5247e..7be6454 100644
  	/* Set hostname */
  	MY_NAME = NULL;
  
-@@ -289,7 +244,7 @@ int main (int argc, char **argv)
+@@ -289,7 +241,7 @@ int main (int argc, char **argv)
  		switch (arg) {
  		case 'V':	/* Version */
  		case 'v':
@@ -10752,7 +11336,7 @@ index 1c5247e..7be6454 100644
  			exit(0);
  		case 'F':	/* Foreground/nodaemon mode */
  			run_mode |= MODE_NODAEMON;
-@@ -326,34 +281,8 @@ int main (int argc, char **argv)
+@@ -326,34 +278,8 @@ int main (int argc, char **argv)
  			MY_NAME = xstrdup(optarg);
  			break;
  		case 'P':
@@ -10760,8 +11344,7 @@ index 1c5247e..7be6454 100644
 -			if ((DIR_BASE = xstrdup(optarg)) == NULL) {
 -				fprintf(stderr, "%s: xstrdup(%s) failed!\n",
 -					argv[0], optarg);
-+			if (!nsm_setup_pathnames(argv[0], optarg))
- 				exit(1);
+-				exit(1);
 -			}
 -
 -			SM_DIR = xmalloc(strlen(DIR_BASE) + 1 + sizeof("sm"));
@@ -10774,7 +11357,8 @@ index 1c5247e..7be6454 100644
 -
 -				fprintf(stderr, "%s: xmalloc() failed!\n",
 -					argv[0]);
--				exit(1);
++			if (!nsm_setup_pathnames(argv[0], optarg))
+ 				exit(1);
 -			}
 -			if (DIR_BASE[strlen(DIR_BASE)-1] == '/') {
 -				sprintf(SM_DIR, "%ssm", DIR_BASE );
@@ -10788,7 +11372,7 @@ index 1c5247e..7be6454 100644
  			break;
  		case 'H': /* PRC: specify the ha-callout program */
  			if ((ha_callout_prog = xstrdup(optarg)) == NULL) {
-@@ -383,7 +312,6 @@ int main (int argc, char **argv)
+@@ -383,7 +309,6 @@ int main (int argc, char **argv)
  		run_sm_notify(out_port);
  	}
  
@@ -10796,7 +11380,7 @@ index 1c5247e..7be6454 100644
  	if (!(run_mode & MODE_NODAEMON)) {
  		run_mode &= ~MODE_LOG_STDERR;	/* Never log to console in
  						   daemon mode. */
-@@ -432,10 +360,6 @@ int main (int argc, char **argv)
+@@ -432,10 +357,6 @@ int main (int argc, char **argv)
  		/* Child.	*/
  		close(pipefds[0]);
  		setsid ();
@@ -10807,7 +11391,7 @@ index 1c5247e..7be6454 100644
  
  		while (pipefds[1] <= 2) {
  			pipefds[1] = dup(pipefds[1]);
-@@ -455,7 +379,13 @@ int main (int argc, char **argv)
+@@ -455,7 +376,13 @@ int main (int argc, char **argv)
  
  	/* Child. */
  
@@ -10822,7 +11406,7 @@ index 1c5247e..7be6454 100644
  
  	log_modes();
  
-@@ -495,25 +425,48 @@ int main (int argc, char **argv)
+@@ -495,25 +422,48 @@ int main (int argc, char **argv)
  	 * pass on any SM_NOTIFY that arrives
  	 */
  	load_state();
@@ -10878,7 +11462,7 @@ index 1c5247e..7be6454 100644
  	for (;;) {
  		/*
  		 * Handle incoming requests:  SM_NOTIFY socket requests, as
-@@ -541,29 +494,3 @@ int main (int argc, char **argv)
+@@ -541,29 +491,3 @@ int main (int argc, char **argv)
  	}
  	return 0;
  }
@@ -10977,10 +11561,10 @@ index 88ba208..e89e666 100644
 -extern const char *version_p;	/* program version */
 -
 diff --git a/utils/statd/statd.man b/utils/statd/statd.man
-index e8be9f3..4ddb634 100644
+index e8be9f3..ffc5e95 100644
 --- a/utils/statd/statd.man
 +++ b/utils/statd/statd.man
-@@ -1,191 +1,403 @@
+@@ -1,191 +1,400 @@
 -.\"
 -.\" statd(8)
 +.\"@(#)rpc.statd.8"
@@ -11348,7 +11932,8 @@ index e8be9f3..4ddb634 100644
 +and then exit.
 +.SH SECURITY
 +The
-+.B rpc.statd
+ .B rpc.statd
+-version is protected by the
 +daemon must be started as root to acquire privileges needed
 +to create sockets with privileged source ports, and to access the
 +state information database.
@@ -11369,15 +11954,11 @@ index e8be9f3..4ddb634 100644
 +the state directory.
 +.PP
 +You can also protect your
- .B rpc.statd
--version is protected by the
++.B rpc.statd
 +listeners using the
 +.B tcp_wrapper
 +library or
 +.BR iptables (8).
-+Note that the
-+.B tcp_wrapper
-+library supports only IPv4 networking.
 +To use the
  .B tcp_wrapper
 -library. You have to give the clients access to
@@ -11531,7 +12112,7 @@ index e8be9f3..4ddb634 100644
  Jeff Uphoff <juphoff@users.sourceforge.net>
  .br
  Olaf Kirch <okir@monad.swb.de>
-@@ -195,3 +407,5 @@ H.J. Lu <hjl@gnu.org>
+@@ -195,3 +404,5 @@ H.J. Lu <hjl@gnu.org>
  Lon Hohberger <hohberger@missioncriticallinux.com>
  .br
  Paul Clements <paul.clements@steeleye.com>

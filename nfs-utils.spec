@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.1
-Release: 11%{?dist}
+Release: 12%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -18,7 +18,7 @@ Source13: rpcgssd.init
 Source14: rpcsvcgssd.init
 Source15: nfs.sysconfig
 
-Patch000: nfs-utils-1.2.2-rc7.patch
+Patch000: nfs-utils-1.2.2-rc8.patch
 Patch001: nfs-utils-1.2.1-compile.patch
 Patch002: nfs-utils-1.2.1-statdpath.patch
 
@@ -51,7 +51,7 @@ BuildRequires: libgssglue-devel libevent-devel libcap-devel
 BuildRequires: nfs-utils-lib-devel >= 1.1.0-3 libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, glibc-headers
-BuildRequires: e2fsprogs-devel, krb5-devel, tcp_wrappers-devel
+BuildRequires: krb5-devel, tcp_wrappers-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
 Requires: nfs-utils-lib >= 1.1.0-3 libgssglue libevent
@@ -250,6 +250,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Sun Jan 17 2010 Steve Dickson <steved@redhat.com> 1.2.1-12
+- Updated to latest upstream RC release: nfs-utils-1-2-2-rc7
+  which includes Ipv6 support for tcpwrapper (disabled by default).
+
 * Sat Jan 16 2010 Steve Dickson <steved@redhat.com> 1.2.1-11
 - Updated to latest upstream RC release: nfs-utils-1-2-2-rc7
   which includes Ipv6 support for statd (disabled by default).
