@@ -1,0 +1,120 @@
+diff -up nfs-utils-1.2.1/support/nfs/getport.c.orig nfs-utils-1.2.1/support/nfs/getport.c
+--- nfs-utils-1.2.1/support/nfs/getport.c.orig	2010-01-27 13:48:06.136623000 -0500
++++ nfs-utils-1.2.1/support/nfs/getport.c	2010-01-27 14:02:28.491921000 -0500
+@@ -277,7 +277,7 @@ nfs_get_proto(const char *netid, sa_fami
+ #ifdef HAVE_LIBTIRPC
+ char *nfs_get_netid(const sa_family_t family, const unsigned long protocol)
+ {
+-	char *nc_protofmly, *nc_proto, *nc_netid;
++	char *nc_protofmly, *nc_proto, *nc_netid = NULL;
+ 	struct netconfig *nconf;
+ 	struct protoent *proto;
+ 	void *handle;
+@@ -319,6 +319,19 @@ char *nfs_get_netid(const sa_family_t fa
+ 	endnetconfig(handle);
+ 
+ out:
++	/*
++	 * The system configuration files are inaccessible 
++	 * so see if these are well known protocols
++	 */
++	if (protocol == IPPROTO_TCP)
++		nc_netid = (family == AF_INET6 ? 
++			strdup("tcp6") : strdup("tcp"));
++	else if (protocol == IPPROTO_UDP)
++		nc_netid = (family == AF_INET6 ? 
++			strdup("udp6") : strdup("udp"));
++	if (nc_netid != NULL)
++		return nc_netid;
++
+ 	rpc_createerr.cf_stat = RPC_UNKNOWNPROTO;
+ 	return NULL;
+ }
+diff -up nfs-utils-1.2.1/utils/mount/network.c.orig nfs-utils-1.2.1/utils/mount/network.c
+--- nfs-utils-1.2.1/utils/mount/network.c.orig	2010-01-27 13:48:06.141624000 -0500
++++ nfs-utils-1.2.1/utils/mount/network.c	2010-01-27 14:17:49.098201000 -0500
+@@ -1280,7 +1280,26 @@ nfs_nfs_version(struct mount_options *op
+ 	*version = 0;
+ 	return 1;
+ }
+-
++/*
++ * Returns TRUE if the option string is a well known protocol
++ */
++int 
++nfs_set_proto(char *option,  unsigned long *protocol)
++{
++	if (strcmp(option, "tcp") == 0 || 
++			strcmp(option, "tcp6") == 0) {
++		*protocol = IPPROTO_TCP;
++		return 1;
++	}
++	if (strcmp(option, "udp") == 0 ||
++			strcmp(option, "udp6") == 0) {
++		*protocol = IPPROTO_UDP;
++		return 1;
++	}
++	if (verbose)
++		nfs_error(_("%s: unkown protocol: '%s'"), progname, option);
++	return 0;
++}
+ /*
+  * Returns TRUE if @protocol contains a valid value for this option,
+  * or FALSE if the option was specified with an invalid value.
+@@ -1300,8 +1319,13 @@ nfs_nfs_protocol(struct mount_options *o
+ 		return 1;
+ 	case 2: /* proto */
+ 		option = po_get(options, "proto");
+-		if (option != NULL)
+-			return nfs_get_proto(option, &family, protocol);
++		if (option != NULL) {
++			if (nfs_get_proto(option, &family, protocol))
++				return 1;
++			if (nfs_set_proto(option, protocol))
++				return 1;
++			return 0;
++		}
+ 	}
+ 
+ 	/*
+@@ -1349,7 +1373,7 @@ nfs_nfs_port(struct mount_options *optio
+ int nfs_nfs_proto_family(struct mount_options *options,
+ 				sa_family_t *family)
+ {
+-	unsigned long protocol;
++	unsigned long protocol = 0;
+ 	char *option;
+ 
+ 	*family = config_default_family;
+@@ -1360,8 +1384,13 @@ int nfs_nfs_proto_family(struct mount_op
+ 		return 1;
+ 	case 2: /* proto */
+ 		option = po_get(options, "proto");
+-		if (option != NULL)
+-			return nfs_get_proto(option, family, &protocol);
++		if (option != NULL){
++			if (nfs_get_proto(option, family, &protocol))
++				return 1;
++			if (nfs_set_proto(option, &protocol))
++				return 1;
++			return 0;
++		}
+ 	}
+ 
+ 	/*
+@@ -1443,8 +1472,13 @@ nfs_mount_protocol(struct mount_options 
+ 	char *option;
+ 
+ 	option = po_get(options, "mountproto");
+-	if (option != NULL)
+-		return nfs_get_proto(option, &family, protocol);
++	if (option != NULL) {
++		if (nfs_get_proto(option, &family, protocol))
++			return 1;
++		if (nfs_set_proto(option, protocol))
++			return 1;
++		return 0;
++	}
+ 
+ 	/*
+ 	 * MNT transport protocol wasn't specified.  If the NFS
