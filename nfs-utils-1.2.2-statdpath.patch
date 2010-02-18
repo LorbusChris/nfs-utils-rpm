@@ -1,6 +1,6 @@
-diff -up nfs-utils-1.2.1/configure.ac.orig nfs-utils-1.2.1/configure.ac
---- nfs-utils-1.2.1/configure.ac.orig	2010-01-15 11:10:25.080854089 -0500
-+++ nfs-utils-1.2.1/configure.ac	2010-01-15 11:11:03.872749424 -0500
+diff -up nfs-utils-1.2.2/configure.ac.orig nfs-utils-1.2.2/configure.ac
+--- nfs-utils-1.2.2/configure.ac.orig	2010-02-18 07:35:00.000000000 -0500
++++ nfs-utils-1.2.2/configure.ac	2010-02-18 09:15:24.710128679 -0500
 @@ -22,6 +22,14 @@ AC_ARG_WITH(statedir,
  	statedir=$withval,
  	statedir=/var/lib/nfs)
@@ -16,7 +16,7 @@ diff -up nfs-utils-1.2.1/configure.ac.orig nfs-utils-1.2.1/configure.ac
  AC_ARG_WITH(statduser,
  	[AC_HELP_STRING([--with-statduser=rpcuser],
                          [statd to run under @<:@rpcuser or nobody@:>@]
-@@ -350,6 +358,9 @@ dnl ************************************
+@@ -364,6 +372,9 @@ dnl ************************************
  dnl Export some path names to config.h
  dnl *************************************************************
  AC_DEFINE_UNQUOTED(NFS_STATEDIR, "$statedir", [This defines the location of the NFS state files. Warning: this must match definitions in config.mk!])
@@ -26,9 +26,9 @@ diff -up nfs-utils-1.2.1/configure.ac.orig nfs-utils-1.2.1/configure.ac
  
  if test "x$cross_compiling" = "xno"; then
  	CFLAGS_FOR_BUILD=${CFLAGS_FOR_BUILD-"$CFLAGS"}
-diff -up nfs-utils-1.2.1/support/nsm/file.c.orig nfs-utils-1.2.1/support/nsm/file.c
---- nfs-utils-1.2.1/support/nsm/file.c.orig	2010-01-15 11:10:25.086884939 -0500
-+++ nfs-utils-1.2.1/support/nsm/file.c	2010-01-15 11:11:03.873769833 -0500
+diff -up nfs-utils-1.2.2/support/nsm/file.c.orig nfs-utils-1.2.2/support/nsm/file.c
+--- nfs-utils-1.2.2/support/nsm/file.c.orig	2010-02-18 07:35:00.000000000 -0500
++++ nfs-utils-1.2.2/support/nsm/file.c	2010-02-18 09:15:24.711128045 -0500
 @@ -93,12 +93,13 @@
  #define NSM_KERNEL_STATE_FILE	"/proc/sys/fs/nfs/nsm_local_state"
  
