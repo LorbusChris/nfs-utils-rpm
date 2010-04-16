@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.2
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -19,6 +19,7 @@ Source14: rpcsvcgssd.init
 Source15: nfs.sysconfig
 
 Patch001: nfs-utils-1-2-3-rc1.patch
+Patch002: nfs-utils-1-2-3-rc2.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.2-statdpath.patch
@@ -72,6 +73,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %setup -q
 
 %patch001 -p1
+%patch002 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -240,6 +242,8 @@ fi
 /usr/sbin/gss_destroy_creds
 /usr/sbin/sm-notify
 /usr/sbin/start-statd
+/usr/sbin/mountstats
+/usr/sbin/nfsiostat
 %{_mandir}/*/*
 %config /etc/rc.d/init.d/nfslock
 
@@ -249,6 +253,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Fri Apr 16 2010 Steve Dickson <steved@redhat.com> 1.2.2-3
+- Update to upstream RC release: nfs-utils-1-2-3-rc2
+
 * Mon Mar 22 2010 Steve Dickson <steved@redhat.com> 1.2.2-2
 - Update to upstream RC release: nfs-utils-1-2-3-rc1
 
