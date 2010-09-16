@@ -18,7 +18,7 @@ Source13: rpcgssd.init
 Source14: rpcsvcgssd.init
 Source15: nfs.sysconfig
 
-Patch001: nfs-utils-1-2-3-rc5.patch
+Patch001: nfs-utils-1-2-3-rc6.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.2-statdpath.patch
@@ -251,6 +251,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Thu Sep 16 2010 Steve Dickson <steved@redhat.com> 1.2.2-8
+- Update to upstream RC release: nfs-utils-1-2-3-rc6
+
 * Thu Sep  9 2010 Steve Dickson <steved@redhat.com> 1.2.2-7
 - Update to upstream RC release: nfs-utils-1-2-3-rc5
 
