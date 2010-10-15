@@ -19,6 +19,7 @@ Source14: rpcsvcgssd.init
 Source15: nfs.sysconfig
 
 Patch001: nfs-utils-1.2.4-rc1.patch
+Patch002: nfs-utils-1.2.3-export-manpage.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.2-statdpath.patch
@@ -73,6 +74,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %setup -q
 
 %patch001 -p1
+%patch002 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -256,6 +258,7 @@ fi
 * Fri Oct 15 2010 Steve Dickson <steved@redhat.com> 1.2.3-2
 - Initscripts do not conform to LSB specification (bz 621562)
 - sm-notify needs to call res_init() before each try (bz 625531)
+- exports(5) man page duplicated paragraphs (bz 590921)
 
 * Thu Oct 14 2010 Steve Dickson <steved@redhat.com> 1.2.3-1
 - Updated to latest upstream release: nfs-utils-1-2-4-rc1
