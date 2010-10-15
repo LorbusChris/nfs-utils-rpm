@@ -28,8 +28,9 @@
 [ -f /etc/sysconfig/nfs ] && . /etc/sysconfig/nfs
 
 RETVAL=0
-LOCKFILE=/var/lock/subsys/rpcidmapd
 prog="rpc.idmapd"
+LOCKFILE=/var/lock/subsys/$prog
+uid=`id | cut -d\( -f1 | cut -d= -f2`
 
 case "$1" in
   start|condstart)
@@ -37,6 +38,9 @@ case "$1" in
 	[ "${NETWORKING}" != "yes" ] && exit 6
 	
 	[ ! -x /usr/sbin/rpc.idmapd ] && exit 5
+
+	# Only root can start the service
+	[ $uid -ne 0 ] && exit 4
 
 	# Make sure the daemon is not already running.
 	[ "$1" = "condstart" -a -n "`pidofproc $prog`" ] && {
@@ -78,6 +82,9 @@ case "$1" in
 	[ $RETVAL -eq 0 ] && touch $LOCKFILE
 	;;
   stop)
+	# Only root can stop the service
+	[ $uid -ne 0 ] && exit 4
+
 	# Stop daemon.
 	echo -n $"Stopping RPC idmapd: "
 	killproc $prog
@@ -89,12 +96,12 @@ case "$1" in
 	status rpc.idmapd
 	RETVAL=$?
 	;;
-  restart|reload)
+  restart|reload|force-reload)
 	$0 stop
 	$0 start
 	RETVAL=$?
 	;;
-  condrestart)
+  condrestart|try-restart)
 	if [ -f $LOCKFILE ]; then
 		$0 restart
 		RETVAL=$?
@@ -107,8 +114,8 @@ case "$1" in
 	fi
 	;;
   *)
-	echo $"Usage: $0 {start|stop|restart|condstart|condrestart|status|condstop}"
-	RETVAL=3
+	echo $"Usage: $0 {start|stop|restart|force-reload|condstart|condrestart|try-restart|status|condstop}"
+	RETVAL=2
 	;;
 esac
 

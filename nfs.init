@@ -12,7 +12,7 @@
 
 ### BEGIN INIT INFO
 # Provides: nfs
-# Required-Start: $local_fs $network $syslog
+# Required-Start: $local_fs $network $syslog $portmap
 # Required-Stop: $local_fs $network $syslog
 # Default-Stop: 0 1 6
 # Short-Description: Start up the NFS server sevice
@@ -35,6 +35,7 @@
 [ -z "$RQUOTAD" ] && RQUOTAD=`type -path rpc.rquotad`
 
 RETVAL=0
+uid=`id | cut -d\( -f1 | cut -d= -f2`
 
 # See how we were called.
 case "$1" in
@@ -51,6 +52,9 @@ case "$1" in
 	if status rpc.mountd > /dev/null ; then
 		exit 0
 	fi
+
+	# Only root can start the service
+	[ $uid -ne 0 ] && exit 4
 
 	# Don't fail if /etc/exports doesn't exist; create a bare-bones 
 	# version and continue.
@@ -119,24 +123,32 @@ case "$1" in
 	daemon rpc.mountd $RPCMOUNTDOPTS
 	RETVAL=$?
 	echo
-	touch /var/lock/subsys/nfs
+	touch /var/lock/subsys/rpc.mountd
+	touch /var/lock/subsys/nfsd
 
 	# Let rpc.idmapd know that rpc.mountd just started
 	[ -x /usr/sbin/rpc.idmapd ] && /sbin/service rpcidmapd condstart
 
 	;;
   stop)
+	# Only root can stop the service
+	[ $uid -ne 0 ] && exit 4
+
 	# Stop daemons.
 	echo -n $"Shutting down NFS mountd: "
 	killproc rpc.mountd
+	RETVAL=$?
 	echo
 	echo -n $"Shutting down NFS daemon: "
 	killproc nfsd -2
+	rval=$?
+	[ $RETVAL -eq 0 ] && RETVAL=$rval
 	echo
 	if [ -n "$RQUOTAD" -a "$RQUOTAD" != "no" ]; then
 		echo -n $"Shutting down NFS quotas: "
 		killproc rpc.rquotad
-		RETVAL=$?
+		rval=$?
+		[ $RETVAL -eq 0 ] && RETVAL=$rval
 		echo
 	fi
 	# Reset the lockd ports if they were set
@@ -151,31 +163,36 @@ case "$1" in
 	cnt=`/usr/sbin/exportfs -v | /usr/bin/wc -l`	
 	if [ $cnt -gt 0 ]; then 
 		action $"Shutting down NFS services: " /usr/sbin/exportfs -au
-	else
-		action $"Shutting down NFS services: " /bin/false
+		rval=$?
+		[ $RETVAL -eq 0 ] && RETVAL=$rval
 	fi
 	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd stop
-	rm -f /var/lock/subsys/nfs
+	rm -f /var/lock/subsys/nfsd
+	rm -f /var/lock/subsys/rpc.mountd
 	;;
   status)
 	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd status
 	status rpc.mountd
+	RETVAL=$?
 	status nfsd
+	rval=$?
+	[ $RETVAL -eq 0 ] && RETVAL=$rval
 	if [ -n "$RQUOTAD" -a "$RQUOTAD" != "no" ]; then
 		status rpc.rquotad
+		rval=$?
+		[ $RETVAL -eq 0 ] && RETVAL=$rval
 	fi
-	RETVAL=$?
 	;;
   restart)
 	$0 stop
 	$0 start
 	;;
-  reload)
+  reload | force-reload)
 	/usr/sbin/exportfs -r
-	touch /var/lock/subsys/nfs
+	touch /var/lock/subsys/nfsd
 	;;
   probe)
-	if [ ! -f /var/lock/subsys/nfs ] ; then
+	if [ ! -f /var/lock/subsys/nfsd ] ; then
 	  echo $"start"; exit 0
 	fi
 	/sbin/pidof rpc.mountd >/dev/null 2>&1; MOUNTD="$?"
@@ -183,13 +200,13 @@ case "$1" in
 	if [ $MOUNTD = 1 -o $NFSD = 1 ] ; then
 	  echo $"restart"; exit 0
 	fi
-	if [ /etc/exports -nt /var/lock/subsys/nfs ] ; then
+	if [ /etc/exports -nt /var/lock/subsys/nfsd ] ; then
 	  echo $"reload"; exit 0
 	fi
 	;;
-  condrestart)
+  condrestart | try-restart)
 	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd condrestart
-  	[ -f /var/lock/subsys/nfs ] && {
+  	[ -f /var/lock/subsys/nfsd ] && {
 		$0 stop
 		$0 start
 		RETVAL=$?
@@ -197,14 +214,14 @@ case "$1" in
 	;;
   condstop)
 	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd condstop
-  	[ -f /var/lock/subsys/nfs ] && {
+  	[ -f /var/lock/subsys/nfsd ] && {
 		$0 stop
 		RETVAL=$?
 	}
 	;;
   *)
-	echo $"Usage: nfs {start|stop|status|restart|reload|condrestart|condstop}"
-	RETVAL=3
+	echo $"Usage: nfs {start|stop|status|restart|reload|force-reload|condrestart|try-restart|condstop}"
+	RETVAL=2
 	;;
 esac
 

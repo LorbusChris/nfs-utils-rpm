@@ -27,19 +27,20 @@
 # Check for and source configuration file otherwise set defaults
 [ -f /etc/sysconfig/nfs ] && . /etc/sysconfig/nfs
 
-# See if we are configured to start
-[ "${SECURE_NFS}" != "yes" ] && exit 6
-
 # Try to use machine credentials by default
 RETVAL=0
-LOCKFILE=/var/lock/subsys/rpcgssd
+uid=`id | cut -d\( -f1 | cut -d= -f2`
+
 prog="rpc.gssd"
+LOCKFILE=/var/lock/subsys/$prog
 
 case "$1" in
   start|condstart)
 	# Check that networking is up.
 	[ "${NETWORKING}" != "yes" ] && exit 6
 	[ ! -x /usr/sbin/rpc.gssd ] && exit 5
+	# Only root can start the service
+	[ $uid -ne 0 ] && exit 4
 
 	# Make sure the daemon is not already running.
 	if status $prog > /dev/null ; then
@@ -94,6 +95,12 @@ case "$1" in
 	[ $RETVAL -eq 0 ] && touch $LOCKFILE
 	;;
   stop)
+	# Just exit if not configured
+	[ "${SECURE_NFS}" != "yes" ] && exit 6
+
+	# Only root can stop the service
+	[ $uid -ne 0 ] && exit 4
+
 	# Stop daemon.
 	echo -n $"Stopping RPC gssd: "
 	killproc $prog
@@ -105,12 +112,12 @@ case "$1" in
 	status rpc.gssd
 	RETVAL=$?
 	;;
-  restart|reload)
+  restart|reload|force-reload)
 	$0 stop
 	$0 start
 	RETVAL=$?
 	;;
-  condrestart)
+  condrestart|try-restart)
 	if [ -f $LOCKFILE ]; then
 		$0 restart
 		RETVAL=$?
@@ -123,8 +130,8 @@ case "$1" in
 	fi
 	;;
   *)
-	echo $"Usage: $0 {start|stop|restart|condstart|condrestart|status|condstop}"
-	RETVAL=3
+	echo $"Usage: $0 {start|stop|restart|force-reload|condstart|condrestart|try-restart|status|condstop}"
+	RETVAL=2
 	;;
 esac
 

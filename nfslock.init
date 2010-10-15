@@ -11,7 +11,7 @@
 
 ### BEGIN INIT INFO
 # Provides: nfslock
-# Required-Start: $network $syslog
+# Required-Start: $network $syslog $portmap
 # Required-Stop: $network $syslog
 # Default-Start: 3 4 5
 # Default-Stop: 0 1 6
@@ -36,6 +36,7 @@ STATDARG=""
 
 [ -f /etc/sysconfig/network ] && . /etc/sysconfig/network
 
+uid=`id | cut -d\( -f1 | cut -d= -f2`
 RETVAL=0
 start() {
 	# Check that networking is up.
@@ -43,11 +44,14 @@ start() {
 
 	[ -x /sbin/rpc.statd ] || exit 5 
 
+	# Only root can start the service
+	[ $uid -ne 0 ] && exit 4
+
 	# Make sure the rpc.statd is not already running.
 	if status rpc.statd > /dev/null ; then
 		exit 0
 	fi
-	rm -f /var/lock/subsys/nfslock
+	rm -f /var/lock/subsys/rpc.statd
 
 	# Make sure locks are recovered
 	rm -f /var/run/sm-notify.pid
@@ -79,11 +83,14 @@ start() {
 	daemon rpc.statd "$STATDARG"
 	RETVAL=$?
 	echo
-	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/nfslock
+	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/rpc.statd
     return $RETVAL
 }
 
 stop() {
+	# Only root can stop the service
+	[ $uid -ne 0 ] && exit 4
+
 	# Stop daemons.
 	if [ -n "`pidofproc lockd`" ]; then
 		echo -n $"Stopping NFS locking: "
@@ -95,7 +102,7 @@ stop() {
 	killproc rpc.statd
 	RETVAL=$?
 	echo
-	rm -f /var/lock/subsys/nfslock
+	rm -f /var/lock/subsys/rpc.statd
 	rm -f /var/run/sm-notify.pid
 	return $RETVAL
 }
@@ -112,12 +119,12 @@ case "$1" in
 	status rpc.statd
 	RETVAL=$?
 	;;
-  restart)
+  restart | force-reload | reload)
 	stop
 	start
 	;;
   probe)
-	if [ ! -f /var/lock/subsys/nfslock ] ; then
+	if [ ! -f /var/lock/subsys/rpc.statd ] ; then
 	  echo $"start"; exit 0
 	fi
 	/sbin/pidof rpc.statd >/dev/null 2>&1
@@ -125,22 +132,22 @@ case "$1" in
 	  echo $"restart"; exit 0
 	fi
 	;;
-  condrestart)
-  	[ -f /var/lock/subsys/nfslock ] && {
+  condrestart | try-restart)
+  	[ -f /var/lock/subsys/rpc.statd ] && {
 		stop
 		start
 		RETVAL=$?
 	}
 	;;
   condstop)
-  	[ -f /var/lock/subsys/nfslock ] && {
+  	[ -f /var/lock/subsys/rpc.statd ] && {
 		stop
 		RETVAL=$?
 	}
 	;;
   *)
-	echo $"Usage: $0 {start|stop|status|restart|probe|condrestart|condstop}"
-	RETVAL=3
+	echo $"Usage: $0 {start|stop|status|restart|reload|force-reload|probe|condrestart|try-restart|condstop}"
+	RETVAL=2
 	;;
 esac
 
