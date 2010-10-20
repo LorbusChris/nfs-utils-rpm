@@ -45,8 +45,7 @@
 #STATDARG=""
 # Port rpc.statd should listen on.
 #STATD_PORT=662
-# Outgoing port statd should used. The default is port
-# is random
+# Outgoing port statd should use. The default port is random.
 #STATD_OUTGOING_PORT=2020
 # Specify callout program 
 #STATD_HA_CALLOUT="/usr/local/bin/foo"
