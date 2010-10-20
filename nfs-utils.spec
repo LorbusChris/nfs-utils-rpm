@@ -9,7 +9,6 @@ Epoch: 1
 %define all_32bit_archs i386 i486 i586 i686 athlon ppc sparcv9
 
 Source0: http://www.kernel.org/pub/linux/utils/nfs/%{name}-%{version}.tar.bz2
-Source1: ftp://nfs.sourceforge.net/pub/nfs/nfs.doc.tar.gz
 
 Source10: nfs.init
 Source11: nfslock.init
