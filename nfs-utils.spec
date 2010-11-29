@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.3
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -17,8 +17,7 @@ Source13: rpcgssd.init
 Source14: rpcsvcgssd.init
 Source15: nfs.sysconfig
 
-Patch001: nfs-utils-1.2.4-rc1.patch
-Patch002: nfs-utils-1.2.3-export-manpage.patch
+Patch001: nfs-utils-1.2.4-rc3.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.2-statdpath.patch
@@ -73,7 +72,6 @@ This package also contains the mount.nfs and umount.nfs program.
 %setup -q
 
 %patch001 -p1
-%patch002 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -254,6 +252,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Nov 29 2010 Steve Dickson <steved@redhat.com> 1.2.3-3
+- Updated to latest upstream release: nfs-utils-1-2-4-rc3
+
 * Fri Oct 15 2010 Steve Dickson <steved@redhat.com> 1.2.3-2
 - Initscripts do not conform to LSB specification (bz 621562)
 - sm-notify needs to call res_init() before each try (bz 625531)

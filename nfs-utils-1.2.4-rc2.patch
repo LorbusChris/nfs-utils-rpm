@@ -1,3 +1,16 @@
+diff --git a/configure.ac b/configure.ac
+index 3058be6..5408e85 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -136,7 +136,7 @@ AC_ARG_ENABLE(tirpc,
+ 	[AC_HELP_STRING([--enable-tirpc],
+ 			[enable use of TI-RPC @<:@default=yes@:>@])],
+ 	enable_tirpc=$enableval,
+-	enable_tirpc='yes')
++	enable_tirpc='')
+ AC_ARG_ENABLE(ipv6,
+ 	[AC_HELP_STRING([--enable-ipv6],
+                         [enable support for IPv6 @<:@default=no@:>@])],
 diff --git a/support/export/client.c b/support/export/client.c
 index dbfc2b1..ba2db8f 100644
 --- a/support/export/client.c
@@ -22,6 +35,30 @@ index f528603..4fda30a 100644
  
  	xfree(exp->m_export.e_hostname);
  	xfree(exp);
+diff --git a/support/export/hostname.c b/support/export/hostname.c
+index 3c55ce7..efcb75c 100644
+--- a/support/export/hostname.c
++++ b/support/export/hostname.c
+@@ -30,10 +30,6 @@
+ #include "sockaddr.h"
+ #include "exportfs.h"
+ 
+-#ifndef HAVE_DECL_AI_ADDRCONFIG
+-#define AI_ADDRCONFIG	0
+-#endif
+-
+ /**
+  * host_ntop - generate presentation address given a sockaddr
+  * @sap: pointer to socket address
+@@ -170,7 +166,7 @@ host_addrinfo(const char *hostname)
+ #endif
+ 		/* don't return duplicates */
+ 		.ai_protocol	= (int)IPPROTO_UDP,
+-		.ai_flags	= AI_ADDRCONFIG | AI_CANONNAME,
++		.ai_flags	= AI_CANONNAME,
+ 	};
+ 	int error;
+ 
 diff --git a/support/include/nfslib.h b/support/include/nfslib.h
 index 3db5bec..53ece0e 100644
 --- a/support/include/nfslib.h
@@ -596,6 +633,55 @@ index 59ba505..b3f75ed 100644
  		void (*dispatch)(struct svc_req *, SVCXPRT *),
  		const uint16_t port)
  {
+diff --git a/tests/nsm_client/nsm_client.c b/tests/nsm_client/nsm_client.c
+index 0d1159a..0fa3422 100644
+--- a/tests/nsm_client/nsm_client.c
++++ b/tests/nsm_client/nsm_client.c
+@@ -205,7 +205,7 @@ nsm_client_get_rpcclient(const char *node)
+ {
+ 	unsigned short		port;
+ 	struct addrinfo		*ai;
+-	struct addrinfo		hints = { .ai_flags	= AI_ADDRCONFIG };
++	struct addrinfo		hints = { };
+ 	int			err;
+ 	CLIENT			*client = NULL;
+ 
+diff --git a/utils/exportfs/exports.man b/utils/exportfs/exports.man
+index c726dd9..4e3edc5 100644
+--- a/utils/exportfs/exports.man
++++ b/utils/exportfs/exports.man
+@@ -145,7 +145,9 @@ storage (see
+ .IR async
+ above).
+ 
+-In releases of nfs-utils up to and including 1.0.0, this option was the
++In releases of nfs-utils up to and including 1.0.0, the
++.I async 
++option was the
+ default.  In all releases after 1.0.0,
+ .I sync
+ is the default, and
+@@ -375,20 +377,6 @@ If the client asks for alternative locations for the export point, it
+ will be given this list of alternatives. (Note that actual replication
+ of the filesystem must be handled elsewhere.)
+ 
+-.TP
+-.IR refer= path@host[+host][:path@host[+host]]
+-A client referencing the export point will be directed to choose from
+-the given list an alternative location for the filesystem.
+-(Note that the server must have a mountpoint here, though a different
+-filesystem is not required; so, for example,
+-.IR "mount --bind" " /path /path"
+-is sufficient.)
+-.TP
+-.IR replicas= path@host[+host][:path@host[+host]]
+-If the client asks for alternative locations for the export point, it
+-will be given this list of alternatives. (Note that actual replication
+-of the filesystem must be handled elsewhere.)
+-
+ .SS User ID Mapping
+ .PP
+ .B nfsd
 diff --git a/utils/idmapd/Makefile.am b/utils/idmapd/Makefile.am
 index 4218048..4328e41 100644
 --- a/utils/idmapd/Makefile.am
@@ -918,7 +1004,7 @@ index 051fa38..a742e64 100644
  				close(lockfile_fd);
  				die (EX_FILEIO, _("Cannot create link %s\n"
 diff --git a/utils/mount/mount.c b/utils/mount/mount.c
-index 82b9169..b4da21f 100644
+index 82b9169..a19af53 100644
 --- a/utils/mount/mount.c
 +++ b/utils/mount/mount.c
 @@ -209,7 +209,7 @@ static char *fix_opts_string(int flags, const char *extra_opts)
@@ -930,16 +1016,62 @@ index 82b9169..b4da21f 100644
  	for (om = opt_map; om->opt != NULL; om++) {
  		if (om->skip)
  			continue;
-@@ -281,7 +281,7 @@ static int add_mtab(char *spec, char *mount_point, char *fstype,
- 	ment.mnt_fsname = spec;
- 	ment.mnt_dir = mount_point;
- 	ment.mnt_type = fstype;
--	ment.mnt_opts = fix_opts_string(flags, opts);
-+	ment.mnt_opts = fix_opts_string(flags & ~MS_NOMTAB, opts);
- 	ment.mnt_freq = freq;
- 	ment.mnt_passno = pass;
+@@ -224,6 +224,20 @@ static char *fix_opts_string(int flags, const char *extra_opts)
+ 	return new_opts;
+ }
  
-@@ -321,7 +321,7 @@ static int add_mtab(char *spec, char *mount_point, char *fstype,
++static void
++init_mntent(struct mntent *mnt, char *fsname, char *dir, char *type,
++		int flags, char *opts)
++{
++	mnt->mnt_fsname	= fsname;
++	mnt->mnt_dir	= dir;
++	mnt->mnt_type	= type;
++	mnt->mnt_opts	= fix_opts_string(flags & ~MS_NOMTAB, opts);
++
++	/* these are always zero for NFS */
++	mnt->mnt_freq	= 0;
++	mnt->mnt_passno	= 0;
++}
++
+ /* Create mtab with a root entry.  */
+ static void
+ create_mtab (void) {
+@@ -245,11 +259,8 @@ create_mtab (void) {
+ 	if ((fstab = getfsfile ("/")) || (fstab = getfsfile ("root"))) {
+ 		char *extra_opts;
+ 		parse_opts (fstab->m.mnt_opts, &flags, &extra_opts);
+-		mnt.mnt_dir = "/";
+-		mnt.mnt_fsname = xstrdup(fstab->m.mnt_fsname);
+-		mnt.mnt_type = fstab->m.mnt_type;
+-		mnt.mnt_opts = fix_opts_string (flags, extra_opts);
+-		mnt.mnt_freq = mnt.mnt_passno = 0;
++		init_mntent(&mnt, xstrdup(fstab->m.mnt_fsname), "/",
++				fstab->m.mnt_type, flags, extra_opts);
+ 		free(extra_opts);
+ 
+ 		if (nfs_addmntent (mfp, &mnt) == 1) {
+@@ -273,17 +284,12 @@ create_mtab (void) {
+ }
+ 
+ static int add_mtab(char *spec, char *mount_point, char *fstype,
+-			int flags, char *opts, int freq, int pass)
++			int flags, char *opts)
+ {
+ 	struct mntent ment;
+ 	int result = EX_SUCCESS;
+ 
+-	ment.mnt_fsname = spec;
+-	ment.mnt_dir = mount_point;
+-	ment.mnt_type = fstype;
+-	ment.mnt_opts = fix_opts_string(flags, opts);
+-	ment.mnt_freq = freq;
+-	ment.mnt_passno = pass;
++	init_mntent(&ment, spec, mount_point, fstype, flags, opts);
+ 
+ 	if (!nomtab && mtab_does_not_exist()) {
+ 		if (verbose > 1)
+@@ -321,7 +327,7 @@ static int add_mtab(char *spec, char *mount_point, char *fstype,
  	return result;
  }
  
@@ -948,7 +1080,7 @@ index 82b9169..b4da21f 100644
  {
  	printf(_("usage: %s remotetarget dir [-rvVwfnsih] [-o nfsoptions]\n"),
  		progname);
-@@ -337,7 +337,7 @@ void mount_usage(void)
+@@ -337,7 +343,7 @@ void mount_usage(void)
  	printf(_("\tnfsoptions\tRefer to mount.nfs(8) or nfs(5)\n\n"));
  }
  
@@ -957,7 +1089,7 @@ index 82b9169..b4da21f 100644
  {
  	const struct opt_map *om;
  
-@@ -371,7 +371,7 @@ static void parse_opts(const char *options, int *flags, char **extra_opts)
+@@ -371,7 +377,7 @@ static void parse_opts(const char *options, int *flags, char **extra_opts)
  	if (options != NULL) {
  		char *opts = xstrdup(options);
  		char *opt, *p;
@@ -966,6 +1098,17 @@ index 82b9169..b4da21f 100644
  		int open_quote = 0;
  
  		*extra_opts = xmalloc(len);
+@@ -441,9 +447,7 @@ static int try_mount(char *spec, char *mount_point, int flags,
+ 	if (!fake)
+ 		print_one(spec, mount_point, fs_type, mount_opts);
+ 
+-	ret = add_mtab(spec, mount_point, fs_type, flags, *extra_opts,
+-			0, 0 /* these are always zero for NFS */ );
+-	return ret;
++	return add_mtab(spec, mount_point, fs_type, flags, *extra_opts);
+ }
+ 
+ int main(int argc, char *argv[])
 diff --git a/utils/mount/mount_config.h b/utils/mount/mount_config.h
 index 3023306..e86b4ba 100644
 --- a/utils/mount/mount_config.h
@@ -1039,7 +1182,7 @@ index cbfb099..4d050d8 100644
 +
  #endif	/* _NFS_UTILS_MOUNT_CONSTANTS_H */
 diff --git a/utils/mount/network.c b/utils/mount/network.c
-index d612427..5b515c3 100644
+index d612427..21a7a2c 100644
 --- a/utils/mount/network.c
 +++ b/utils/mount/network.c
 @@ -59,6 +59,8 @@
@@ -1051,7 +1194,17 @@ index d612427..5b515c3 100644
  extern int nfs_mount_data_version;
  extern char *progname;
  extern int verbose;
-@@ -428,12 +430,12 @@ static int get_socket(struct sockaddr_in *saddr, unsigned int p_prot,
+@@ -208,9 +210,6 @@ int nfs_lookup(const char *hostname, const sa_family_t family,
+ {
+ 	struct addrinfo *gai_results;
+ 	struct addrinfo gai_hint = {
+-#ifdef HAVE_DECL_AI_ADDRCONFIG
+-		.ai_flags	= AI_ADDRCONFIG,
+-#endif	/* HAVE_DECL_AI_ADDRCONFIG */
+ 		.ai_family	= family,
+ 	};
+ 	socklen_t len = *salen;
+@@ -428,12 +427,12 @@ static int get_socket(struct sockaddr_in *saddr, unsigned int p_prot,
  		if (bindresvport(so, &laddr) < 0)
  			goto err_bindresvport;
  	} else {
@@ -1066,7 +1219,7 @@ index d612427..5b515c3 100644
  				timeout);
  		if (cc < 0)
  			goto err_connect;
-@@ -756,11 +758,12 @@ int nfs_probe_bothports(const struct sockaddr *mnt_saddr,
+@@ -756,11 +755,12 @@ int nfs_probe_bothports(const struct sockaddr *mnt_saddr,
   */
  int probe_bothports(clnt_addr_t *mnt_server, clnt_addr_t *nfs_server)
  {
@@ -1083,7 +1236,7 @@ index d612427..5b515c3 100644
  					&nfs_server->pmap);
  }
  
-@@ -772,7 +775,7 @@ static int nfs_probe_statd(void)
+@@ -772,7 +772,7 @@ static int nfs_probe_statd(void)
  	};
  	rpcprog_t program = nfs_getrpcbyname(NSMPROG, nfs_ns_pgmtbl);
  
@@ -1092,7 +1245,7 @@ index d612427..5b515c3 100644
  				program, (rpcvers_t)1, IPPROTO_UDP);
  }
  
-@@ -901,7 +904,7 @@ int nfs_advise_umount(const struct sockaddr *sap, const socklen_t salen,
+@@ -901,7 +901,7 @@ int nfs_advise_umount(const struct sockaddr *sap, const socklen_t salen,
   */
  int nfs_call_umount(clnt_addr_t *mnt_server, dirpath *argp)
  {
@@ -1101,7 +1254,7 @@ index d612427..5b515c3 100644
  	socklen_t salen = sizeof(mnt_server->saddr);
  	struct pmap *pmap = &mnt_server->pmap;
  	CLIENT *clnt;
-@@ -1011,11 +1014,11 @@ int clnt_ping(struct sockaddr_in *saddr, const unsigned long prog,
+@@ -1011,11 +1011,11 @@ int clnt_ping(struct sockaddr_in *saddr, const unsigned long prog,
  		struct sockaddr_in *caddr)
  {
  	CLIENT *clnt = NULL;
@@ -1115,7 +1268,7 @@ index d612427..5b515c3 100644
  	sock = get_socket(saddr, prot, CONNECT_TIMEOUT, FALSE, TRUE);
  	if (sock == RPC_ANYSOCK) {
  		if (rpc_createerr.cf_error.re_errno == ETIMEDOUT) {
-@@ -1058,18 +1061,18 @@ int clnt_ping(struct sockaddr_in *saddr, const unsigned long prog,
+@@ -1058,18 +1058,18 @@ int clnt_ping(struct sockaddr_in *saddr, const unsigned long prog,
  		return 0;
  	}
  	memset(&clnt_res, 0, sizeof(clnt_res));
@@ -1138,7 +1291,7 @@ index d612427..5b515c3 100644
  		return 1;
  	else
  		return 0;
-@@ -1103,13 +1106,13 @@ static int nfs_ca_sockname(const struct sockaddr *sap, const socklen_t salen,
+@@ -1103,13 +1103,13 @@ static int nfs_ca_sockname(const struct sockaddr *sap, const socklen_t salen,
  
  	switch (sap->sa_family) {
  	case AF_INET:
@@ -1154,7 +1307,7 @@ index d612427..5b515c3 100644
  			close(sock);
  			return 0;
  		}
-@@ -1518,7 +1521,11 @@ nfs_mount_protocol(struct mount_options *options, unsigned long *protocol)
+@@ -1518,7 +1518,11 @@ nfs_mount_protocol(struct mount_options *options, unsigned long *protocol)
  	 * set @protocol to zero.  The pmap protocol value will
  	 * be filled in later by an rpcbind query in this case.
  	 */
@@ -1168,10 +1321,36 @@ index d612427..5b515c3 100644
  
  /*
 diff --git a/utils/mount/nfs.man b/utils/mount/nfs.man
-index d2a4c5f..01bc712 100644
+index 55d4b55..be91a25 100644
 --- a/utils/mount/nfs.man
 +++ b/utils/mount/nfs.man
-@@ -619,7 +619,7 @@ in such cases.
+@@ -69,10 +69,9 @@ for details on specifying raw IPv6 addresses.
+ .P
+ The
+ .I fstype
+-field contains "nfs", for whatever version of the protocol.
+-The
+-.B nfs
+-allow several mount options, which are described below.
++field contains "nfs".  Use of the "nfs4" fstype in
++.I /etc/fstab
++is deprecated.
+ .SH "MOUNT OPTIONS"
+ Refer to
+ .BR mount (8)
+@@ -464,9 +463,9 @@ by other clients, but can impact application and server performance.
+ .IP
+ The DATA AND METADATA COHERENCE section contains a
+ detailed discussion of these trade-offs.
+-.SS "Options for versions 2 and 3 only"
++.SS "Options for NFS versions 2 and 3 only"
+ Use these options, along with the options in the above subsection,
+-for NFSv2/v3 only. They will be ignored for newer versions.
++for NFS versions 2 and 3 only.
+ .TP 1.5i
+ .BI proto= netid
+ The transport protocol name and protocol family the NFS client uses
+@@ -619,7 +618,7 @@ in such cases.
  .BI nfsvers= n
  The NFS protocol version number used to contact the server's NFS service.
  If the server does not support the requested version, the mount request fails.
@@ -1180,6 +1359,133 @@ index d2a4c5f..01bc712 100644
  the server, trying version 4 first, version 3 second, and version 2 last.
  .TP 1.5i
  .BI vers= n
+@@ -717,9 +716,53 @@ If this option is not specified, the NFS client uses READDIRPLUS requests
+ on NFS version 3 mounts to read small directories.
+ Some applications perform better if the client uses only READDIR requests
+ for all directories.
+-.SS "Options for version 4 only"
++.TP 1.5i
++.BR local_lock= mechanism
++Specifies whether to use local locking for any or both of the flock and the
++POSIX locking mechanisms.
++.I mechanism
++can be one of
++.BR all ,
++.BR flock ,
++.BR posix ,
++or
++.BR none .
++This option is supported in kernels 2.6.37 and later.
++.IP
++The Linux NFS client provides a way to make locks local. This means, the
++applications can lock files, but such locks provide exclusion only against
++other applications running on the same client. Remote applications are not
++affected by these locks.
++.IP
++If this option is not specified, or if
++.B none
++is specified, the client assumes that the locks are not local.
++.IP
++If
++.BR all
++is specified, the client assumes that both flock and POSIX locks are local.
++.IP
++If
++.BR flock
++is specified, the client assumes that only flock locks are local and uses
++NLM sideband protocol to lock files when POSIX locks are used.
++.IP
++If
++.BR posix
++is specified, the client assumes that POSIX locks are local and uses NLM
++sideband protocol to lock files when flock locks are used.
++.IP
++To support legacy flock behavior similar to that of NFS clients < 2.6.12, use
++'local_lock=flock'. This option is required when exporting NFS mounts via
++Samba as Samba maps Windows share mode locks as flock. Since NFS clients >
++2.6.12 implement flock by emulating POSIX locks, this will result in
++conflicting locks.
++.IP
++NOTE: When used together, the 'local_lock' mount option will be overridden
++by 'nolock'/'lock' mount option.
++.SS "Options for NFS version 4 only"
+ Use these options, along with the options in the first subsection above,
+-for NFSv4 only. They will be ignored with older versions.
++for NFS version 4 and newer.
+ .TP 1.5i
+ .BI proto= netid
+ The transport protocol name and protocol family the NFS client uses
+@@ -1480,32 +1523,54 @@ of Access Control Lists that are semantically richer than POSIX ACLs.
+ NFS version 4 ACLs are not fully compatible with POSIX ACLs; as such,
+ some translation between the two is required
+ in an environment that mixes POSIX ACLs and NFS version 4.
+-.SH FILES
+-.TP 1.5i
+-.I /etc/fstab
+-file system table
+-.SH BUGS
+-The generic
+-.B remount
+-option is not fully supported.
+-Generic options, such as
+-.BR rw " and " ro
+-can be modified using the
+-.B remount
+-option,
+-but NFS-specific options are not all supported.
++.SH "THE REMOUNT OPTION"
++Generic mount options such as
++.BR rw " and " sync
++can be modified on NFS mount points using the
++.BR remount
++option.
++See
++.BR mount (8)
++for more information on generic mount options.
++.P
++With few exceptions, NFS-specific options
++are not able to be modified during a remount.
+ The underlying transport or NFS version
+ cannot be changed by a remount, for example.
++.P
+ Performing a remount on an NFS file system mounted with the
+ .B noac
+ option may have unintended consequences.
+ The
+ .B noac
+-option is a mixture of a generic option,
++option is a combination of the generic option
+ .BR sync ,
+-and an NFS-specific option
++and the NFS-specific option
+ .BR actimeo=0 .
++.SS "Unmounting after a remount"
++For mount points that use NFS versions 2 or 3, the NFS umount subcommand
++depends on knowing the original set of mount options used to perform the
++MNT operation.
++These options are stored on disk by the NFS mount subcommand,
++and can be erased by a remount.
+ .P
++To ensure that the saved mount options are not erased during a remount,
++specify either the local mount directory, or the server hostname and
++export pathname, but not both, during a remount.  For example,
++.P
++.NF
++.TA 2.5i
++	mount -o remount,ro /mnt
++.FI
++.P
++merges the mount option
++.B ro
++with the mount options already saved on disk for the NFS server mounted at /mnt.
++.SH FILES
++.TP 1.5i
++.I /etc/fstab
++file system table
++.SH BUGS
+ Before 2.4.7, the Linux NFS client did not support NFS over TCP.
+ .P
+ Before 2.4.20, the Linux NFS client used a heuristic
 diff --git a/utils/mount/nfsumount.c b/utils/mount/nfsumount.c
 index 1514340..02d40ff 100644
 --- a/utils/mount/nfsumount.c
@@ -1359,6 +1665,82 @@ index f0918f7..ab869d9 100644
  
  	if (options) {
  		for (option = options->tail; option; option = option->prev) {
+diff --git a/utils/mount/stropts.c b/utils/mount/stropts.c
+index 50a1a2a..ac81616 100644
+--- a/utils/mount/stropts.c
++++ b/utils/mount/stropts.c
+@@ -49,10 +49,6 @@
+ #include "parse_dev.h"
+ #include "conffile.h"
+ 
+-#ifndef HAVE_DECL_AI_ADDRCONFIG
+-#define AI_ADDRCONFIG	0
+-#endif
+-
+ #ifndef NFS_PROGRAM
+ #define NFS_PROGRAM	(100003)
+ #endif
+@@ -123,10 +119,12 @@ inline void nfs_default_version(struct nfsmount_info *mi) {}
+  * Returns a time_t timeout timestamp, in seconds.
+  */
+ static time_t nfs_parse_retry_option(struct mount_options *options,
+-				     unsigned int timeout_minutes)
++				     const time_t default_timeout)
+ {
++	time_t timeout_minutes;
+ 	long tmp;
+ 
++	timeout_minutes = default_timeout;
+ 	switch (po_get_numeric(options, "retry", &tmp)) {
+ 	case PO_NOT_FOUND:
+ 		break;
+@@ -135,6 +133,7 @@ static time_t nfs_parse_retry_option(struct mount_options *options,
+ 			timeout_minutes = tmp;
+ 			break;
+ 		}
++		/*FALLTHROUGH*/
+ 	case PO_BAD_VALUE:
+ 		if (verbose)
+ 			nfs_error(_("%s: invalid retry timeout was specified; "
+@@ -142,7 +141,7 @@ static time_t nfs_parse_retry_option(struct mount_options *options,
+ 		break;
+ 	}
+ 
+-	return time(NULL) + (time_t)(timeout_minutes * 60);
++	return time(NULL) + (timeout_minutes * 60);
+ }
+ 
+ /*
+@@ -343,7 +342,6 @@ static int nfs_validate_options(struct nfsmount_info *mi)
+ {
+ 	struct addrinfo hint = {
+ 		.ai_protocol	= (int)IPPROTO_UDP,
+-		.ai_flags	= AI_ADDRCONFIG,
+ 	};
+ 	sa_family_t family;
+ 	int error;
+@@ -570,16 +568,18 @@ static int nfs_sys_mount(struct nfsmount_info *mi, struct mount_options *opts)
+ 	char *options = NULL;
+ 	int result;
+ 
++	if (mi->fake)
++		return 1;
++
+ 	if (po_join(opts, &options) == PO_FAILED) {
+ 		errno = EIO;
+ 		return 0;
+ 	}
+ 
+-	if (mi->fake)
+-		return 1;
+-
+ 	result = mount(mi->spec, mi->node, mi->type,
+ 			mi->flags & ~(MS_USER|MS_USERS), options);
++	free(options);
++
+ 	if (verbose && result) {
+ 		int save = errno;
+ 		nfs_error(_("%s: mount(2): %s"), progname, strerror(save));
 diff --git a/utils/mount/version.h b/utils/mount/version.h
 index 46552a1..af61a6f 100644
 --- a/utils/mount/version.h
@@ -1376,3 +1758,88 @@ index 46552a1..af61a6f 100644
  	return MAKE_VERSION(p, q, r);
  }
  
+diff --git a/utils/mountd/mountd.c b/utils/mountd/mountd.c
+index d309950..035624c 100644
+--- a/utils/mountd/mountd.c
++++ b/utils/mountd/mountd.c
+@@ -99,12 +99,9 @@ static int version_any(void)
+ static void
+ unregister_services (void)
+ {
+-	if (version2()) {
+-		nfs_svc_unregister(MOUNTPROG, MOUNTVERS);
+-		nfs_svc_unregister(MOUNTPROG, MOUNTVERS_POSIX);
+-	}
+-	if (version3())
+-		nfs_svc_unregister(MOUNTPROG, MOUNTVERS_NFSV3);
++	nfs_svc_unregister(MOUNTPROG, MOUNTVERS);
++	nfs_svc_unregister(MOUNTPROG, MOUNTVERS_POSIX);
++	nfs_svc_unregister(MOUNTPROG, MOUNTVERS_NFSV3);
+ }
+ 
+ static void
+@@ -840,6 +837,7 @@ main(int argc, char **argv)
+ 	if (new_cache)
+ 		cache_open();
+ 
++	unregister_services();
+ 	if (version2()) {
+ 		listeners += nfs_svc_create("mountd", MOUNTPROG,
+ 					MOUNTVERS, mount_dispatch, port);
+diff --git a/utils/mountd/mountd.man b/utils/mountd/mountd.man
+index 4bb96e8..016a357 100644
+--- a/utils/mountd/mountd.man
++++ b/utils/mountd/mountd.man
+@@ -106,11 +106,11 @@ This option can be used to request that
+ .B rpc.mountd
+ do not offer certain versions of NFS. The current version of
+ .B rpc.mountd
+-can support both NFS version 2 and the newer version 3. If the
+-NFS kernel module was compiled without support for NFSv3,
++can support both NFS version 2, 3 and 4. If the
++either one of these version should not be offered,
+ .B rpc.mountd
+ must be invoked with the option
+-.B "\-\-no-nfs-version 3" .
++.B "\-\-no-nfs-version <vers>" .
+ .TP
+ .B \-n " or " \-\-no-tcp
+ Don't advertise TCP for mount.
+diff --git a/utils/statd/hostname.c b/utils/statd/hostname.c
+index 38f2265..616a3cb 100644
+--- a/utils/statd/hostname.c
++++ b/utils/statd/hostname.c
+@@ -39,10 +39,6 @@
+ #include "statd.h"
+ #include "xlog.h"
+ 
+-#ifndef HAVE_DECL_AI_ADDRCONFIG
+-#define AI_ADDRCONFIG	0
+-#endif
+-
+ /**
+  * statd_present_address - convert sockaddr to presentation address
+  * @sap: pointer to socket address to convert
+diff --git a/utils/statd/sm-notify.c b/utils/statd/sm-notify.c
+index 437e37a..b7f4371 100644
+--- a/utils/statd/sm-notify.c
++++ b/utils/statd/sm-notify.c
+@@ -34,10 +34,6 @@
+ #include "nsm.h"
+ #include "nfsrpc.h"
+ 
+-#ifndef HAVE_DECL_AI_ADDRCONFIG
+-#define AI_ADDRCONFIG	0
+-#endif
+-
+ #define NSM_TIMEOUT	2
+ #define NSM_MAX_TIMEOUT	120	/* don't make this too big */
+ 
+@@ -78,7 +74,6 @@ smn_lookup(const char *name)
+ {
+ 	struct addrinfo	*ai = NULL;
+ 	struct addrinfo hint = {
+-		.ai_flags	= AI_ADDRCONFIG,
+ 		.ai_family	= (nsm_family == AF_INET ? AF_INET: AF_UNSPEC),
+ 		.ai_protocol	= (int)IPPROTO_UDP,
+ 	};
