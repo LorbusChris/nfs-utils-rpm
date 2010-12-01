@@ -124,7 +124,7 @@ case "$1" in
 	RETVAL=$?
 	echo
 	touch /var/lock/subsys/rpc.mountd
-	touch /var/lock/subsys/nfsd
+	touch /var/lock/subsys/nfs
 
 	# Let rpc.idmapd know that rpc.mountd just started
 	[ -x /usr/sbin/rpc.idmapd ] && /sbin/service rpcidmapd condstart
@@ -167,7 +167,7 @@ case "$1" in
 		[ $RETVAL -eq 0 ] && RETVAL=$rval
 	fi
 	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd stop
-	rm -f /var/lock/subsys/nfsd
+	rm -f /var/lock/subsys/nfs
 	rm -f /var/lock/subsys/rpc.mountd
 	;;
   status)
@@ -189,10 +189,10 @@ case "$1" in
 	;;
   reload | force-reload)
 	/usr/sbin/exportfs -r
-	touch /var/lock/subsys/nfsd
+	touch /var/lock/subsys/nfs
 	;;
   probe)
-	if [ ! -f /var/lock/subsys/nfsd ] ; then
+	if [ ! -f /var/lock/subsys/nfs ] ; then
 	  echo $"start"; exit 0
 	fi
 	/sbin/pidof rpc.mountd >/dev/null 2>&1; MOUNTD="$?"
@@ -200,13 +200,13 @@ case "$1" in
 	if [ $MOUNTD = 1 -o $NFSD = 1 ] ; then
 	  echo $"restart"; exit 0
 	fi
-	if [ /etc/exports -nt /var/lock/subsys/nfsd ] ; then
+	if [ /etc/exports -nt /var/lock/subsys/nfs ] ; then
 	  echo $"reload"; exit 0
 	fi
 	;;
   condrestart | try-restart)
 	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd condrestart
-  	[ -f /var/lock/subsys/nfsd ] && {
+  	[ -f /var/lock/subsys/nfs ] && {
 		$0 stop
 		$0 start
 		RETVAL=$?
@@ -214,7 +214,7 @@ case "$1" in
 	;;
   condstop)
 	[ -x /usr/sbin/rpc.svcgssd ] && /sbin/service rpcsvcgssd condstop
-  	[ -f /var/lock/subsys/nfsd ] && {
+  	[ -f /var/lock/subsys/nfs ] && {
 		$0 stop
 		RETVAL=$?
 	}
