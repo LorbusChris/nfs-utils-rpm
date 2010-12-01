@@ -254,6 +254,7 @@ fi
 %changelog
 * Wed Dec  1  2010 Steve Dickson <steved@redhat.com> 1.2.3-4
 - The nfs service is not stopped on reboot or halt (bz 652786)
+- Removed obsolete configuration values (bz 653765)
 
 * Mon Nov 29 2010 Steve Dickson <steved@redhat.com> 1.2.3-3
 - Updated to latest upstream release: nfs-utils-1-2-4-rc3
