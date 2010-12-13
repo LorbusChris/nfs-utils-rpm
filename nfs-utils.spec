@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.3
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -17,7 +17,7 @@ Source13: rpcgssd.init
 Source14: rpcsvcgssd.init
 Source15: nfs.sysconfig
 
-Patch001: nfs-utils-1.2.4-rc3.patch
+Patch001: nfs-utils-1.2.4-rc4.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.2-statdpath.patch
@@ -253,6 +253,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Dec 13 2010 Steve Dickson <steved@redhat.com> 1.2.3-6
+- Updated to latest upstream release: nfs-utils-1-2-4-rc4
+
 * Wed Dec  8  2010 Steve Dickson <steved@redhat.com> 1.2.3-5
 - Replace the nfs-utils-lib dependency with a libnfsidmap 
   dependency
