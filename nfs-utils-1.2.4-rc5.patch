@@ -1,6 +1,6 @@
 diff -up nfs-utils-1.2.3/aclocal/keyutils.m4.orig nfs-utils-1.2.3/aclocal/keyutils.m4
---- nfs-utils-1.2.3/aclocal/keyutils.m4.orig	2010-11-29 11:18:44.168551958 -0500
-+++ nfs-utils-1.2.3/aclocal/keyutils.m4	2010-11-29 11:18:44.168551958 -0500
+--- nfs-utils-1.2.3/aclocal/keyutils.m4.orig	2011-01-14 13:27:17.497605500 -0500
++++ nfs-utils-1.2.3/aclocal/keyutils.m4	2011-01-14 13:27:17.497605500 -0500
 @@ -0,0 +1,11 @@
 +dnl Checks for keyutils library and headers
 +dnl
@@ -15,7 +15,7 @@ diff -up nfs-utils-1.2.3/aclocal/keyutils.m4.orig nfs-utils-1.2.3/aclocal/keyuti
 +])dnl
 diff -up nfs-utils-1.2.3/aclocal/libnfsidmap.m4.orig nfs-utils-1.2.3/aclocal/libnfsidmap.m4
 --- nfs-utils-1.2.3/aclocal/libnfsidmap.m4.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/aclocal/libnfsidmap.m4	2010-11-29 11:18:44.168551958 -0500
++++ nfs-utils-1.2.3/aclocal/libnfsidmap.m4	2011-01-14 13:27:17.498605703 -0500
 @@ -14,4 +14,8 @@ AC_DEFUN([AC_LIBNFSIDMAP], [
                 [AC_DEFINE([HAVE_NFS4_SET_DEBUG], 1,
                            [Define to 1 if you have the `nfs4_set_debug' function.])])
@@ -26,8 +26,8 @@ diff -up nfs-utils-1.2.3/aclocal/libnfsidmap.m4.orig nfs-utils-1.2.3/aclocal/lib
 +
  ])dnl
 diff -up nfs-utils-1.2.3/configure.ac.orig nfs-utils-1.2.3/configure.ac
---- nfs-utils-1.2.3/configure.ac.orig	2010-11-29 11:17:26.902868938 -0500
-+++ nfs-utils-1.2.3/configure.ac	2010-11-29 11:18:44.169551941 -0500
+--- nfs-utils-1.2.3/configure.ac.orig	2011-01-14 13:22:07.094642705 -0500
++++ nfs-utils-1.2.3/configure.ac	2011-01-14 13:27:17.498605703 -0500
 @@ -144,7 +144,7 @@ AC_ARG_ENABLE(tirpc,
  	[AC_HELP_STRING([--enable-tirpc],
  			[enable use of TI-RPC @<:@default=yes@:>@])],
@@ -60,7 +60,7 @@ diff -up nfs-utils-1.2.3/configure.ac.orig nfs-utils-1.2.3/configure.ac
  	tests/Makefile
 diff -up nfs-utils-1.2.3/.gitignore.orig nfs-utils-1.2.3/.gitignore
 --- nfs-utils-1.2.3/.gitignore.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/.gitignore	2010-11-29 11:18:44.168551958 -0500
++++ nfs-utils-1.2.3/.gitignore	2011-01-14 13:27:17.497605500 -0500
 @@ -64,6 +64,7 @@ tests/nsm_client/nlm_sm_inter.h
  tests/nsm_client/nlm_sm_inter_clnt.c
  tests/nsm_client/nlm_sm_inter_svc.c
@@ -71,7 +71,7 @@ diff -up nfs-utils-1.2.3/.gitignore.orig nfs-utils-1.2.3/.gitignore
  # generic editor backup et al
 diff -up nfs-utils-1.2.3/support/export/client.c.orig nfs-utils-1.2.3/support/export/client.c
 --- nfs-utils-1.2.3/support/export/client.c.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/support/export/client.c	2010-11-29 11:18:44.170551927 -0500
++++ nfs-utils-1.2.3/support/export/client.c	2011-01-14 13:27:17.499605906 -0500
 @@ -178,6 +178,7 @@ out_badprefix:
  static int
  init_netmask6(nfs_client *UNUSED(clp), const char *UNUSED(slash))
@@ -82,7 +82,7 @@ diff -up nfs-utils-1.2.3/support/export/client.c.orig nfs-utils-1.2.3/support/ex
  
 diff -up nfs-utils-1.2.3/support/export/export.c.orig nfs-utils-1.2.3/support/export/export.c
 --- nfs-utils-1.2.3/support/export/export.c.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/support/export/export.c	2010-11-29 11:18:44.170551927 -0500
++++ nfs-utils-1.2.3/support/export/export.c	2011-01-14 13:27:17.500606109 -0500
 @@ -38,6 +38,7 @@ export_free(nfs_export *exp)
  	xfree(exp->m_export.e_sqgids);
  	free(exp->m_export.e_mountpoint);
@@ -93,7 +93,7 @@ diff -up nfs-utils-1.2.3/support/export/export.c.orig nfs-utils-1.2.3/support/ex
  	xfree(exp);
 diff -up nfs-utils-1.2.3/support/export/hostname.c.orig nfs-utils-1.2.3/support/export/hostname.c
 --- nfs-utils-1.2.3/support/export/hostname.c.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/support/export/hostname.c	2010-11-29 11:18:44.171551914 -0500
++++ nfs-utils-1.2.3/support/export/hostname.c	2011-01-14 13:27:17.500606109 -0500
 @@ -30,10 +30,6 @@
  #include "sockaddr.h"
  #include "exportfs.h"
@@ -116,7 +116,7 @@ diff -up nfs-utils-1.2.3/support/export/hostname.c.orig nfs-utils-1.2.3/support/
  
 diff -up nfs-utils-1.2.3/support/include/nfslib.h.orig nfs-utils-1.2.3/support/include/nfslib.h
 --- nfs-utils-1.2.3/support/include/nfslib.h.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/support/include/nfslib.h	2010-11-29 11:18:44.172551902 -0500
++++ nfs-utils-1.2.3/support/include/nfslib.h	2011-01-14 13:27:17.501606312 -0500
 @@ -163,6 +163,12 @@ void closeall(int min);
  int			svctcp_socket (u_long __number, int __reuse);
  int			svcudp_socket (u_long __number);
@@ -131,8 +131,8 @@ diff -up nfs-utils-1.2.3/support/include/nfslib.h.orig nfs-utils-1.2.3/support/i
  #define UNUSED(x) UNUSED_ ## x __attribute__((unused))
  
 diff -up nfs-utils-1.2.3/support/nfs/atomicio.c.orig nfs-utils-1.2.3/support/nfs/atomicio.c
---- nfs-utils-1.2.3/support/nfs/atomicio.c.orig	2010-11-29 11:18:44.173551890 -0500
-+++ nfs-utils-1.2.3/support/nfs/atomicio.c	2010-11-29 11:18:44.173551890 -0500
+--- nfs-utils-1.2.3/support/nfs/atomicio.c.orig	2011-01-14 13:27:17.502606515 -0500
++++ nfs-utils-1.2.3/support/nfs/atomicio.c	2011-01-14 13:27:17.502606515 -0500
 @@ -0,0 +1,54 @@
 +/*
 + * Copyright (c) 2002 Marius Aamodt Eriksen <marius@monkey.org>
@@ -190,7 +190,7 @@ diff -up nfs-utils-1.2.3/support/nfs/atomicio.c.orig nfs-utils-1.2.3/support/nfs
 +}
 diff -up nfs-utils-1.2.3/support/nfs/conffile.c.orig nfs-utils-1.2.3/support/nfs/conffile.c
 --- nfs-utils-1.2.3/support/nfs/conffile.c.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/support/nfs/conffile.c	2010-11-29 11:18:44.174551888 -0500
++++ nfs-utils-1.2.3/support/nfs/conffile.c	2011-01-14 13:27:17.502606516 -0500
 @@ -271,9 +271,9 @@ conf_parse_line(int trans, char *line, s
  		if (ptr == NULL)
  			return;
@@ -204,8 +204,8 @@ diff -up nfs-utils-1.2.3/support/nfs/conffile.c.orig nfs-utils-1.2.3/support/nfs
   				"non-matched '\"', ignoring until next section", ln);
  		}  else {
 diff -up nfs-utils-1.2.3/support/nfs/exports.c.orig nfs-utils-1.2.3/support/nfs/exports.c
---- nfs-utils-1.2.3/support/nfs/exports.c.orig	2010-11-29 11:17:26.906868973 -0500
-+++ nfs-utils-1.2.3/support/nfs/exports.c	2010-11-29 11:18:44.174551888 -0500
+--- nfs-utils-1.2.3/support/nfs/exports.c.orig	2011-01-14 13:22:07.097643314 -0500
++++ nfs-utils-1.2.3/support/nfs/exports.c	2011-01-14 13:27:17.503606719 -0500
 @@ -332,6 +332,8 @@ dupexportent(struct exportent *dst, stru
  		dst->e_mountpoint = strdup(src->e_mountpoint);
  	if (src->e_fslocdata)
@@ -217,7 +217,7 @@ diff -up nfs-utils-1.2.3/support/nfs/exports.c.orig nfs-utils-1.2.3/support/nfs/
  
 diff -up nfs-utils-1.2.3/support/nfs/Makefile.am.orig nfs-utils-1.2.3/support/nfs/Makefile.am
 --- nfs-utils-1.2.3/support/nfs/Makefile.am.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/support/nfs/Makefile.am	2010-11-29 11:18:44.172551902 -0500
++++ nfs-utils-1.2.3/support/nfs/Makefile.am	2011-01-14 13:27:17.502606515 -0500
 @@ -5,7 +5,7 @@ libnfs_a_SOURCES = exports.c rmtab.c xio
  		   xlog.c xcommon.c wildmat.c nfsclient.c \
  		   nfsexport.c getfh.c nfsctl.c rpc_socket.c getport.c \
@@ -227,9 +227,24 @@ diff -up nfs-utils-1.2.3/support/nfs/Makefile.am.orig nfs-utils-1.2.3/support/nf
  
  MAINTAINERCLEANFILES = Makefile.in
  
+diff -up nfs-utils-1.2.3/support/nfs/rpcdispatch.c.orig nfs-utils-1.2.3/support/nfs/rpcdispatch.c
+--- nfs-utils-1.2.3/support/nfs/rpcdispatch.c.orig	2010-09-28 08:24:16.000000000 -0400
++++ nfs-utils-1.2.3/support/nfs/rpcdispatch.c	2011-01-14 13:27:17.503606719 -0500
+@@ -37,6 +37,11 @@ rpc_dispatch(struct svc_req *rqstp, SVCX
+ 		return;
+ 	}
+ 
++	if (dtable->nproc <= rqstp->rq_proc) {
++		svcerr_noproc(transp);
++		return;
++	}
++
+ 	dent = dtable->entries + rqstp->rq_proc;
+ 
+ 	if (dent->func == NULL) {
 diff -up nfs-utils-1.2.3/support/nfs/strlcat.c.orig nfs-utils-1.2.3/support/nfs/strlcat.c
---- nfs-utils-1.2.3/support/nfs/strlcat.c.orig	2010-11-29 11:18:44.175551873 -0500
-+++ nfs-utils-1.2.3/support/nfs/strlcat.c	2010-11-29 11:18:44.175551873 -0500
+--- nfs-utils-1.2.3/support/nfs/strlcat.c.orig	2011-01-14 13:27:17.505607123 -0500
++++ nfs-utils-1.2.3/support/nfs/strlcat.c	2011-01-14 13:27:17.505607123 -0500
 @@ -0,0 +1,76 @@
 +/*	$OpenBSD: strlcat.c,v 1.8 2001/05/13 15:40:15 deraadt Exp $	*/
 +
@@ -308,8 +323,8 @@ diff -up nfs-utils-1.2.3/support/nfs/strlcat.c.orig nfs-utils-1.2.3/support/nfs/
 +	return(dlen + (s - src));	/* count does not include NUL */
 +}
 diff -up nfs-utils-1.2.3/support/nfs/strlcpy.c.orig nfs-utils-1.2.3/support/nfs/strlcpy.c
---- nfs-utils-1.2.3/support/nfs/strlcpy.c.orig	2010-11-29 11:18:44.175551873 -0500
-+++ nfs-utils-1.2.3/support/nfs/strlcpy.c	2010-11-29 11:18:44.175551873 -0500
+--- nfs-utils-1.2.3/support/nfs/strlcpy.c.orig	2011-01-14 13:27:17.505607123 -0500
++++ nfs-utils-1.2.3/support/nfs/strlcpy.c	2011-01-14 13:27:17.506607326 -0500
 @@ -0,0 +1,72 @@
 +/*	$OpenBSD: strlcpy.c,v 1.5 2001/05/13 15:40:16 deraadt Exp $	*/
 +
@@ -385,7 +400,7 @@ diff -up nfs-utils-1.2.3/support/nfs/strlcpy.c.orig nfs-utils-1.2.3/support/nfs/
 +}
 diff -up nfs-utils-1.2.3/support/nfs/svc_create.c.orig nfs-utils-1.2.3/support/nfs/svc_create.c
 --- nfs-utils-1.2.3/support/nfs/svc_create.c.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/support/nfs/svc_create.c	2010-11-29 11:18:44.176551853 -0500
++++ nfs-utils-1.2.3/support/nfs/svc_create.c	2011-01-14 13:27:17.506607326 -0500
 @@ -27,6 +27,7 @@
  #include <memory.h>
  #include <signal.h>
@@ -693,9 +708,133 @@ diff -up nfs-utils-1.2.3/support/nfs/svc_create.c.orig nfs-utils-1.2.3/support/n
  		void (*dispatch)(struct svc_req *, SVCXPRT *),
  		const uint16_t port)
  {
+diff -up nfs-utils-1.2.3/support/nsm/file.c.orig nfs-utils-1.2.3/support/nsm/file.c
+--- nfs-utils-1.2.3/support/nsm/file.c.orig	2011-01-14 13:22:07.094642705 -0500
++++ nfs-utils-1.2.3/support/nsm/file.c	2011-01-14 13:27:17.507607529 -0500
+@@ -127,7 +127,7 @@ exact_error_check(const ssize_t len, con
+  * containing an appropriate pathname, or NULL if an error
+  * occurs.  Caller must free the returned result with free(3).
+  */
+-__attribute_malloc__
++__attribute__((__malloc__))
+ static char *
+ nsm_make_record_pathname(const char *directory, const char *hostname)
+ {
+@@ -175,7 +175,7 @@ nsm_make_record_pathname(const char *dir
+  * containing an appropriate pathname, or NULL if an error
+  * occurs.  Caller must free the returned result with free(3).
+  */
+-__attribute_malloc__
++__attribute__((__malloc__))
+ static char *
+ nsm_make_pathname(const char *directory)
+ {
+@@ -205,7 +205,7 @@ nsm_make_pathname(const char *directory)
+  * containing an appropriate pathname, or NULL if an error
+  * occurs.  Caller must free the returned result with free(3).
+  */
+-__attribute_malloc__
++__attribute__((__malloc__))
+ static char *
+ nsm_make_temp_pathname(const char *pathname)
+ {
+@@ -422,7 +422,7 @@ nsm_drop_privileges(const int pidfd)
+ 	 */
+         if (prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0) == -1) {
+                 xlog(L_ERROR, "prctl(PR_SET_KEEPCAPS) failed: %m");
+-		return 0;
++		return false;
+ 	}
+ 
+ 	if (setgroups(0, NULL) == -1) {
+@@ -569,9 +569,8 @@ nsm_retire_monitored_hosts(void)
+ 
+ 	while ((de = readdir(dir)) != NULL) {
+ 		char *src, *dst;
++		struct stat stb;
+ 
+-		if (de->d_type != (unsigned char)DT_REG)
+-			continue;
+ 		if (de->d_name[0] == '.')
+ 			continue;
+ 
+@@ -581,6 +580,20 @@ nsm_retire_monitored_hosts(void)
+ 			continue;
+ 		}
+ 
++		/* NB: not all file systems fill in d_type correctly */
++		if (lstat(src, &stb) == -1) {
++			xlog_warn("Bad monitor file %s, skipping: %m",
++					de->d_name);
++			free(src);
++			continue;
++		}
++		if (!S_ISREG(stb.st_mode)) {
++			xlog(D_GENERAL, "Skipping non-regular file %s",
++					de->d_name);
++			free(src);
++			continue;
++		}
++
+ 		dst = nsm_make_record_pathname(NSM_NOTIFY_DIR, de->d_name);
+ 		if (dst == NULL) {
+ 			free(src);
+@@ -635,7 +648,7 @@ nsm_priv_to_hex(const char *priv, char *
+ /*
+  * Returns the length in bytes of the created record.
+  */
+-__attribute_noinline__
++__attribute__((__noinline__))
+ static size_t
+ nsm_create_monitor_record(char *buf, const size_t buflen,
+ 		const struct sockaddr *sap, const struct mon *m)
+@@ -785,7 +798,7 @@ out:
+ 	return result;
+ }
+ 
+-__attribute_noinline__
++__attribute__((__noinline__))
+ static _Bool
+ nsm_parse_line(char *line, struct sockaddr_in *sin, struct mon *m)
+ {
+@@ -847,7 +860,7 @@ nsm_read_line(const char *hostname, cons
+ }
+ 
+ /*
+- * Given a filename, reads data from a file under NSM_MONITOR_DIR
++ * Given a filename, reads data from a file under "directory"
+  * and invokes @func so caller can populate their in-core
+  * database with this data.
+  */
+@@ -864,10 +877,15 @@ nsm_load_host(const char *directory, con
+ 	if (path == NULL)
+ 		goto out_err;
+ 
+-	if (stat(path, &stb) == -1) {
++	if (lstat(path, &stb) == -1) {
+ 		xlog(L_ERROR, "Failed to stat %s: %m", path);
+ 		goto out_freepath;
+ 	}
++	if (!S_ISREG(stb.st_mode)) {
++		xlog(D_GENERAL, "Skipping non-regular file %s",
++				path);
++		goto out_freepath;
++	}
+ 
+ 	f = fopen(path, "r");
+ 	if (f == NULL) {
+@@ -914,8 +932,6 @@ nsm_load_dir(const char *directory, nsm_
+ 	}
+ 
+ 	while ((de = readdir(dir)) != NULL) {
+-		if (de->d_type != (unsigned char)DT_REG)
+-			continue;
+ 		if (de->d_name[0] == '.')
+ 			continue;
+ 
 diff -up nfs-utils-1.2.3/tests/nsm_client/nsm_client.c.orig nfs-utils-1.2.3/tests/nsm_client/nsm_client.c
 --- nfs-utils-1.2.3/tests/nsm_client/nsm_client.c.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/tests/nsm_client/nsm_client.c	2010-11-29 11:18:44.177551833 -0500
++++ nfs-utils-1.2.3/tests/nsm_client/nsm_client.c	2011-01-14 13:27:17.508607732 -0500
 @@ -205,7 +205,7 @@ nsm_client_get_rpcclient(const char *nod
  {
  	unsigned short		port;
@@ -707,7 +846,7 @@ diff -up nfs-utils-1.2.3/tests/nsm_client/nsm_client.c.orig nfs-utils-1.2.3/test
  
 diff -up nfs-utils-1.2.3/utils/exportfs/exports.man.orig nfs-utils-1.2.3/utils/exportfs/exports.man
 --- nfs-utils-1.2.3/utils/exportfs/exports.man.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/utils/exportfs/exports.man	2010-11-29 11:18:48.351597145 -0500
++++ nfs-utils-1.2.3/utils/exportfs/exports.man	2011-01-14 13:27:17.509607935 -0500
 @@ -145,7 +145,9 @@ storage (see
  .IR async
  above).
@@ -740,9 +879,130 @@ diff -up nfs-utils-1.2.3/utils/exportfs/exports.man.orig nfs-utils-1.2.3/utils/e
  .SS User ID Mapping
  .PP
  .B nfsd
+diff -up nfs-utils-1.2.3/utils/gssd/gss_util.c.orig nfs-utils-1.2.3/utils/gssd/gss_util.c
+--- nfs-utils-1.2.3/utils/gssd/gss_util.c.orig	2010-09-28 08:24:16.000000000 -0400
++++ nfs-utils-1.2.3/utils/gssd/gss_util.c	2011-01-14 13:27:17.509607936 -0500
+@@ -138,6 +138,83 @@ display_status_1(char *m, u_int32_t code
+ 	}
+ }
+ #endif
++static char *
++gss_display_error(OM_uint32 status)
++{
++		char *error = NULL;
++
++		switch(status) {
++		case GSS_S_COMPLETE: 
++			error = "GSS_S_COMPLETE";
++			break;
++		case GSS_S_CALL_INACCESSIBLE_READ: 
++			error = "GSS_S_CALL_INACCESSIBLE_READ";
++			break;
++		case GSS_S_CALL_INACCESSIBLE_WRITE:
++			error = "GSS_S_CALL_INACCESSIBLE_WRITE";
++			break;
++		case GSS_S_CALL_BAD_STRUCTURE:
++			error = "GSS_S_CALL_BAD_STRUCTURE";
++			break;
++		case  GSS_S_BAD_MECH:
++			error = "GSS_S_BAD_MECH";
++			break;
++		case  GSS_S_BAD_NAME:
++			error = "GSS_S_BAD_NAME";
++			break;
++		case  GSS_S_BAD_NAMETYPE:
++			error = "GSS_S_BAD_NAMETYPE";
++			break;
++		case  GSS_S_BAD_BINDINGS:
++			error = "GSS_S_BAD_BINDINGS";
++			break;
++		case  GSS_S_BAD_STATUS:
++			error = "GSS_S_BAD_STATUS";
++			break;
++		case  GSS_S_BAD_SIG:
++			error = "GSS_S_BAD_SIG";
++			break;
++		case  GSS_S_NO_CRED:
++			error = "GSS_S_NO_CRED";
++			break;
++		case  GSS_S_NO_CONTEXT:
++			error = "GSS_S_NO_CONTEXT";
++			break;
++		case  GSS_S_DEFECTIVE_TOKEN:
++			error = "GSS_S_DEFECTIVE_TOKEN";
++			break;
++		case  GSS_S_DEFECTIVE_CREDENTIAL:
++			error = "GSS_S_DEFECTIVE_CREDENTIAL";
++			break;
++		case  GSS_S_CREDENTIALS_EXPIRED:
++			error = "GSS_S_CREDENTIALS_EXPIRED";
++			break;
++		case  GSS_S_CONTEXT_EXPIRED:
++			error = "GSS_S_CONTEXT_EXPIRED";
++			break;
++		case  GSS_S_FAILURE:
++			error = "GSS_S_FAILURE";
++			break;
++		case  GSS_S_BAD_QOP:
++			error = "GSS_S_BAD_QOP";
++			break;
++		case  GSS_S_UNAUTHORIZED:
++			error = "GSS_S_UNAUTHORIZED";
++			break;
++		case  GSS_S_UNAVAILABLE:
++			error = "GSS_S_UNAVAILABLE";
++			break;
++		case  GSS_S_DUPLICATE_ELEMENT:
++			error = "GSS_S_DUPLICATE_ELEMENT";
++			break;
++		case  GSS_S_NAME_NOT_MN:
++			error = "GSS_S_NAME_NOT_MN";
++			break;
++		default:
++			error = "Not defined";
++		}
++	return error;
++}
+ 
+ static void
+ display_status_2(char *m, u_int32_t major, u_int32_t minor, const gss_OID mech)
+@@ -175,8 +252,8 @@ display_status_2(char *m, u_int32_t majo
+ 
+ 	if (major == GSS_S_CREDENTIALS_EXPIRED)
+ 		msg_verbosity = 1;
+-	printerr(msg_verbosity, "ERROR: GSS-API: error in %s(): %s - %s\n",
+-		 m, maj, min);
++	printerr(msg_verbosity, "ERROR: GSS-API: error in %s(): %s (%s) - %s(%s)\n",
++		 m, gss_display_error(major), maj, min);
+ 
+ 	if (maj_gss_buf.length != 0)
+ 		(void) gss_release_buffer(&min_stat1, &maj_gss_buf);
+diff -up nfs-utils-1.2.3/utils/gssd/svcgssd.c.orig nfs-utils-1.2.3/utils/gssd/svcgssd.c
+--- nfs-utils-1.2.3/utils/gssd/svcgssd.c.orig	2010-09-28 08:24:16.000000000 -0400
++++ nfs-utils-1.2.3/utils/gssd/svcgssd.c	2011-01-14 13:27:17.509607936 -0500
+@@ -267,6 +267,7 @@ main(int argc, char *argv[])
+ 	if (!fg)
+ 		release_parent();
+ 
++	nfs4_init_name_mapping(NULL); /* XXX: should only do this once */
+ 	gssd_run();
+ 	printerr(0, "gssd_run returned!\n");
+ 	abort();
+diff -up nfs-utils-1.2.3/utils/gssd/svcgssd_proc.c.orig nfs-utils-1.2.3/utils/gssd/svcgssd_proc.c
+--- nfs-utils-1.2.3/utils/gssd/svcgssd_proc.c.orig	2010-09-28 08:24:16.000000000 -0400
++++ nfs-utils-1.2.3/utils/gssd/svcgssd_proc.c	2011-01-14 13:27:17.510608139 -0500
+@@ -241,7 +241,7 @@ get_ids(gss_name_t client_name, gss_OID 
+ 			"file for name '%s'\n", sname);
+ 		goto out_free;
+ 	}
+-	nfs4_init_name_mapping(NULL); /* XXX: should only do this once */
++
+ 	res = nfs4_gss_princ_to_ids(secname, sname, &uid, &gid);
+ 	if (res < 0) {
+ 		/*
 diff -up nfs-utils-1.2.3/utils/idmapd/idmapd.c.orig nfs-utils-1.2.3/utils/idmapd/idmapd.c
 --- nfs-utils-1.2.3/utils/idmapd/idmapd.c.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/utils/idmapd/idmapd.c	2010-11-29 11:18:48.353596932 -0500
++++ nfs-utils-1.2.3/utils/idmapd/idmapd.c	2011-01-14 13:27:17.513608747 -0500
 @@ -158,10 +158,6 @@ static int nfsdopenone(struct idmap_clie
  static void nfsdreopen_one(struct idmap_client *);
  static void nfsdreopen(void);
@@ -756,7 +1016,7 @@ diff -up nfs-utils-1.2.3/utils/idmapd/idmapd.c.orig nfs-utils-1.2.3/utils/idmapd
  
 diff -up nfs-utils-1.2.3/utils/idmapd/Makefile.am.orig nfs-utils-1.2.3/utils/idmapd/Makefile.am
 --- nfs-utils-1.2.3/utils/idmapd/Makefile.am.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/utils/idmapd/Makefile.am	2010-11-29 11:18:48.352597045 -0500
++++ nfs-utils-1.2.3/utils/idmapd/Makefile.am	2011-01-14 13:27:17.512608544 -0500
 @@ -11,12 +11,8 @@ EXTRA_DIST = \
  	idmapd.conf
  
@@ -772,7 +1032,7 @@ diff -up nfs-utils-1.2.3/utils/idmapd/Makefile.am.orig nfs-utils-1.2.3/utils/idm
  
 diff -up nfs-utils-1.2.3/utils/Makefile.am.orig nfs-utils-1.2.3/utils/Makefile.am
 --- nfs-utils-1.2.3/utils/Makefile.am.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/utils/Makefile.am	2010-11-29 11:18:48.351597145 -0500
++++ nfs-utils-1.2.3/utils/Makefile.am	2011-01-14 13:27:17.509607935 -0500
 @@ -4,6 +4,9 @@ OPTDIRS =
  
  if CONFIG_NFSV4
@@ -785,7 +1045,7 @@ diff -up nfs-utils-1.2.3/utils/Makefile.am.orig nfs-utils-1.2.3/utils/Makefile.a
  if CONFIG_GSS
 diff -up nfs-utils-1.2.3/utils/mountd/mountd.c.orig nfs-utils-1.2.3/utils/mountd/mountd.c
 --- nfs-utils-1.2.3/utils/mountd/mountd.c.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/utils/mountd/mountd.c	2010-11-29 11:18:48.362595959 -0500
++++ nfs-utils-1.2.3/utils/mountd/mountd.c	2011-01-14 13:27:17.521610371 -0500
 @@ -99,12 +99,9 @@ static int version_any(void)
  static void
  unregister_services (void)
@@ -812,7 +1072,7 @@ diff -up nfs-utils-1.2.3/utils/mountd/mountd.c.orig nfs-utils-1.2.3/utils/mountd
  					MOUNTVERS, mount_dispatch, port);
 diff -up nfs-utils-1.2.3/utils/mountd/mountd.man.orig nfs-utils-1.2.3/utils/mountd/mountd.man
 --- nfs-utils-1.2.3/utils/mountd/mountd.man.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/utils/mountd/mountd.man	2010-11-29 11:18:48.362595959 -0500
++++ nfs-utils-1.2.3/utils/mountd/mountd.man	2011-01-14 13:27:17.522610574 -0500
 @@ -106,11 +106,11 @@ This option can be used to request that
  .B rpc.mountd
  do not offer certain versions of NFS. The current version of
@@ -830,7 +1090,7 @@ diff -up nfs-utils-1.2.3/utils/mountd/mountd.man.orig nfs-utils-1.2.3/utils/moun
  Don't advertise TCP for mount.
 diff -up nfs-utils-1.2.3/utils/mount/fstab.c.orig nfs-utils-1.2.3/utils/mount/fstab.c
 --- nfs-utils-1.2.3/utils/mount/fstab.c.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/utils/mount/fstab.c	2010-11-29 11:18:48.354596817 -0500
++++ nfs-utils-1.2.3/utils/mount/fstab.c	2011-01-14 13:27:17.513608747 -0500
 @@ -364,19 +364,22 @@ lock_mtab (void) {
  	/* Repeat until it was us who made the link */
  	while (!we_created_lockfile) {
@@ -888,7 +1148,7 @@ diff -up nfs-utils-1.2.3/utils/mount/fstab.c.orig nfs-utils-1.2.3/utils/mount/fs
  				die (EX_FILEIO, _("Cannot create link %s\n"
 diff -up nfs-utils-1.2.3/utils/mount/mount_config.h.orig nfs-utils-1.2.3/utils/mount/mount_config.h
 --- nfs-utils-1.2.3/utils/mount/mount_config.h.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/utils/mount/mount_config.h	2010-11-29 11:18:48.355596703 -0500
++++ nfs-utils-1.2.3/utils/mount/mount_config.h	2011-01-14 13:27:17.514608950 -0500
 @@ -1,7 +1,7 @@
 -#ifndef _LINUX_MOUNT__CONFIG_H
 -#define _LINUX_MOUNT_CONFIG__H
@@ -946,7 +1206,7 @@ diff -up nfs-utils-1.2.3/utils/mount/mount_config.h.orig nfs-utils-1.2.3/utils/m
 +#endif	/* _LINUX_MOUNT_CONFIG_H */
 diff -up nfs-utils-1.2.3/utils/mount/mount_constants.h.orig nfs-utils-1.2.3/utils/mount/mount_constants.h
 --- nfs-utils-1.2.3/utils/mount/mount_constants.h.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/utils/mount/mount_constants.h	2010-11-29 11:18:48.355596703 -0500
++++ nfs-utils-1.2.3/utils/mount/mount_constants.h	2011-01-14 13:27:17.515609153 -0500
 @@ -64,4 +64,8 @@ if we have a stack or plain mount - moun
  #define MS_MGC_MSK 0xffff0000	/* magic flag number mask */
  #endif
@@ -958,7 +1218,7 @@ diff -up nfs-utils-1.2.3/utils/mount/mount_constants.h.orig nfs-utils-1.2.3/util
  #endif	/* _NFS_UTILS_MOUNT_CONSTANTS_H */
 diff -up nfs-utils-1.2.3/utils/mount/mount.c.orig nfs-utils-1.2.3/utils/mount/mount.c
 --- nfs-utils-1.2.3/utils/mount/mount.c.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/utils/mount/mount.c	2010-11-29 11:18:48.354596817 -0500
++++ nfs-utils-1.2.3/utils/mount/mount.c	2011-01-14 13:27:17.514608950 -0500
 @@ -209,7 +209,7 @@ static char *fix_opts_string(int flags, 
  	}
  	if (flags & MS_USERS)
@@ -1063,7 +1323,7 @@ diff -up nfs-utils-1.2.3/utils/mount/mount.c.orig nfs-utils-1.2.3/utils/mount/mo
  int main(int argc, char *argv[])
 diff -up nfs-utils-1.2.3/utils/mount/network.c.orig nfs-utils-1.2.3/utils/mount/network.c
 --- nfs-utils-1.2.3/utils/mount/network.c.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/utils/mount/network.c	2010-11-29 11:18:48.357596482 -0500
++++ nfs-utils-1.2.3/utils/mount/network.c	2011-01-14 13:27:17.516609356 -0500
 @@ -59,6 +59,8 @@
  #define CONNECT_TIMEOUT	(20)
  #define MOUNT_TIMEOUT	(30)
@@ -1201,7 +1461,7 @@ diff -up nfs-utils-1.2.3/utils/mount/network.c.orig nfs-utils-1.2.3/utils/mount/
  /*
 diff -up nfs-utils-1.2.3/utils/mount/nfs.man.orig nfs-utils-1.2.3/utils/mount/nfs.man
 --- nfs-utils-1.2.3/utils/mount/nfs.man.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/utils/mount/nfs.man	2010-11-29 11:18:48.358596373 -0500
++++ nfs-utils-1.2.3/utils/mount/nfs.man	2011-01-14 13:27:17.518609762 -0500
 @@ -69,10 +69,9 @@ for details on specifying raw IPv6 addre
  .P
  The
@@ -1366,7 +1626,7 @@ diff -up nfs-utils-1.2.3/utils/mount/nfs.man.orig nfs-utils-1.2.3/utils/mount/nf
  Before 2.4.20, the Linux NFS client used a heuristic
 diff -up nfs-utils-1.2.3/utils/mount/nfsumount.c.orig nfs-utils-1.2.3/utils/mount/nfsumount.c
 --- nfs-utils-1.2.3/utils/mount/nfsumount.c.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/utils/mount/nfsumount.c	2010-11-29 11:18:48.359596267 -0500
++++ nfs-utils-1.2.3/utils/mount/nfsumount.c	2011-01-14 13:27:17.518609762 -0500
 @@ -31,12 +31,16 @@
  #include "nls.h"
  
@@ -1531,7 +1791,7 @@ diff -up nfs-utils-1.2.3/utils/mount/nfsumount.c.orig nfs-utils-1.2.3/utils/moun
  			ret = nfs_umount23(spec, "tcp,v3");
 diff -up nfs-utils-1.2.3/utils/mount/parse_opt.c.orig nfs-utils-1.2.3/utils/mount/parse_opt.c
 --- nfs-utils-1.2.3/utils/mount/parse_opt.c.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/utils/mount/parse_opt.c	2010-11-29 11:18:48.359596267 -0500
++++ nfs-utils-1.2.3/utils/mount/parse_opt.c	2011-01-14 13:27:17.519609965 -0500
 @@ -508,7 +508,7 @@ po_found_t po_get_numeric(struct mount_o
  int po_rightmost(struct mount_options *options, const char *keys[])
  {
@@ -1543,7 +1803,7 @@ diff -up nfs-utils-1.2.3/utils/mount/parse_opt.c.orig nfs-utils-1.2.3/utils/moun
  		for (option = options->tail; option; option = option->prev) {
 diff -up nfs-utils-1.2.3/utils/mount/stropts.c.orig nfs-utils-1.2.3/utils/mount/stropts.c
 --- nfs-utils-1.2.3/utils/mount/stropts.c.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/utils/mount/stropts.c	2010-11-29 11:18:48.360596162 -0500
++++ nfs-utils-1.2.3/utils/mount/stropts.c	2011-01-14 13:27:17.520610168 -0500
 @@ -49,10 +49,6 @@
  #include "parse_dev.h"
  #include "conffile.h"
@@ -1636,7 +1896,7 @@ diff -up nfs-utils-1.2.3/utils/mount/stropts.c.orig nfs-utils-1.2.3/utils/mount/
  		ret = nfs_do_mount_v4(mi, ai->ai_addr, ai->ai_addrlen);
 diff -up nfs-utils-1.2.3/utils/mount/version.h.orig nfs-utils-1.2.3/utils/mount/version.h
 --- nfs-utils-1.2.3/utils/mount/version.h.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/utils/mount/version.h	2010-11-29 11:18:48.361596059 -0500
++++ nfs-utils-1.2.3/utils/mount/version.h	2011-01-14 13:27:17.521610371 -0500
 @@ -42,9 +42,9 @@ static inline unsigned int linux_version
  	if (uname(&my_utsname))
  		return 0;
@@ -1651,8 +1911,8 @@ diff -up nfs-utils-1.2.3/utils/mount/version.h.orig nfs-utils-1.2.3/utils/mount/
  }
  
 diff -up nfs-utils-1.2.3/utils/nfsidmap/Makefile.am.orig nfs-utils-1.2.3/utils/nfsidmap/Makefile.am
---- nfs-utils-1.2.3/utils/nfsidmap/Makefile.am.orig	2010-11-29 11:18:48.363595859 -0500
-+++ nfs-utils-1.2.3/utils/nfsidmap/Makefile.am	2010-11-29 11:18:48.363595859 -0500
+--- nfs-utils-1.2.3/utils/nfsidmap/Makefile.am.orig	2011-01-14 13:27:17.523610776 -0500
++++ nfs-utils-1.2.3/utils/nfsidmap/Makefile.am	2011-01-14 13:27:17.523610776 -0500
 @@ -0,0 +1,9 @@
 +## Process this file with automake to produce Makefile.in
 +
@@ -1664,8 +1924,8 @@ diff -up nfs-utils-1.2.3/utils/nfsidmap/Makefile.am.orig nfs-utils-1.2.3/utils/n
 +
 +MAINTAINERCLEANFILES = Makefile.in
 diff -up nfs-utils-1.2.3/utils/nfsidmap/nfsidmap.c.orig nfs-utils-1.2.3/utils/nfsidmap/nfsidmap.c
---- nfs-utils-1.2.3/utils/nfsidmap/nfsidmap.c.orig	2010-11-29 11:18:48.363595859 -0500
-+++ nfs-utils-1.2.3/utils/nfsidmap/nfsidmap.c	2010-11-29 11:18:48.363595859 -0500
+--- nfs-utils-1.2.3/utils/nfsidmap/nfsidmap.c.orig	2011-01-14 13:27:17.523610776 -0500
++++ nfs-utils-1.2.3/utils/nfsidmap/nfsidmap.c	2011-01-14 13:27:17.523610776 -0500
 @@ -0,0 +1,118 @@
 +
 +#include <stdarg.h>
@@ -1786,8 +2046,8 @@ diff -up nfs-utils-1.2.3/utils/nfsidmap/nfsidmap.c.orig nfs-utils-1.2.3/utils/nf
 +	return rc;
 +}
 diff -up nfs-utils-1.2.3/utils/nfsidmap/nfsidmap.man.orig nfs-utils-1.2.3/utils/nfsidmap/nfsidmap.man
---- nfs-utils-1.2.3/utils/nfsidmap/nfsidmap.man.orig	2010-11-29 11:18:48.364595762 -0500
-+++ nfs-utils-1.2.3/utils/nfsidmap/nfsidmap.man	2010-11-29 11:18:48.364595762 -0500
+--- nfs-utils-1.2.3/utils/nfsidmap/nfsidmap.man.orig	2011-01-14 13:27:17.523610777 -0500
++++ nfs-utils-1.2.3/utils/nfsidmap/nfsidmap.man	2011-01-14 13:27:17.532612603 -0500
 @@ -0,0 +1,60 @@
 +.\"
 +.\"@(#)nfsidmap(8) - The NFS idmapper upcall program
@@ -1851,7 +2111,7 @@ diff -up nfs-utils-1.2.3/utils/nfsidmap/nfsidmap.man.orig nfs-utils-1.2.3/utils/
 +Bryan Schumaker, <bjschuma@netapp.com>
 diff -up nfs-utils-1.2.3/utils/nfsstat/nfsstat.c.orig nfs-utils-1.2.3/utils/nfsstat/nfsstat.c
 --- nfs-utils-1.2.3/utils/nfsstat/nfsstat.c.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/utils/nfsstat/nfsstat.c	2010-11-29 11:18:48.365595665 -0500
++++ nfs-utils-1.2.3/utils/nfsstat/nfsstat.c	2011-01-14 13:27:17.532612603 -0500
 @@ -46,7 +46,7 @@ static unsigned int	cltproc3info[CLTPROC
  static unsigned int	srvproc4info[SRVPROC4_SZ+2],
  			srvproc4info_old[SRVPROC4_SZ+2];	/* NFSv4 call counts ([0] == 2) */
@@ -2113,7 +2373,7 @@ diff -up nfs-utils-1.2.3/utils/nfsstat/nfsstat.c.orig nfs-utils-1.2.3/utils/nfss
  has_rpcstats(const unsigned int *info, int size)
 diff -up nfs-utils-1.2.3/utils/nfsstat/nfsstat.man.orig nfs-utils-1.2.3/utils/nfsstat/nfsstat.man
 --- nfs-utils-1.2.3/utils/nfsstat/nfsstat.man.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/utils/nfsstat/nfsstat.man	2010-11-29 11:18:48.366595571 -0500
++++ nfs-utils-1.2.3/utils/nfsstat/nfsstat.man	2011-01-14 13:27:17.541614429 -0500
 @@ -30,10 +30,12 @@ Print only NFS v2 statistics. The defaul
  about the versions of \fBNFS\fR that have non-zero counts.
  .TP
@@ -2131,7 +2391,7 @@ diff -up nfs-utils-1.2.3/utils/nfsstat/nfsstat.man.orig nfs-utils-1.2.3/utils/nf
  Print information about each of the mounted \fBNFS\fR file systems.
 diff -up nfs-utils-1.2.3/utils/statd/hostname.c.orig nfs-utils-1.2.3/utils/statd/hostname.c
 --- nfs-utils-1.2.3/utils/statd/hostname.c.orig	2010-09-28 08:24:16.000000000 -0400
-+++ nfs-utils-1.2.3/utils/statd/hostname.c	2010-11-29 11:18:48.366595571 -0500
++++ nfs-utils-1.2.3/utils/statd/hostname.c	2011-01-14 13:27:17.541614430 -0500
 @@ -39,10 +39,6 @@
  #include "statd.h"
  #include "xlog.h"
@@ -2144,20 +2404,21 @@ diff -up nfs-utils-1.2.3/utils/statd/hostname.c.orig nfs-utils-1.2.3/utils/statd
   * statd_present_address - convert sockaddr to presentation address
   * @sap: pointer to socket address to convert
 diff -up nfs-utils-1.2.3/utils/statd/sm-notify.c.orig nfs-utils-1.2.3/utils/statd/sm-notify.c
---- nfs-utils-1.2.3/utils/statd/sm-notify.c.orig	2010-11-29 11:17:26.908868990 -0500
-+++ nfs-utils-1.2.3/utils/statd/sm-notify.c	2010-11-29 11:18:48.367595478 -0500
-@@ -37,10 +37,6 @@
+--- nfs-utils-1.2.3/utils/statd/sm-notify.c.orig	2011-01-14 13:22:07.100643922 -0500
++++ nfs-utils-1.2.3/utils/statd/sm-notify.c	2011-01-14 13:27:17.543614834 -0500
+@@ -37,8 +37,9 @@
  #include "nsm.h"
  #include "nfsrpc.h"
  
 -#ifndef HAVE_DECL_AI_ADDRCONFIG
 -#define AI_ADDRCONFIG	0
--#endif
--
- #define NSM_TIMEOUT	2
- #define NSM_MAX_TIMEOUT	120	/* don't make this too big */
++/* glibc before 2.3.4 */
++#ifndef AI_NUMERICSERV
++#define AI_NUMERICSERV	0
+ #endif
  
-@@ -81,7 +77,6 @@ smn_lookup(const char *name)
+ #define NSM_TIMEOUT	2
+@@ -81,7 +82,6 @@ smn_lookup(const char *name)
  {
  	struct addrinfo	*ai = NULL;
  	struct addrinfo hint = {
@@ -2165,3 +2426,11 @@ diff -up nfs-utils-1.2.3/utils/statd/sm-notify.c.orig nfs-utils-1.2.3/utils/stat
  		.ai_family	= (nsm_family == AF_INET ? AF_INET: AF_UNSPEC),
  		.ai_protocol	= (int)IPPROTO_UDP,
  	};
+@@ -257,6 +257,7 @@ smn_bind_address(const char *srcaddr, co
+ 	if (srcaddr == NULL)
+ 		hint.ai_flags |= AI_PASSIVE;
+ 
++	/* Do not allow "node" and "service" parameters both to be NULL */
+ 	if (srcport == NULL)
+ 		error = getaddrinfo(srcaddr, "", &hint, &ai);
+ 	else
