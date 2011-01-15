@@ -32,6 +32,8 @@
 #RPCNFSDCOUNT=8
 # Stop the nfsd module from being pre-loaded
 #NFSD_MODULE="noload"
+# Set V4 grace period in seconds
+#NFSD_V4_GRACE=90
 #
 #
 # Optional arguments passed to rpc.mountd. See rpc.mountd(8)

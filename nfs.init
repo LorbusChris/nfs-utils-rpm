@@ -85,6 +85,11 @@ case "$1" in
 		/sbin/modprobe nfsd
 		[ -n "$RDMA_PORT" ] && /sbin/modprobe svcrdma
 	}
+
+	# Set v4 grace period if requested  
+	[ -n "$NFSD_V4_GRACE" ] && {
+		echo "$NFSD_V4_GRACE" > /proc/fs/nfsd/nfsv4gracetime
+	}
 	action $"Starting NFS services: " /usr/sbin/exportfs -r
 
 	if [ -n "$RQUOTAD" -a "$RQUOTAD" != "no" ]; then
