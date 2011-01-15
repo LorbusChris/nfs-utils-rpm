@@ -255,6 +255,9 @@ fi
 %changelog
 * Fri Jan 14 2011 Steve Dickson <steved@redhat.com> 1.2.3-7
 - Updated to latest upstream release: nfs-utils-1-2-4-rc5
+- Add initscripts changes needed for rpcbind to be running when nfs is started
+- Initscripts changes needed to support NFS over RDMA
+- Allow the setting of the NFSv4 grace period (bz 665387)
 
 * Mon Dec 13 2010 Steve Dickson <steved@redhat.com> 1.2.3-6
 - Updated to latest upstream release: nfs-utils-1-2-4-rc4
