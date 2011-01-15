@@ -81,8 +81,9 @@ case "$1" in
 	fi
 
 	# Load the nfsd module so /proc/fs/nfsd will exist
-	[ "$NFSD_MODULE" != "noload" ] && {
-		[ -x /sbin/modprobe ] && /sbin/modprobe nfsd
+	[ "$NFSD_MODULE" != "noload" -a -x /sbin/modprobe ] && {
+		/sbin/modprobe nfsd
+		[ -n "$RDMA_PORT" ] && /sbin/modprobe svcrdma
 	}
 	action $"Starting NFS services: " /usr/sbin/exportfs -r
 
@@ -100,6 +101,8 @@ case "$1" in
 	RETVAL=$?
 	echo
 	[ $RETVAL -ne 0 ] && exit $RETVAL
+
+	[ -n "$RDMA_PORT" ] && echo "rdma $RDMA_PORT" > /proc/fs/nfsd/portlist
 
 	[ -n "$MOUNTD_PORT" ] \
 	&& RPCMOUNTDOPTS="$RPCMOUNTDOPTS -p $MOUNTD_PORT"
