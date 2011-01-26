@@ -1,0 +1,11 @@
+diff -up nfs-utils-1.2.3/utils/mountd/rmtab.c.orig nfs-utils-1.2.3/utils/mountd/rmtab.c
+--- nfs-utils-1.2.3/utils/mountd/rmtab.c.orig	2011-01-25 11:09:29.484980000 -0500
++++ nfs-utils-1.2.3/utils/mountd/rmtab.c	2011-01-25 11:09:40.693309000 -0500
+@@ -205,6 +205,7 @@ mountlist_list(void)
+ 	}
+ 	if (stb.st_mtime != last_mtime) {
+ 		mountlist_freeall(mlist);
++		mlist = NULL;
+ 		last_mtime = stb.st_mtime;
+ 
+ 		setrmtabent("r");
