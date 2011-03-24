@@ -17,7 +17,7 @@ Source13: rpcgssd.init
 Source14: rpcsvcgssd.init
 Source15: nfs.sysconfig
 
-Patch001: nfs-utils-1.2.4-rc5.patch
+Patch001: nfs-utils-1.2.4-rc6.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.2-statdpath.patch
