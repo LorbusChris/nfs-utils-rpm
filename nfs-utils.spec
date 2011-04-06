@@ -255,7 +255,7 @@ fi
 
 %changelog
 * Wed Apr  6 2011 Steve Dickson <steved@redhat.com> 1.2.3-12
-- Updated to latest upstream release: nfs-utils-1-2-4-rc6
+- Updated to latest upstream release: nfs-utils-1-2-4-rc7
 - Enabled the libmount code.
 
 * Mon Mar  7 2011 Steve Dickson <steved@redhat.com> 1.2.3-11
