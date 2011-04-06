@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.3
-Release: 11%{?dist}
+Release: 12%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -17,7 +17,7 @@ Source13: rpcgssd.init
 Source14: rpcsvcgssd.init
 Source15: nfs.sysconfig
 
-Patch001: nfs-utils-1.2.4-rc6.patch
+Patch001: nfs-utils-1.2.4-rc7.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.2-statdpath.patch
@@ -50,11 +50,11 @@ BuildRequires: libgssglue-devel libevent-devel libcap-devel
 BuildRequires: libnfsidmap-devel libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, glibc-headers
-BuildRequires: krb5-devel, tcp_wrappers-devel
+BuildRequires: krb5-devel, tcp_wrappers-devel, libmount-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
 Requires: libnfsidmap libgssglue libevent
-Requires: libtirpc libblkid libcap
+Requires: libtirpc libblkid libcap libmount
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
@@ -100,9 +100,10 @@ CFLAGS="`echo $RPM_OPT_FLAGS $ARCH_OPT_FLAGS $PIE -D_FILE_OFFSET_BITS=64`"
     --enable-mountconfig \
     --enable-ipv6 \
     --enable-nfsv41 \
-	--with-statdpath=/var/lib/nfs/statd
+	--with-statdpath=/var/lib/nfs/statd \
+	--enable-libmount-mount
 
-make all
+make %{?_smp_mflags} all
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -253,6 +254,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Apr  6 2011 Steve Dickson <steved@redhat.com> 1.2.3-12
+- Updated to latest upstream release: nfs-utils-1-2-4-rc6
+- Enabled the libmount code.
+
 * Mon Mar  7 2011 Steve Dickson <steved@redhat.com> 1.2.3-11
 - Updated to latest upstream release: nfs-utils-1-2-4-rc6
 
