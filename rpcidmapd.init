@@ -57,23 +57,7 @@ case "$1" in
 	echo -n $"Starting RPC idmapd: "
 
 	# Make sure the rpc_pipefs filesystem is available
-	[ "${RPCMTAB}" != "noload" ] && {
-		RPCMTAB=`grep -v '^#' /proc/mounts | \
-			awk '{ if ($3 ~ /^rpc_pipefs$/ ) print $2}'`
-		[ -z "${RPCMTAB}" ] && {
-			[ -x /sbin/lsmod -a -x /sbin/modprobe ] && {
-				if ! /sbin/lsmod | grep sunrpc > /dev/null ; then
-				 	/sbin/modprobe sunrpc
-				fi
-			}
-			RPCMTAB=`grep -v '^#' /proc/mounts | \
-				awk '{ if ($3 ~ /^rpc_pipefs$/ ) print $2}'`
-			[ -z "${RPCMTAB}" ] && { \
-				echo "Error: RPC MTAB does not exist."
-				exit 6
-			}
-		}
-	}
+	/bin/mount -t rpc_pipefs sunrpc /var/lib/nfs/rpc_pipefs > /dev/null 2>&1
 
 	# Start daemon.
 	daemon $prog ${RPCIDMAPDARGS}
