@@ -54,23 +54,16 @@ case "$1" in
 	rm -f $LOCKFILE
 	echo -n $"Starting RPC gssd: "
 
-	# List of kernel modules to load
-	[ -z "${SECURE_NFS_MODS}" ] && SECURE_NFS_MODS="des rpcsec_gss_krb5"
-
 	# Make sure the rpc_pipefs filesystem is available
 	/bin/mount -t rpc_pipefs sunrpc /var/lib/nfs/rpc_pipefs > /dev/null 2>&1
 
-	[ "${SECURE_NFS_MODS}" != "noload" ] && {
-		[ -x /sbin/lsmod -a -x /sbin/modprobe ] && {
-			for i in ${SECURE_NFS_MODS}; do 
-				if ! /sbin/lsmod | grep $i > /dev/null ;  then
-				 	/sbin/modprobe $i || {
-						echo "Error: Unable to load '$i' security module."
-						exit 6;
-					}
-				fi
-			done
-		}
+	[ -x /sbin/lsmod -a -x /sbin/modprobe ] && {
+		if ! /sbin/lsmod | grep rpcsec_gss_krb5 > /dev/null ;  then
+			/sbin/modprobe rpcsec_gss_krb5 || {
+				echo "Error: Unable to load rpcsec_gss_krb5."
+				exit 6;
+			}
+		fi
 	}
 
 	# Start daemon.
