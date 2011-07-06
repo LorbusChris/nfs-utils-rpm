@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.4
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -223,7 +223,8 @@ fi
 %config(noreplace) /var/lib/nfs/xtab
 %config(noreplace) /var/lib/nfs/etab
 %config(noreplace) /var/lib/nfs/rmtab
-%doc linux-nfs/*
+%doc linux-nfs/ChangeLog linux-nfs/KNOWNBUGS linux-nfs/NEW linux-nfs/README
+%doc linux-nfs/THANKS linux-nfs/TODO
 /sbin/rpc.statd
 /usr/sbin/exportfs
 /usr/sbin/nfsstat
@@ -250,6 +251,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Thu Jul  7 2011 Ville Skyttä <ville.skytta@iki.fi> - 1:1.2.4-2
+- Don't ship Makefiles or INSTALL in docs (#633934).
+
 * Mon Jul  4 2011 J. Bruce Fields <bfields@redhat.com> 1.2.4-2
 - Rely on crypto module autoloading in init scripts
 - initscripts: just try to mount rpc_pipefs always
