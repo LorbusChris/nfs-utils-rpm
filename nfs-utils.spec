@@ -25,6 +25,7 @@ Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
 
 Patch001: nfs-utils.1.2.5-rc1.patch
+Patch002: nfs-utils-1.2.3-libmount-api-2.20.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.2-statdpath.patch
@@ -57,11 +58,11 @@ BuildRequires: libgssglue-devel libevent-devel libcap-devel
 BuildRequires: libnfsidmap-devel libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, glibc-headers
-BuildRequires: krb5-devel, tcp_wrappers-devel, libmount-devel
+BuildRequires: krb5-devel, tcp_wrappers-devel, libmount-devel >= 2.20
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
 Requires: libnfsidmap libgssglue libevent
-Requires: libtirpc libblkid libcap libmount
+Requires: libtirpc libblkid libcap libmount >= 2.20
 Requires(post): systemd-units
 Requires(preun): systemd-units
 Requires(postun): systemd-units
@@ -82,6 +83,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %setup -q
 
 %patch001 -p1
+%patch002 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -266,6 +268,7 @@ fi
 * Wed Aug  3 2011 Steve Dickson <steved@redhat.com> 1.2.4-4
 - Converted init scrips to systemd services. (bz 699040)
 - Made nfsnobody's uid/gid to always be a 16-bit value of -2
+- mount: fix for libmount from util-linux >= 2.20
 
 * Thu Jul 21 2011 Steve Dickson <steved@redhat.com> 1.2.4-3
 - Updated to latest upstream release: nfs-utils-1-2-5-rc1
