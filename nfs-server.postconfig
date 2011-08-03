@@ -8,10 +8,11 @@
 #
 # Enabled the RDMA server support if configured to do so.
 # 
-# Make sure the modules is loaded
-[ -n "$RDMA_PORT" ] && /sbin/modprobe svcrdma
-
-# Enable the server to listen on the given port
-[ -n "$RDMA_PORT" ] && echo "rdma $RDMA_PORT" > /proc/fs/nfsd/portlist
+# Load the module and  then enable the server to listen 
+# on the given port
+if [ -n "$RDMA_PORT" ]; then 
+	/sbin/modprobe svcrdma
+	echo "rdma $RDMA_PORT" > /proc/fs/nfsd/portlist
+fi
 
 exit 0

@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.4
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -58,11 +58,11 @@ BuildRequires: libgssglue-devel libevent-devel libcap-devel
 BuildRequires: libnfsidmap-devel libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, glibc-headers
-BuildRequires: krb5-devel, tcp_wrappers-devel, libmount-devel >= 2.20
+BuildRequires: krb5-devel, tcp_wrappers-devel, libmount-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
 Requires: libnfsidmap libgssglue libevent
-Requires: libtirpc libblkid libcap libmount >= 2.20
+Requires: libtirpc libblkid libcap libmount
 Requires(post): systemd-units
 Requires(preun): systemd-units
 Requires(postun): systemd-units
@@ -265,6 +265,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Aug  3 2011 Steve Dickson <steved@redhat.com> 1.2.4-5
+- Cleaned up the .preconfig and .postconfig files per
+  code review request.
+
 * Wed Aug  3 2011 Steve Dickson <steved@redhat.com> 1.2.4-4
 - Converted init scrips to systemd services. (bz 699040)
 - Made nfsnobody's uid/gid to always be a 16-bit value of -2
