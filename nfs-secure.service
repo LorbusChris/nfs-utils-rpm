@@ -1,0 +1,12 @@
+[Unit]
+Description=Secure NFS
+After=var-lib-nfs-rpc_pipefs.mount
+Requires=var-lib-nfs-rpc_pipefs.mount
+
+[Service]
+Type=forking
+EnvironmentFile=-/etc/sysconfig/nfs
+ExecStart=/usr/sbin/rpc.gssd $RPCGSSDARGS
+
+[Install]
+WantedBy=multi-user.target

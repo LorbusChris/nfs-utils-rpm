@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.4
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -10,12 +10,19 @@ Epoch: 1
 
 Source0: http://www.kernel.org/pub/linux/utils/nfs/%{name}-%{version}.tar.bz2
 
-Source10: nfs.init
-Source11: nfslock.init
-Source12: rpcidmapd.init
-Source13: rpcgssd.init
-Source14: rpcsvcgssd.init
-Source15: nfs.sysconfig
+Source10: nfs.sysconfig
+Source11: nfs-lock.service
+Source12: nfs-secure.service
+Source13: nfs-secure-server.service
+Source14: nfs-server.service
+Source15: nfs-idmap.service
+Source16: var-lib-nfs-rpc_pipefs.mount
+%define nfs_services %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} %{SOURCE16}
+
+Source50: nfs-lock.preconfig
+Source51: nfs-server.preconfig
+Source52: nfs-server.postconfig
+%define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
 
 Patch001: nfs-utils.1.2.5-rc1.patch
 
@@ -55,6 +62,9 @@ Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
 Requires: libnfsidmap libgssglue libevent
 Requires: libtirpc libblkid libcap libmount
+Requires(post): systemd-units
+Requires(preun): systemd-units
+Requires(postun): systemd-units
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
@@ -107,18 +117,21 @@ make %{?_smp_mflags} all
 
 %install
 rm -rf $RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT{/sbin,/usr/sbin}
+mkdir -p $RPM_BUILD_ROOT{/sbin,/usr/sbin,/lib/systemd/system}
+mkdir -p $RPM_BUILD_ROOT/usr/lib/%{name}/scripts
 mkdir -p ${RPM_BUILD_ROOT}%{_mandir}/man8
-mkdir -p $RPM_BUILD_ROOT{/etc/rc.d/init.d,/etc/sysconfig}
+mkdir -p $RPM_BUILD_ROOT/etc/sysconfig
 make DESTDIR=$RPM_BUILD_ROOT install
 install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT/usr/sbin
-install -m 755 %{SOURCE10} $RPM_BUILD_ROOT/etc/rc.d/init.d/nfs
-install -m 755 %{SOURCE11} $RPM_BUILD_ROOT/etc/rc.d/init.d/nfslock
-install -m 755 %{SOURCE12} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcidmapd
-install -m 755 %{SOURCE13} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcgssd
-install -m 755 %{SOURCE14} $RPM_BUILD_ROOT/etc/rc.d/init.d/rpcsvcgssd
-install -m 644 %{SOURCE15} $RPM_BUILD_ROOT/etc/sysconfig/nfs
 install -m 644 utils/mount/nfsmount.conf  $RPM_BUILD_ROOT/etc
+install -m 644 %{SOURCE10} $RPM_BUILD_ROOT/etc/sysconfig/nfs
+
+for service in %{nfs_services} ; do
+	install -m 644 $service $RPM_BUILD_ROOT/lib/systemd/system
+done
+for config in %{nfs_configs} ; do
+	install -m 755 $config $RPM_BUILD_ROOT/usr/lib/%{name}/scripts
+done
 
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/rpc_pipefs
 
@@ -133,6 +146,7 @@ mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/v4recovery
 rm -rf $RPM_BUILD_ROOT
 
 %pre
+
 # move files so the running service will have this applied as well
 for x in gssd svcgssd idmapd ; do
     if [ -f /var/lock/subsys/rpc.$x ]; then
@@ -142,48 +156,47 @@ done
 
 /usr/sbin/useradd -l -c "RPC Service User" -r \
         -s /sbin/nologin -u 29 -d /var/lib/nfs rpcuser 2>/dev/null || :
-# Define the correct unsigned uid value for 32 or 64 bit archs
-%ifarch %{all_32bit_archs}
-%define nfsnobody_uid   65534
-%else
-%define nfsnobody_uid   4294967294
-%endif
+/usr/sbin/groupadd -g 29 rpcuser 2>/dev/null || :
 
-# If GID 65534 (or 4294967294 64bit archs) is unassigned, 
-# create group "nfsnobody"
+# Using the 16-bit value of -2 for the nfsnobody uid and gid
+%define nfsnobody_uid   65534
+
+# Create nfsnobody gid as long as it does not already exist
 cat /etc/group | cut -d':' -f 3 | grep --quiet %{nfsnobody_uid} 2>/dev/null
 if [ "$?" -eq 1 ]; then
     /usr/sbin/groupadd -g %{nfsnobody_uid} nfsnobody 2>/dev/null || :
+else
+    /usr/sbin/groupmod -g %{nfsnobody_uid} nfsnobody 2>/dev/null || :
 fi
 
-# If UID 65534 (or 4294967294 64bit archs) is unassigned, 
-# create user "nfsnobody"
+# Create nfsnobody uid as long as it does not already exist.
 cat /etc/passwd | cut -d':' -f 3 | grep --quiet %{nfsnobody_uid} 2>/dev/null
 if [ "$?" -eq 1 ]; then
     /usr/sbin/useradd -l -c "Anonymous NFS User" -r -g %{nfsnobody_uid} \
         -s /sbin/nologin -u %{nfsnobody_uid} -d /var/lib/nfs nfsnobody 2>/dev/null || :
+else
+
+   /usr/sbin/usermod -u %{nfsnobody_uid} nfsnobody 2>/dev/null || :
 fi
 
 %post
-/sbin/chkconfig --add nfs
-/sbin/chkconfig --add nfslock
-/sbin/chkconfig --add rpcidmapd
-/sbin/chkconfig --add rpcgssd
-/sbin/chkconfig --add rpcsvcgssd
+
+if [ $1 -eq 1 ]; then
+	# Package install, not upgrade
+    /bin/systemctl enable nfs-idmap.service >/dev/null 2>&1 || :
+    /bin/systemctl enable nfs-lock.service >/dev/null 2>&1 || :
+fi
 # Make sure statd used the correct uid/gid.
 chown -R rpcuser:rpcuser /var/lib/nfs/statd
 
 %preun
+
 if [ "$1" = "0" ]; then
-    /etc/rc.d/init.d/nfs condstop > /dev/null
-    /etc/rc.d/init.d/rpcgssd condstop > /dev/null
-    /etc/rc.d/init.d/rpcidmapd condstop > /dev/null
-    /etc/rc.d/init.d/nfslock condstop > /dev/null
-    /sbin/chkconfig --del rpcidmapd
-    /sbin/chkconfig --del rpcgssd
-    /sbin/chkconfig --del rpcsvcgssd
-    /sbin/chkconfig --del nfs
-    /sbin/chkconfig --del nfslock
+	# Package removal, not upgrade
+	for service in %{nfs_services} ; do
+    	/bin/systemctl disable $service >/dev/null 2>&1 || :
+    	/bin/systemctl stop $service >/dev/null 2>&1 || :
+	done
     /usr/sbin/userdel rpcuser 2>/dev/null || :
     /usr/sbin/groupdel rpcuser 2>/dev/null || :
     /usr/sbin/userdel nfsnobody 2>/dev/null || :
@@ -193,28 +206,22 @@ if [ "$1" = "0" ]; then
 fi
 
 %postun
+
 if [ "$1" -ge 1 ]; then
-    /etc/rc.d/init.d/rpcidmapd condrestart > /dev/null
-    /etc/rc.d/init.d/rpcgssd condrestart > /dev/null
-    /etc/rc.d/init.d/nfs condrestart > /dev/null
-	/etc/rc.d/init.d/nfslock condrestart > /dev/null
+	# Package upgrade, not uninstall
+	for service in %{nfs_services} ; do
+    	/bin/systemctl try-restart $service >/dev/null 2>&1 || :
+	done
 fi
+/bin/systemctl --system daemon-reload >/dev/null 2>&1 || :
 
-%triggerpostun -- nfs-server
-/sbin/chkconfig --add nfs
-
-%triggerpostun -- knfsd
-/sbin/chkconfig --add nfs
-
-%triggerpostun -- knfsd-clients
-/sbin/chkconfig --add nfslock
+%triggerun -- nfs < 1.2.4-4
+if /sbin/chkconfig --level 3 nfs ; then
+	/bin/systemctl --no-reload enable nfsserver.service >/dev/null 2>&1 || :
+fi
 
 %files
 %defattr(-,root,root)
-%config /etc/rc.d/init.d/nfs
-%config /etc/rc.d/init.d/rpcidmapd
-%config /etc/rc.d/init.d/rpcgssd
-%config /etc/rc.d/init.d/rpcsvcgssd
 %config(noreplace) /etc/sysconfig/nfs
 %config(noreplace) /etc/nfsmount.conf
 %dir /var/lib/nfs/v4recovery
@@ -247,7 +254,8 @@ fi
 /usr/sbin/nfsiostat
 /usr/sbin/nfsidmap
 %{_mandir}/*/*
-%config /etc/rc.d/init.d/nfslock
+/lib/systemd/system/*
+/usr/lib/%{name}/scripts/*
 
 %attr(4755,root,root)   /sbin/mount.nfs
 %attr(4755,root,root)   /sbin/mount.nfs4
@@ -255,6 +263,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Aug  3 2011 Steve Dickson <steved@redhat.com> 1.2.4-4
+- Converted init scrips to systemd services. (bz 699040)
+- Made nfsnobody's uid/gid to always be a 16-bit value of -2
+
 * Thu Jul 21 2011 Steve Dickson <steved@redhat.com> 1.2.4-3
 - Updated to latest upstream release: nfs-utils-1-2-5-rc1
 

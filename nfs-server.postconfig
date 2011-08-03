@@ -1,0 +1,17 @@
+#!/bin/sh
+
+. /etc/sysconfig/nfs
+
+# Tell idmapd the server is up and running
+/usr/bin/pkill -HUP rpc.idmapd
+
+#
+# Enabled the RDMA server support if configured to do so.
+# 
+# Make sure the modules is loaded
+[ -n "$RDMA_PORT" ] && /sbin/modprobe svcrdma
+
+# Enable the server to listen on the given port
+[ -n "$RDMA_PORT" ] && echo "rdma $RDMA_PORT" > /proc/fs/nfsd/portlist
+
+exit 0
