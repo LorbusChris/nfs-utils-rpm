@@ -1,11 +1,11 @@
 [Unit]
-Description=NFS Protocol Daemon
+Description=NFS Server
 After=network.target rpcbind.service
 
 [Service]
 Type=forking
 EnvironmentFile=-/etc/sysconfig/nfs
-EnvironmentFile=/usr/lib/nfs-utils/scripts/nfs-server.preconfig
+ExecStartPre=/usr/lib/nfs-utils/scripts/nfs-server.preconfig
 ExecStartPre=-/usr/sbin/rpc.rquotad $RPCRQUOTADOPTS
 ExecStartPre=/usr/sbin/exportfs -r
 ExecStart=/usr/sbin/rpc.nfsd $RPCNFSDARGS ${RPCNFSDCOUNT}

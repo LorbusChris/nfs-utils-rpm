@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.4
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -182,7 +182,6 @@ else
 fi
 
 %post
-
 if [ $1 -eq 1 ]; then
 	# Package install, not upgrade
     /bin/systemctl enable nfs-idmap.service >/dev/null 2>&1 || :
@@ -192,8 +191,7 @@ fi
 chown -R rpcuser:rpcuser /var/lib/nfs/statd
 
 %preun
-
-if [ "$1" = "0" ]; then
+if [ $1 -eq 0 ]; then
 	# Package removal, not upgrade
 	for service in %{nfs_services} ; do
     	/bin/systemctl disable $service >/dev/null 2>&1 || :
@@ -208,18 +206,26 @@ if [ "$1" = "0" ]; then
 fi
 
 %postun
-
-if [ "$1" -ge 1 ]; then
+if [ $1 -ge 1 ]; then
 	# Package upgrade, not uninstall
 	for service in %{nfs_services} ; do
+		echo "try-restart $service service"
     	/bin/systemctl try-restart $service >/dev/null 2>&1 || :
 	done
 fi
 /bin/systemctl --system daemon-reload >/dev/null 2>&1 || :
 
-%triggerun -- nfs < 1.2.4-4
+%triggerun -- nfs-utils < 1:1.2.4-2
+/bin/systemctl enable nfs-idmap.service >/dev/null 2>&1 || :
+/bin/systemctl enable nfs-lock.service >/dev/null 2>&1 || :
 if /sbin/chkconfig --level 3 nfs ; then
-	/bin/systemctl --no-reload enable nfsserver.service >/dev/null 2>&1 || :
+	/bin/systemctl enable nfs-server.service >/dev/null 2>&1 || :
+fi
+if /sbin/chkconfig --level 3 rpcgssd ; then
+	/bin/systemctl enable nfs-secure.service >/dev/null 2>&1 || :
+fi
+if /sbin/chkconfig --level 3 rpcsvcgssd ; then
+	/bin/systemctl enable nfs-secure-server.service >/dev/null 2>&1 || :
 fi
 
 %files
@@ -265,6 +271,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Aug 10 2011 Steve Dickson <steved@redhat.com> 1.2.4-6
+- Fixed some bugs in the triggerun script as well in
+  the nfs-server scripts (bz 699040).
+
 * Wed Aug  3 2011 Steve Dickson <steved@redhat.com> 1.2.4-5
 - Cleaned up the .preconfig and .postconfig files per
   code review request.
