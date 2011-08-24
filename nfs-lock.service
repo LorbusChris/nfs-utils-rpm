@@ -4,6 +4,7 @@ After=network.target rpcbind.service
 
 [Service]
 Type=forking
+StandardError=syslog+console
 EnvironmentFile=-/etc/sysconfig/nfs
 ExecStartPre=/usr/lib/nfs-utils/scripts/nfs-lock.preconfig
 ExecStart=/sbin/rpc.statd $STATDARG

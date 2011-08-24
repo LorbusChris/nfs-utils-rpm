@@ -1,9 +1,11 @@
 [Unit]
 Description=NFS Server
-After=network.target rpcbind.service
+Requires=proc-fs-nfsd.mount
+After=network.target rpcbind.service proc-fs-nfsd.mount
 
 [Service]
 Type=forking
+StandardError=syslog+console
 EnvironmentFile=-/etc/sysconfig/nfs
 ExecStartPre=/usr/lib/nfs-utils/scripts/nfs-server.preconfig
 ExecStartPre=-/usr/sbin/rpc.rquotad $RPCRQUOTADOPTS

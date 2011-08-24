@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.4
-Release: 6%{?dist}
+Release: 7%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -17,7 +17,8 @@ Source13: nfs-secure-server.service
 Source14: nfs-server.service
 Source15: nfs-idmap.service
 Source16: var-lib-nfs-rpc_pipefs.mount
-%define nfs_services %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} %{SOURCE16}
+Source17: proc-fs-nfsd.mount
+%define nfs_services %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} %{SOURCE16} %{SOURCE17}
 
 Source50: nfs-lock.preconfig
 Source51: nfs-server.preconfig
@@ -26,6 +27,7 @@ Source52: nfs-server.postconfig
 
 Patch001: nfs-utils.1.2.5-rc1.patch
 Patch002: nfs-utils-1.2.3-libmount-api-2.20.patch
+Patch003: nfs-utils-1.2.4-exportfs-nolog.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.2-statdpath.patch
@@ -84,6 +86,7 @@ This package also contains the mount.nfs and umount.nfs program.
 
 %patch001 -p1
 %patch002 -p1
+%patch003 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -271,6 +274,13 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Aug 24 2011 Steve Dickson <steved@redhat.com> 1.2.4-7
+- Added StandardError=syslog+console to all the service files
+  so startup errors will be logged. 
+- Changed exportfs to only log errors on existing /etc/export.d 
+  directory, which eliminates a needless syslog entry.
+- Automount /proc/fs/nfsd for rpc.nfsd 
+
 * Wed Aug 10 2011 Steve Dickson <steved@redhat.com> 1.2.4-6
 - Fixed some bugs in the triggerun script as well in
   the nfs-server scripts (bz 699040).
