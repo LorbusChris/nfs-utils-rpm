@@ -1,0 +1,1865 @@
+diff --git a/COPYING b/COPYING
+index 60549be..941c87d 100644
+--- a/COPYING
++++ b/COPYING
+@@ -1,12 +1,12 @@
+-		    GNU GENERAL PUBLIC LICENSE
+-		       Version 2, June 1991
++                    GNU GENERAL PUBLIC LICENSE
++                       Version 2, June 1991
+ 
+- Copyright (C) 1989, 1991 Free Software Foundation, Inc.
+-                       59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ Copyright (C) 1989, 1991 Free Software Foundation, Inc.,
++ 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  Everyone is permitted to copy and distribute verbatim copies
+  of this license document, but changing it is not allowed.
+ 
+-			    Preamble
++                            Preamble
+ 
+   The licenses for most software are designed to take away your
+ freedom to share and change it.  By contrast, the GNU General Public
+@@ -15,7 +15,7 @@ software--to make sure the software is free for all its users.  This
+ General Public License applies to most of the Free Software
+ Foundation's software and to any other program whose authors commit to
+ using it.  (Some other Free Software Foundation software is covered by
+-the GNU Library General Public License instead.)  You can apply it to
++the GNU Lesser General Public License instead.)  You can apply it to
+ your programs, too.
+ 
+   When we speak of free software, we are referring to freedom, not
+@@ -55,8 +55,8 @@ patent must be licensed for everyone's free use or not licensed at all.
+ 
+   The precise terms and conditions for copying, distribution and
+ modification follow.
+-
+-		    GNU GENERAL PUBLIC LICENSE
++
++		            GNU GENERAL PUBLIC LICENSE
+    TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+ 
+   0. This License applies to any program or other work which contains
+@@ -110,7 +110,7 @@ above, provided that you also meet all of these conditions:
+     License.  (Exception: if the Program itself is interactive but
+     does not normally print such an announcement, your work based on
+     the Program is not required to print an announcement.)
+-
++
+ These requirements apply to the modified work as a whole.  If
+ identifiable sections of that work are not derived from the Program,
+ and can be reasonably considered independent and separate works in
+@@ -168,7 +168,7 @@ access to copy from a designated place, then offering equivalent
+ access to copy the source code from the same place counts as
+ distribution of the source code, even though third parties are not
+ compelled to copy the source along with the object code.
+-
++
+   4. You may not copy, modify, sublicense, or distribute the Program
+ except as expressly provided under this License.  Any attempt
+ otherwise to copy, modify, sublicense or distribute the Program is
+@@ -225,7 +225,7 @@ impose that choice.
+ 
+ This section is intended to make thoroughly clear what is believed to
+ be a consequence of the rest of this License.
+-
++
+   8. If the distribution and/or use of the Program is restricted in
+ certain countries either by patents or by copyrighted interfaces, the
+ original copyright holder who places the Program under this License
+@@ -255,7 +255,7 @@ make exceptions for this.  Our decision will be guided by the two goals
+ of preserving the free status of all derivatives of our free software and
+ of promoting the sharing and reuse of software generally.
+ 
+-			    NO WARRANTY
++                            NO WARRANTY
+ 
+   11. BECAUSE THE PROGRAM IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY
+ FOR THE PROGRAM, TO THE EXTENT PERMITTED BY APPLICABLE LAW.  EXCEPT WHEN
+@@ -277,9 +277,9 @@ YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE WITH ANY OTHER
+ PROGRAMS), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE
+ POSSIBILITY OF SUCH DAMAGES.
+ 
+-		     END OF TERMS AND CONDITIONS
+-
+-	    How to Apply These Terms to Your New Programs
++		            END OF TERMS AND CONDITIONS
++
++	        How to Apply These Terms to Your New Programs
+ 
+   If you develop a new program, and you want it to be of the greatest
+ possible use to the public, the best way to achieve this is to make it
+@@ -291,7 +291,7 @@ convey the exclusion of warranty; and each file should have at least
+ the "copyright" line and a pointer to where the full notice is found.
+ 
+     <one line to give the program's name and a brief idea of what it does.>
+-    Copyright (C) 19yy  <name of author>
++    Copyright (C) <year>  <name of author>
+ 
+     This program is free software; you can redistribute it and/or modify
+     it under the terms of the GNU General Public License as published by
+@@ -303,17 +303,16 @@ the "copyright" line and a pointer to where the full notice is found.
+     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+     GNU General Public License for more details.
+ 
+-    You should have received a copy of the GNU General Public License
+-    along with this program; if not, write to the Free Software
+-    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+-
++    You should have received a copy of the GNU General Public License along
++    with this program; if not, write to the Free Software Foundation, Inc.,
++    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ 
+ Also add information on how to contact you by electronic and paper mail.
+ 
+ If the program is interactive, make it output a short notice like this
+ when it starts in an interactive mode:
+ 
+-    Gnomovision version 69, Copyright (C) 19yy name of author
++    Gnomovision version 69, Copyright (C) year name of author
+     Gnomovision comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+     This is free software, and you are welcome to redistribute it
+     under certain conditions; type `show c' for details.
+@@ -336,5 +335,5 @@ necessary.  Here is a sample; alter the names:
+ This General Public License does not permit incorporating your program into
+ proprietary programs.  If your program is a subroutine library, you may
+ consider it more useful to permit linking proprietary applications with the
+-library.  If this is what you want to do, use the GNU Library General
++library.  If this is what you want to do, use the GNU Lesser General
+ Public License instead of this License.
+diff --git a/aclocal/rpcsec_vers.m4 b/aclocal/rpcsec_vers.m4
+index 25902ca..8218372 100644
+--- a/aclocal/rpcsec_vers.m4
++++ b/aclocal/rpcsec_vers.m4
+@@ -1,7 +1,7 @@
+ dnl Checks librpcsec version
+ AC_DEFUN([AC_RPCSEC_VERSION], [
+ 
+-  PKG_CHECK_MODULES([GSSGLUE], [libgssglue >= 0.1])
++  PKG_CHECK_MODULES([GSSGLUE], [libgssglue >= 0.3])
+ 
+   dnl TI-RPC replaces librpcsecgss
+   if test "$enable_tirpc" = no; then
+diff --git a/configure.ac b/configure.ac
+index ca12f9e..c9fb27b 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -114,14 +114,14 @@ AC_ARG_WITH(rpcgen,
+ 	rpcgen_path=$withval,
+ 	rpcgen_path=yes )
+ 	RPCGEN_PATH=
+-	if test "$rpcgen_path" == "yes"; then
++	if test "$rpcgen_path" = "yes"; then
+ 	    for p in /usr/local/bin/rpcgen /usr/bin/rpcgen /bin/rpcgen
+ 	    do if test -f $p ; then RPCGEN_PATH=$p ; break; fi ; done
+ 	elif test "$rpcgen_path" != "internal"; then
+ 	    RPCGEN_PATH=$rpcgen_path
+ 	fi
+ 	AC_SUBST(RPCGEN_PATH)
+-	AM_CONDITIONAL(CONFIG_RPCGEN, [test "$RPCGEN_PATH" == ""])
++	AM_CONDITIONAL(CONFIG_RPCGEN, [test "$RPCGEN_PATH" = ""])
+ AC_ARG_ENABLE(uuid,
+ 	[AC_HELP_STRING([--disable-uuid], [Exclude uuid support to avoid buggy libblkid])],
+ 	if test "$enableval" = "yes" ; then choose_blkid=yes; else choose_blkid=no; fi,
+@@ -137,7 +137,7 @@ if test "$enable_mount" = yes; then
+ 	AC_ARG_ENABLE(libmount-mount,
+ 		[AC_HELP_STRING([--enable-libmount-mount],
+ 				[Link mount.nfs with libmount (EXPERIMENTAL)])],
+-		enable_libmount=yes,
++		enable_libmount=$enableval,
+ 		enable_libmount=no)
+ fi
+ 
+@@ -256,9 +256,6 @@ if test "$enable_nfsv4" = yes; then
+   dnl check for nfsidmap libraries and headers
+   AC_LIBNFSIDMAP
+ 
+-  dnl enable nfsidmap when its support by libnfsidmap
+-  AM_CONDITIONAL(CONFIG_NFSIDMAP, [test "$enable_nfsidmap" = "yes"])
+-
+   dnl check for the keyutils libraries and headers
+   AC_KEYUTILS
+ 
+@@ -268,6 +265,9 @@ if test "$enable_nfsv4" = yes; then
+     AC_RPCSEC_VERSION
+   fi
+ fi
++dnl enable nfsidmap when its support by libnfsidmap
++AM_CONDITIONAL(CONFIG_NFSIDMAP, [test "$enable_nfsidmap" = "yes"])
++
+ 
+ if test "$knfsd_cv_glibc2" = no; then
+     AC_CHECK_LIB(bsd, daemon, [LIBBSD="-lbsd"])
+diff --git a/support/include/nfsrpc.h b/support/include/nfsrpc.h
+index d50fe94..a0b80e1 100644
+--- a/support/include/nfsrpc.h
++++ b/support/include/nfsrpc.h
+@@ -15,8 +15,8 @@
+  *
+  * You should have received a copy of the GNU General Public
+  * License along with this program; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+- * Boston, MA 021110-1307, USA.
++ * Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  */
+ 
+diff --git a/support/include/rpcmisc.h b/support/include/rpcmisc.h
+index 0b06457..b806227 100644
+--- a/support/include/rpcmisc.h
++++ b/support/include/rpcmisc.h
+@@ -53,6 +53,7 @@ void		rpc_init(char *name, int prog, int vers,
+ void		rpc_dispatch(struct svc_req *rq, SVCXPRT *xprt,
+ 				struct rpc_dtable *dtable, int nvers,
+ 				void *argp, void *resp);
++int		getservport(u_long number, const char *proto);
+ 
+ extern int	_rpcpmstart;
+ extern int	_rpcfdtype;
+diff --git a/support/nfs/exports.c b/support/nfs/exports.c
+index c250383..c96500f 100644
+--- a/support/nfs/exports.c
++++ b/support/nfs/exports.c
+@@ -784,8 +784,9 @@ struct export_features *get_export_features(void)
+ 	fd = open(path, O_RDONLY);
+ 	if (fd == -1)
+ 		goto good;
+-	fd = read(fd, buf, 50);
+-	if (fd == -1)
++	c = read(fd, buf, 50);
++	close(fd);
++	if (c == -1)
+ 		goto err;
+ 	c = sscanf(buf, "%x %x", &ef.flags, &ef.secinfo_flags);
+ 	if (c != 2)
+diff --git a/support/nfs/getport.c b/support/nfs/getport.c
+index d74400b..3331ad4 100644
+--- a/support/nfs/getport.c
++++ b/support/nfs/getport.c
+@@ -17,8 +17,8 @@
+  *
+  * You should have received a copy of the GNU General Public
+  * License along with this program; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+- * Boston, MA 021110-1307, USA.
++ * Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  */
+ 
+diff --git a/support/nfs/rpc_socket.c b/support/nfs/rpc_socket.c
+index c14efe8..7896cd2 100644
+--- a/support/nfs/rpc_socket.c
++++ b/support/nfs/rpc_socket.c
+@@ -15,8 +15,8 @@
+  *
+  * You should have received a copy of the GNU General Public
+  * License along with this program; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+- * Boston, MA 021110-1307, USA.
++ * Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  */
+ 
+diff --git a/support/nfs/svc_create.c b/support/nfs/svc_create.c
+index b3f75ed..c159fc8 100644
+--- a/support/nfs/svc_create.c
++++ b/support/nfs/svc_create.c
+@@ -393,7 +393,7 @@ nfs_svc_create(char *name, const rpcprog_t program, const rpcvers_t version,
+ 	const struct sigaction create_sigaction = {
+ 		.sa_handler	= SIG_IGN,
+ 	};
+-	unsigned int visible, up;
++	unsigned int visible, up, servport;
+ 	struct netconfig *nconf;
+ 	void *handlep;
+ 
+@@ -417,8 +417,13 @@ nfs_svc_create(char *name, const rpcprog_t program, const rpcvers_t version,
+ 		if (!(nconf->nc_flag & NC_VISIBLE))
+ 			continue;
+ 		visible++;
++		if (port == 0)
++			servport = getservport(program, nconf->nc_proto);
++		else
++			servport = port;
++
+ 		up += svc_create_nconf(name, program, version, dispatch,
+-						port, nconf);
++						servport, nconf);
+ 	}
+ 
+ 	if (visible == 0)
+diff --git a/support/nfs/svc_socket.c b/support/nfs/svc_socket.c
+index 03a5325..f56f310 100644
+--- a/support/nfs/svc_socket.c
++++ b/support/nfs/svc_socket.c
+@@ -13,8 +13,8 @@
+ 
+    You should have received a copy of the GNU Lesser General Public
+    License along with the GNU C Library; if not, write to the Free
+-   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+-   02111-1307 USA.  */
++   Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
++   Boston, MA 0211-1301 USA */
+ 
+ #include <stdio.h>
+ #include <string.h>
+@@ -35,14 +35,43 @@
+ # define __close(f)		close ((f))
+ #endif
+ 
++int getservport(u_long number, const char *proto)
++{
++	char rpcdata[1024], servdata[1024];
++	struct rpcent rpcbuf, *rpcp;
++	struct servent servbuf, *servp = NULL;
++	int ret;
++
++	ret = getrpcbynumber_r(number, &rpcbuf, rpcdata, sizeof rpcdata,
++				&rpcp);
++	if (ret == 0 && rpcp != NULL) {
++		/* First try name.  */
++		ret = getservbyname_r(rpcp->r_name, proto, &servbuf, servdata,
++					sizeof servdata, &servp);
++		if ((ret != 0 || servp == NULL) && rpcp->r_aliases) {
++			const char **a;
++
++			/* Then we try aliases.  */
++			for (a = (const char **) rpcp->r_aliases; *a != NULL; a++) {
++				ret = getservbyname_r(*a, proto, &servbuf, servdata,
++							sizeof servdata, &servp);
++				if (ret == 0 && servp != NULL)
++					break;
++			}
++		}
++	}
++
++	if (ret == 0 && servp != NULL)
++		return ntohs(servp->s_port);
++
++	return 0;
++}
++
+ static int
+ svc_socket (u_long number, int type, int protocol, int reuse)
+ {
+   struct sockaddr_in addr;
+   socklen_t len = sizeof (struct sockaddr_in);
+-  char rpcdata [1024], servdata [1024];
+-  struct rpcent rpcbuf, *rpcp;
+-  struct servent servbuf, *servp = NULL;
+   int sock, ret;
+   const char *proto = protocol == IPPROTO_TCP ? "tcp" : "udp";
+ 
+@@ -66,48 +95,13 @@ svc_socket (u_long number, int type, int protocol, int reuse)
+ 
+   memset (&addr, 0, sizeof (addr));
+   addr.sin_family = AF_INET;
++  addr.sin_port = htons(getservport(number, proto));
+ 
+-  ret = getrpcbynumber_r (number, &rpcbuf, rpcdata, sizeof rpcdata,
+-			  &rpcp);
+-  if (ret == 0 && rpcp != NULL)
+-    {
+-      /* First try name.  */
+-      ret = getservbyname_r (rpcp->r_name, proto, &servbuf, servdata,
+-			     sizeof servdata, &servp);
+-      if ((ret != 0 || servp == NULL) && rpcp->r_aliases)
+-	{
+-	  const char **a;
+-
+-	  /* Then we try aliases.  */
+-	  for (a = (const char **) rpcp->r_aliases; *a != NULL; a++) 
+-	    {
+-	      ret = getservbyname_r (*a, proto, &servbuf, servdata,
+-				     sizeof servdata, &servp);
+-	      if (ret == 0 && servp != NULL)
+-		break;
+-	    }
+-	}
+-    }
+-
+-  if (ret == 0 && servp != NULL)
++  if (bind(sock, (struct sockaddr *) &addr, len) < 0)
+     {
+-      addr.sin_port = servp->s_port;
+-      if (bind (sock, (struct sockaddr *) &addr, len) < 0)
+-	{
+-	  perror (_("svc_socket: bind problem"));
+-	  (void) __close (sock);
+-	  sock = -1;
+-	}
+-    }
+-  else
+-    {
+-	  addr.sin_port = 0;
+-	  if (bind (sock, (struct sockaddr *) &addr, len) < 0)
+-	    {
+-	      perror (_("svc_socket: bind problem"));
+-	      (void) __close (sock);
+-	      sock = -1;
+-	    }
++      perror (_("svc_socket: bind problem"));
++      (void) __close(sock);
++      sock = -1;
+     }
+ 
+   if (sock >= 0)
+diff --git a/support/nsm/file.c b/support/nsm/file.c
+index 98b47bf..a12c753 100644
+--- a/support/nsm/file.c
++++ b/support/nsm/file.c
+@@ -395,18 +395,18 @@ nsm_drop_privileges(const int pidfd)
+ 		return false;
+ 	}
+ 
+-	if (st.st_uid == 0) {
+-		xlog_warn("Running as root.  "
+-			"chown %s to choose different user", nsm_base_dirname);
+-		return true;
+-	}
+-
+ 	if (chdir(nsm_base_dirname) == -1) {
+ 		xlog(L_ERROR, "Failed to change working directory to %s: %m",
+ 				nsm_base_dirname);
+ 		return false;
+ 	}
+ 
++	if (st.st_uid == 0) {
++		xlog_warn("Running as root.  "
++			"chown %s to choose different user", nsm_base_dirname);
++		return true;
++	}
++
+ 	/*
+ 	 * If the pidfile happens to reside on NFS, dropping privileges
+ 	 * will probably cause us to lose access, even though we are
+diff --git a/tests/t0001-statd-basic-mon-unmon.sh b/tests/t0001-statd-basic-mon-unmon.sh
+index 00127fb..51f0d22 100755
+--- a/tests/t0001-statd-basic-mon-unmon.sh
++++ b/tests/t0001-statd-basic-mon-unmon.sh
+@@ -16,7 +16,7 @@
+ #
+ # You should have received a copy of the GNU General Public License
+ # along with this program; if not, write to the Free Software Foundation, Inc.,
+-# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++* 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+ #
+ 
+ . ./test-lib.sh
+diff --git a/tests/test-lib.sh b/tests/test-lib.sh
+index 3d47264..ce4ecff 100644
+--- a/tests/test-lib.sh
++++ b/tests/test-lib.sh
+@@ -16,7 +16,7 @@
+ #
+ # You should have received a copy of the GNU General Public License
+ # along with this program; if not, write to the Free Software Foundation, Inc.,
+-# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++* 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+ #
+ 
+ # make sure $srcdir is set and sanity check it
+diff --git a/tools/mountstats/mountstats.py b/tools/mountstats/mountstats.py
+index c475c9e..280e15c 100644
+--- a/tools/mountstats/mountstats.py
++++ b/tools/mountstats/mountstats.py
+@@ -17,7 +17,8 @@ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
++Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
++MA 02110-1301 USA
+ """
+ 
+ import sys, os, time
+diff --git a/tools/nfs-iostat/nfs-iostat.py b/tools/nfs-iostat/nfs-iostat.py
+index 1207674..4e55dad 100644
+--- a/tools/nfs-iostat/nfs-iostat.py
++++ b/tools/nfs-iostat/nfs-iostat.py
+@@ -17,7 +17,8 @@ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
++Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
++MA 02110-1301 USA
+ """
+ 
+ import sys, os, time
+diff --git a/tools/nfs-iostat/nfsiostat.man b/tools/nfs-iostat/nfsiostat.man
+index 99e04fb..3ec245d 100644
+--- a/tools/nfs-iostat/nfsiostat.man
++++ b/tools/nfs-iostat/nfsiostat.man
+@@ -24,7 +24,7 @@ parameter is
+ specified, the value of 
+ .I <count> 
+ determines the number of reports generated at
+-. <interval> 
++.I <interval> 
+ seconds apart. if the interval parameter is 
+ specified without the
+ .I <count> 
+diff --git a/utils/exportfs/exportfs.c b/utils/exportfs/exportfs.c
+index b107c7c..12e8bf1 100644
+--- a/utils/exportfs/exportfs.c
++++ b/utils/exportfs/exportfs.c
+@@ -448,6 +448,36 @@ is_hostname(const char *sp)
+ 	return true;
+ }
+ 
++/*
++ * Take care to perform an explicit reverse lookup on presentation
++ * addresses.  Otherwise we don't get a real canonical name or a
++ * complete list of addresses.
++ */
++static struct addrinfo *
++address_list(const char *hostname)
++{
++	struct addrinfo *ai;
++	char *cname;
++
++	ai = host_pton(hostname);
++	if (ai != NULL) {
++		/* @hostname was a presentation address */
++		cname = host_canonname(ai->ai_addr);
++		freeaddrinfo(ai);
++		if (cname != NULL)
++			goto out;
++	}
++	/* @hostname was a hostname or had no reverse mapping */
++	cname = strdup(hostname);
++	if (cname == NULL)
++		return NULL;
++
++out:
++	ai = host_addrinfo(cname);
++	free(cname);
++	return ai;
++}
++
+ static int
+ matchhostname(const char *hostname1, const char *hostname2)
+ {
+@@ -464,10 +494,10 @@ matchhostname(const char *hostname1, const char *hostname2)
+ 	if (!is_hostname(hostname1) || !is_hostname(hostname2))
+ 		return 0;
+ 
+-	results1 = host_addrinfo(hostname1);
++	results1 = address_list(hostname1);
+ 	if (results1 == NULL)
+ 		goto out;
+-	results2 = host_addrinfo(hostname2);
++	results2 = address_list(hostname2);
+ 	if (results2 == NULL)
+ 		goto out;
+ 
+diff --git a/utils/exportfs/exports.man b/utils/exportfs/exports.man
+index b202583..54adfeb 100644
+--- a/utils/exportfs/exports.man
++++ b/utils/exportfs/exports.man
+@@ -80,25 +80,25 @@ This is specified by a single
+ character (not to be confused with the
+ .I wildcard
+ entry above) and will match all clients.
+-'''.TP
+-'''.B =public
+-'''This is a special ``hostname'' that identifies the given directory name
+-'''as the public root directory (see the section on WebNFS in
+-'''.BR nfsd (8)
+-'''for a discussion of WebNFS and the public root handle). When using this
+-'''convention,
+-'''.B =public
+-'''must be the only entry on this line, and must have no export options
+-'''associated with it. Note that this does
+-'''.I not
+-'''actually export the named directory; you still have to set the exports
+-'''options in a separate entry.
+-'''.PP
+-'''The public root path can also be specified by invoking
+-'''.I nfsd
+-'''with the
+-'''.B \-\-public\-root
+-'''option. Multiple specifications of a public root will be ignored.
++.\".TP
++.\".B =public
++.\"This is a special ``hostname'' that identifies the given directory name
++.\"as the public root directory (see the section on WebNFS in
++.\".BR nfsd (8)
++.\"for a discussion of WebNFS and the public root handle). When using this
++.\"convention,
++.\".B =public
++.\"must be the only entry on this line, and must have no export options
++.\"associated with it. Note that this does
++.\".I not
++.\"actually export the named directory; you still have to set the exports
++.\"options in a separate entry.
++.\".PP
++.\"The public root path can also be specified by invoking
++.\".I nfsd
++.\"with the
++.\".B \-\-public\-root
++.\"option. Multiple specifications of a public root will be ignored.
+ .PP
+ If a client matches more than one of the specifications above, then
+ the first match from the above list order takes precedence - regardless of
+@@ -130,7 +130,7 @@ this way are ro, rw, no_root_squash, root_squash, and all_squash.
+ .BR exportfs
+ understands the following export options:
+ .TP
+-.IR secure "\*d
++.IR secure
+ This option requires that requests originate on an Internet port less
+ than IPPORT_RESERVED (1024). This option is on by default. To turn it
+ off, specify
+@@ -311,24 +311,24 @@ with ACL support (i.e. by default,
+ .I no_acl
+ is off).
+ 
+-'''.TP
+-'''.I noaccess
+-'''This makes everything below the directory inaccessible for the named
+-'''client.  This is useful when you want to export a directory hierarchy to
+-'''a client, but exclude certain subdirectories. The client's view of a
+-'''directory flagged with noaccess is very limited; it is allowed to read
+-'''its attributes, and lookup `.' and `..'. These are also the only entries
+-'''returned by a readdir.
+-'''.TP
+-'''.IR link_relative
+-'''Convert absolute symbolic links (where the link contents start with a
+-'''slash) into relative links by prepending the necessary number of ../'s
+-'''to get from the directory containing the link to the root on the
+-'''server.  This has subtle, perhaps questionable, semantics when the file
+-'''hierarchy is not mounted at its root.
+-'''.TP
+-'''.IR link_absolute
+-'''Leave all symbolic link as they are. This is the default operation.
++.\".TP
++.\".I noaccess
++.\"This makes everything below the directory inaccessible for the named
++.\"client.  This is useful when you want to export a directory hierarchy to
++.\"a client, but exclude certain subdirectories. The client's view of a
++.\"directory flagged with noaccess is very limited; it is allowed to read
++.\"its attributes, and lookup `.' and `..'. These are also the only entries
++.\"returned by a readdir.
++.\".TP
++.\".IR link_relative
++.\"Convert absolute symbolic links (where the link contents start with a
++.\"slash) into relative links by prepending the necessary number of ../'s
++.\"to get from the directory containing the link to the root on the
++.\"server.  This has subtle, perhaps questionable, semantics when the file
++.\"hierarchy is not mounted at its root.
++.\".TP
++.\".IR link_absolute
++.\"Leave all symbolic link as they are. This is the default operation.
+ 
+ .TP
+ .IR mountpoint= path
+@@ -411,21 +411,21 @@ and can be turned off with
+ .IR no_root_squash .
+ .PP
+ By default,
+-'''.B nfsd
+-'''tries to obtain the anonymous uid and gid by looking up user
+-'''.I nobody
+-'''in the password file at startup time. If it isn't found, a uid and gid
++.\".B nfsd
++.\"tries to obtain the anonymous uid and gid by looking up user
++.\".I nobody
++.\"in the password file at startup time. If it isn't found, a uid and gid
+ .B exportfs
+ chooses a uid and gid
+ of 65534 for squashed access. These values can also be overridden by
+ the
+ .IR anonuid " and " anongid
+ options.
+-'''.PP
+-'''In addition to this,
+-'''.B nfsd
+-'''lets you specify arbitrary uids and gids that should be mapped to user
+-'''nobody as well.
++.\".PP
++.\"In addition to this,
++.\".B nfsd
++.\"lets you specify arbitrary uids and gids that should be mapped to user
++.\"nobody as well.
+ Finally, you can map all user requests to the
+ anonymous uid by specifying the
+ .IR all_squash " option.
+@@ -490,7 +490,7 @@ The format for extra export tables is the same as
+ /srv/www        \-sync,rw server @trusted @external(ro)
+ /foo            2001:db8:9:e54::/64(rw) 192.0.2.0/24(rw)
+ /build          buildhost[0-9].local.domain(rw)
+-'''/pub/private    (noaccess)
++.\"/pub/private    (noaccess)
+ .fi
+ .PP
+ The first line exports the entire filesystem to machines master and trusty.
+@@ -508,21 +508,21 @@ as well as the `@trusted' netgroup, and read-only to netgroup `@external',
+ all three mounts with the `sync' option enabled. The seventh line exports
+ a directory to both an IPv6 and an IPv4 subnet. The eighth line demonstrates
+ a character class wildcard match.
+-''' The last line denies all NFS clients
+-'''access to the private directory.
+-'''.SH CAVEATS
+-'''Unlike other NFS server implementations, this
+-'''.B nfsd
+-'''allows you to export both a directory and a subdirectory thereof to
+-'''the same host, for instance
+-'''.IR /usr " and " /usr/X11R6 .
+-'''In this case, the mount options of the most specific entry apply. For
+-'''instance, when a user on the client host accesses a file in
+-'''.IR /usr/X11R6 ,
+-'''the mount options given in the
+-'''.I /usr/X11R6
+-'''entry apply. This is also true when the latter is a wildcard or netgroup
+-'''entry.
++.\" The last line denies all NFS clients
++.\"access to the private directory.
++.\".SH CAVEATS
++.\"Unlike other NFS server implementations, this
++.\".B nfsd
++.\"allows you to export both a directory and a subdirectory thereof to
++.\"the same host, for instance
++.\".IR /usr " and " /usr/X11R6 .
++.\"In this case, the mount options of the most specific entry apply. For
++.\"instance, when a user on the client host accesses a file in
++.\".IR /usr/X11R6 ,
++.\"the mount options given in the
++.\".I /usr/X11R6
++.\"entry apply. This is also true when the latter is a wildcard or netgroup
++.\"entry.
+ .SH FILES
+ /etc/exports
+ /etc/exports.d
+@@ -532,17 +532,17 @@ a character class wildcard match.
+ .BR mountd (8),
+ .BR nfsd (8),
+ .BR showmount (8).
+-'''.SH DIAGNOSTICS
+-'''An error parsing the file is reported using syslogd(8) as level NOTICE from
+-'''a DAEMON whenever
+-'''.BR nfsd (8)
+-'''or
+-'''.BR mountd (8)
+-'''is started up.  Any unknown
+-'''host is reported at that time, but often not all hosts are not yet known
+-'''to
+-'''.BR named (8)
+-'''at boot time, thus as hosts are found they are reported
+-'''with the same
+-'''.BR syslogd (8)
+-'''parameters.
++.\".SH DIAGNOSTICS
++.\"An error parsing the file is reported using syslogd(8) as level NOTICE from
++.\"a DAEMON whenever
++.\".BR nfsd (8)
++.\"or
++.\".BR mountd (8)
++.\"is started up.  Any unknown
++.\"host is reported at that time, but often not all hosts are not yet known
++.\"to
++.\".BR named (8)
++.\"at boot time, thus as hosts are found they are reported
++.\"with the same
++.\".BR syslogd (8)
++.\"parameters.
+diff --git a/utils/gssd/context_lucid.c b/utils/gssd/context_lucid.c
+index b8d4734..3e695ab 100644
+--- a/utils/gssd/context_lucid.c
++++ b/utils/gssd/context_lucid.c
+@@ -305,7 +305,7 @@ serialize_krb5_ctx(gss_ctx_id_t ctx, gss_buffer_desc *buf, int32_t *endtime)
+ 
+ 	maj_stat = gss_free_lucid_sec_context(&min_stat, ctx, return_ctx);
+ 	if (maj_stat != GSS_S_COMPLETE) {
+-		pgsserr("gss_export_lucid_sec_context",
++		pgsserr("gss_free_lucid_sec_context",
+ 			maj_stat, min_stat, &krb5oid);
+ 		printerr(0, "WARN: failed to free lucid sec context\n");
+ 	}
+diff --git a/utils/gssd/svcgssd_krb5.c b/utils/gssd/svcgssd_krb5.c
+index fc67a6f..6c34faf 100644
+--- a/utils/gssd/svcgssd_krb5.c
++++ b/utils/gssd/svcgssd_krb5.c
+@@ -45,6 +45,7 @@
+ #include "gss_oids.h"
+ #include "err_util.h"
+ #include "svcgssd_krb5.h"
++#include "../mount/version.h"
+ 
+ #define MYBUFLEN 1024
+ 
+@@ -169,22 +170,44 @@ svcgssd_limit_krb5_enctypes(void)
+ {
+ #ifdef HAVE_SET_ALLOWABLE_ENCTYPES
+ 	u_int maj_stat, min_stat;
+-	krb5_enctype default_enctypes[] = { ENCTYPE_DES_CBC_CRC,
+-					    ENCTYPE_DES_CBC_MD5,
+-					    ENCTYPE_DES_CBC_MD4 };
+-	int default_num_enctypes =
+-		sizeof(default_enctypes) / sizeof(default_enctypes[0]);
+-	krb5_enctype *enctypes;
+-	int num_enctypes;
++	krb5_enctype old_kernel_enctypes[] = {
++		ENCTYPE_DES_CBC_CRC,
++		ENCTYPE_DES_CBC_MD5,
++		ENCTYPE_DES_CBC_MD4 };
++	krb5_enctype new_kernel_enctypes[] = {
++		ENCTYPE_AES256_CTS_HMAC_SHA1_96,
++		ENCTYPE_AES128_CTS_HMAC_SHA1_96,
++		ENCTYPE_DES3_CBC_SHA1,
++		ENCTYPE_ARCFOUR_HMAC,
++		ENCTYPE_DES_CBC_CRC,
++		ENCTYPE_DES_CBC_MD5,
++		ENCTYPE_DES_CBC_MD4 };
++	krb5_enctype *default_enctypes, *enctypes;
++	int default_num_enctypes, num_enctypes;
++
++
++	if (linux_version_code() < MAKE_VERSION(2, 6, 35)) {
++		default_enctypes = old_kernel_enctypes;
++		default_num_enctypes =
++			sizeof(old_kernel_enctypes) / sizeof(old_kernel_enctypes[0]);
++	} else {
++		default_enctypes = new_kernel_enctypes;
++		default_num_enctypes =
++			sizeof(new_kernel_enctypes) / sizeof(new_kernel_enctypes[0]);
++	}
+ 
+ 	get_kernel_supported_enctypes();
+ 
+ 	if (parsed_enctypes != NULL) {
+ 		enctypes = parsed_enctypes;
+ 		num_enctypes = parsed_num_enctypes;
++		printerr(2, "%s: Calling gss_set_allowable_enctypes with %d "
++			"enctypes from the kernel\n", __func__, num_enctypes);
+ 	} else {
+ 		enctypes = default_enctypes;
+ 		num_enctypes = default_num_enctypes;
++		printerr(2, "%s: Calling gss_set_allowable_enctypes with %d "
++			"enctypes from defaults\n", __func__, num_enctypes);
+ 	}
+ 
+ 	maj_stat = gss_set_allowable_enctypes(&min_stat, gssd_creds,
+diff --git a/utils/mount/error.c b/utils/mount/error.c
+index 1b64bd7..83ad1d2 100644
+--- a/utils/mount/error.c
++++ b/utils/mount/error.c
+@@ -16,8 +16,8 @@
+  *
+  * You should have received a copy of the GNU General Public
+  * License along with this program; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+- * Boston, MA 021110-1307, USA.
++ * Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  * To Do:
+  *  + Proper support for internationalization
+diff --git a/utils/mount/error.h b/utils/mount/error.h
+index 42b28cf..ef80fd0 100644
+--- a/utils/mount/error.h
++++ b/utils/mount/error.h
+@@ -16,8 +16,8 @@
+  *
+  * You should have received a copy of the GNU General Public
+  * License along with this program; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+- * Boston, MA 021110-1307, USA.
++ * Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  */
+ 
+diff --git a/utils/mount/fstab.c b/utils/mount/fstab.c
+index 1fc9efe..eedbdda 100644
+--- a/utils/mount/fstab.c
++++ b/utils/mount/fstab.c
+@@ -86,10 +86,13 @@ mtab_is_writable() {
+ 
+ struct mntentchn mounttable;
+ static int got_mtab = 0;
++struct mntentchn procmounts;
++static int got_procmounts = 0;
+ struct mntentchn fstab;
+ static int got_fstab = 0;
+ 
+ static void read_mounttable(void);
++static void read_procmounts(void);
+ static void read_fstab(void);
+ 
+ static struct mntentchn *
+@@ -101,6 +104,14 @@ mtab_head(void)
+ }
+ 
+ static struct mntentchn *
++procmounts_head(void)
++{
++	if (!got_procmounts)
++		read_procmounts();
++	return &procmounts;
++}
++
++static struct mntentchn *
+ fstab_head(void)
+ {
+ 	if (!got_fstab)
+@@ -186,6 +197,30 @@ read_mounttable() {
+         read_mntentchn(mfp, fnam, mc);
+ }
+ 
++/*
++ * Read /proc/mounts.
++ * This produces a linked list. The list head procmounts is a dummy.
++ * Return 0 on success.
++ */
++static void
++read_procmounts() {
++        mntFILE *mfp;
++        const char *fnam;
++        struct mntentchn *mc = &procmounts;
++
++        got_procmounts = 1;
++        mc->nxt = mc->prev = NULL;
++
++        fnam = PROC_MOUNTS;
++        mfp = nfs_setmntent(fnam, "r");
++        if (mfp == NULL || mfp->mntent_fp == NULL) {
++                nfs_error(_("warning: can't open %s: %s"),
++                          PROC_MOUNTS, strerror (errno));
++                return;
++        }
++        read_mntentchn(mfp, fnam, mc);
++}
++
+ static void
+ read_fstab()
+ {
+@@ -225,6 +260,23 @@ getmntdirbackward (const char *name, struct mntentchn *mcprev) {
+ }
+ 
+ /*
++ * Given the directory name NAME, and the place MCPREV we found it last time,
++ * try to find more occurrences.
++ */
++struct mntentchn *
++getprocmntdirbackward (const char *name, struct mntentchn *mcprev) {
++	struct mntentchn *mc, *mc0;
++
++	mc0 = procmounts_head();
++	if (!mcprev)
++		mcprev = mc0;
++	for (mc = mcprev->prev; mc && mc != mc0; mc = mc->prev)
++		if (streq(mc->m.mnt_dir, name))
++			return mc;
++	return NULL;
++}
++
++/*
+  * Given the device name NAME, and the place MCPREV we found it last time,
+  * try to find more occurrences.
+  */ 
+diff --git a/utils/mount/fstab.h b/utils/mount/fstab.h
+index dc7c9fc..313bf9b 100644
+--- a/utils/mount/fstab.h
++++ b/utils/mount/fstab.h
+@@ -18,6 +18,7 @@ struct mntentchn {
+ 
+ struct mntentchn *getmntoptfile (const char *file);
+ struct mntentchn *getmntdirbackward (const char *dir, struct mntentchn *mc);
++struct mntentchn *getprocmntdirbackward (const char *name, struct mntentchn *mc);
+ struct mntentchn *getmntdevbackward (const char *dev, struct mntentchn *mc);
+ 
+ struct mntentchn *getfsfile (const char *file);
+diff --git a/utils/mount/mount_libmount.c b/utils/mount/mount_libmount.c
+index 6dd6484..e450d79 100644
+--- a/utils/mount/mount_libmount.c
++++ b/utils/mount/mount_libmount.c
+@@ -15,8 +15,8 @@
+  *
+  * You should have received a copy of the GNU General Public
+  * License along with this program; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+- * Boston, MA 021110-1307, USA.
++ * Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  */
+ 
+@@ -61,10 +61,19 @@ int nomtab;
+  * managed by libmount at all. We have to use "mount attributes" that are
+  * private for mount.<type> helpers.
+  */
+-static void store_mount_options(struct libmnt_fs *fs, const char *opts)
++static void store_mount_options(struct libmnt_fs *fs, const char *nfs_opts)
+ {
+-	mnt_fs_set_fs_options(fs, opts);	/* for mtab */
+-	mnt_fs_set_attributes(fs, opts);	/* for non-mtab systems */
++	char *o = NULL;
++
++	mnt_fs_set_attributes(fs, nfs_opts);	/* for non-mtab systems */
++
++	/* for mtab create a new options list */
++	mnt_optstr_append_option(&o, mnt_fs_get_vfs_options(fs), NULL);
++	mnt_optstr_append_option(&o, nfs_opts, NULL);
++	mnt_optstr_append_option(&o, mnt_fs_get_user_options(fs), NULL);
++
++	mnt_fs_set_options(fs, o);
++	free(o);
+ }
+ 
+ /*
+diff --git a/utils/mount/network.c b/utils/mount/network.c
+index d1f91dc..e7bd522 100644
+--- a/utils/mount/network.c
++++ b/utils/mount/network.c
+@@ -16,8 +16,8 @@
+  *
+  * You should have received a copy of the GNU General Public
+  * License along with this program; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+- * Boston, MA 021110-1307, USA.
++ * Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  */
+ 
+diff --git a/utils/mount/network.h b/utils/mount/network.h
+index 81c6f22..9c75856 100644
+--- a/utils/mount/network.h
++++ b/utils/mount/network.h
+@@ -16,8 +16,8 @@
+  *
+  * You should have received a copy of the GNU General Public
+  * License along with this program; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+- * Boston, MA 021110-1307, USA.
++ * Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  */
+ 
+diff --git a/utils/mount/nfs.man b/utils/mount/nfs.man
+index be91a25..dfb0bc9 100644
+--- a/utils/mount/nfs.man
++++ b/utils/mount/nfs.man
+@@ -46,11 +46,10 @@ files on this mount point.
+ The fifth and sixth fields on each line are not used
+ by NFS, thus conventionally each contain the digit zero. For example:
+ .P
+-.SP
+-.NF
+-.TA 2.5i +0.75i +0.75i +1.0i
++.nf
++.ta 8n +14n +14n +9n +20n
+ 	server:path	/mountpoint	fstype	option,option,...	0 0
+-.FI
++.fi
+ .P
+ The server's hostname and export pathname
+ are separated by a colon, while
+@@ -752,8 +751,8 @@ If
+ is specified, the client assumes that POSIX locks are local and uses NLM
+ sideband protocol to lock files when flock locks are used.
+ .IP
+-To support legacy flock behavior similar to that of NFS clients < 2.6.12, use
+-'local_lock=flock'. This option is required when exporting NFS mounts via
++To support legacy flock behavior similar to that of NFS clients < 2.6.12, 
++use 'local_lock=flock'. This option is required when exporting NFS mounts via
+ Samba as Samba maps Windows share mode locks as flock. Since NFS clients >
+ 2.6.12 implement flock by emulating POSIX locks, this will result in
+ conflicting locks.
+@@ -900,40 +899,40 @@ The following example from an
+ file causes the mount command to negotiate
+ reasonable defaults for NFS behavior.
+ .P
+-.NF
+-.TA 2.5i +0.7i +0.7i +.7i
++.nf
++.ta 8n +16n +6n +6n +30n
+ 	server:/export	/mnt	nfs	defaults	0 0
+-.FI
++.fi
+ .P
+ Here is an example from an /etc/fstab file for an NFS version 2 mount over UDP.
+ .P
+-.NF
+-.TA 2.5i +0.7i +0.7i +.7i
++.nf
++.ta 8n +16n +6n +6n +30n
+ 	server:/export	/mnt	nfs	nfsvers=2,proto=udp	0 0
+-.FI
++.fi
+ .P
+ Try this example to mount using NFS version 4 over TCP
+ with Kerberos 5 mutual authentication.
+ .P
+-.NF
+-.TA 2.5i +0.7i +0.7i +.7i
++.nf
++.ta 8n +16n +6n +6n +30n
+ 	server:/export	/mnt	nfs4	sec=krb5	0 0
+-.FI
++.fi
+ .P
+ This example can be used to mount /usr over NFS.
+ .P
+-.NF
+-.TA 2.5i +0.7i +0.7i +.7i
++.nf
++.ta 8n +16n +6n +6n +30n
+ 	server:/export	/usr	nfs	ro,nolock,nocto,actimeo=3600	0 0
+-.FI
++.fi
+ .P
+ This example shows how to mount an NFS server
+ using a raw IPv6 link-local address.
+ .P
+-.NF
+-.TA 2.5i +0.7i +0.7i +.7i
++.nf
++.ta 8n +40n +5n +4n +9n
+ 	[fe80::215:c5ff:fb3e:e2b1%eth0]:/export	/mnt	nfs	defaults	0 0
+-.FI
++.fi
+ .SH "TRANSPORT METHODS"
+ NFS clients send requests to NFS servers via
+ Remote Procedure Calls, or
+diff --git a/utils/mount/nfsumount.c b/utils/mount/nfsumount.c
+index 8cd2852..b846564 100644
+--- a/utils/mount/nfsumount.c
++++ b/utils/mount/nfsumount.c
+@@ -151,65 +151,50 @@ static int del_mtab(const char *spec, const char *node)
+  */
+ static int nfs_umount_is_vers4(const struct mntentchn *mc)
+ {
+-	char buffer[LINELEN], *next;
++	struct mntentchn *pmc;
++	struct mount_options *options;
+ 	int retval;
+-	FILE *f;
+-
+-	if ((f = fopen(MOUNTSFILE, "r")) == NULL) {
+-		fprintf(stderr, "%s: %s\n",
+-			MOUNTSFILE, strerror(errno));
+-		return -1;
+-	}
+ 
+ 	retval = -1;
+-	while (fgets(buffer, sizeof(buffer), f) != NULL) {
+-		char *device, *mntdir, *type, *flags;
+-		struct mount_options *options;
+-		char *line = buffer;
+-
+-		next = strchr(line, '\n');
+-		if (next != NULL)
+-			*next = '\0';
+-
+-		device = strtok(line, " \t");
+-		if (device == NULL)
+-			continue;
+-		mntdir = strtok(NULL, " \t");
+-		if (mntdir == NULL)
+-			continue;
+-		if (strcmp(device, mc->m.mnt_fsname) != 0 &&
+-		    strcmp(mntdir, mc->m.mnt_dir) != 0)
++	pmc = getprocmntdirbackward(mc->m.mnt_dir, NULL);
++	if (!pmc)
++		goto not_found;
++
++	do {
++		int nlen = strlen(pmc->m.mnt_fsname);
++		/*
++		 * It's possible the mount location string in /proc/mounts
++		 * ends with a '/'. In this case, if the entry came from
++		 * /etc/mtab, it won't have the trailing '/' so deal with
++		 * it.
++		 */
++		while (pmc->m.mnt_fsname[nlen - 1] == '/')
++			nlen--;
++		if (strncmp(pmc->m.mnt_fsname, mc->m.mnt_fsname, nlen) != 0)
+ 			continue;
+ 
+-		type = strtok(NULL, " \t");
+-		if (type == NULL)
+-			continue;
+-		if (strcmp(type, "nfs4") == 0)
++		if (strcmp(pmc->m.mnt_type, "nfs4") == 0)
+ 			goto out_nfs4;
+ 
+-		flags = strtok(NULL, " \t");
+-		if (flags == NULL)
+-			continue;
+-		options = po_split(flags);
++		options = po_split(pmc->m.mnt_opts);
+ 		if (options != NULL) {
+ 			unsigned long version;
+-			int rc;
+-
+-			rc = nfs_nfs_version(options, &version);
++			int rc = nfs_nfs_version(options, &version);
+ 			po_destroy(options);
+ 			if (rc && version == 4)
+ 				goto out_nfs4;
+ 		}
+ 
+-		goto out_nfs;
+-	}
+-	if (retval == -1)
++		if (strcmp(pmc->m.mnt_type, "nfs") == 0)
++			goto out_nfs;
++	} while ((pmc = getprocmntdirbackward(mc->m.mnt_dir, pmc)) != NULL);
++
++	if (retval == -1) {
++not_found:
+ 		fprintf(stderr, "%s was not found in %s\n",
+ 			mc->m.mnt_dir, MOUNTSFILE);
+-
+-out:
+-	fclose(f);
+-	return retval;
++		goto out;
++	}
+ 
+ out_nfs4:
+ 	if (verbose)
+@@ -221,7 +206,9 @@ out_nfs:
+ 	if (verbose)
+ 		fprintf(stderr, "Legacy NFS mount point detected\n");
+ 	retval = 0;
+-	goto out;
++
++out:
++	return retval;
+ }
+ 
+ static struct option umount_longopts[] =
+diff --git a/utils/mount/parse_dev.c b/utils/mount/parse_dev.c
+index c8a58b1..d64b83d 100644
+--- a/utils/mount/parse_dev.c
++++ b/utils/mount/parse_dev.c
+@@ -15,8 +15,8 @@
+  *
+  * You should have received a copy of the GNU General Public
+  * License along with this program; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+- * Boston, MA 021110-1307, USA.
++ * Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  */
+ 
+diff --git a/utils/mount/parse_dev.h b/utils/mount/parse_dev.h
+index a1288c2..f9857bc 100644
+--- a/utils/mount/parse_dev.h
++++ b/utils/mount/parse_dev.h
+@@ -15,8 +15,8 @@
+  *
+  * You should have received a copy of the GNU General Public
+  * License along with this program; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+- * Boston, MA 021110-1307, USA.
++ * Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  */
+ 
+diff --git a/utils/mount/parse_opt.c b/utils/mount/parse_opt.c
+index ab869d9..75a0daa 100644
+--- a/utils/mount/parse_opt.c
++++ b/utils/mount/parse_opt.c
+@@ -16,8 +16,8 @@
+  *
+  * You should have received a copy of the GNU General Public
+  * License along with this program; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+- * Boston, MA 021110-1307, USA.
++ * Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  */
+ 
+diff --git a/utils/mount/parse_opt.h b/utils/mount/parse_opt.h
+index 2c0b5f4..5037207 100644
+--- a/utils/mount/parse_opt.h
++++ b/utils/mount/parse_opt.h
+@@ -16,8 +16,8 @@
+  *
+  * You should have received a copy of the GNU General Public
+  * License along with this program; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+- * Boston, MA 021110-1307, USA.
++ * Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  */
+ 
+diff --git a/utils/mount/stropts.c b/utils/mount/stropts.c
+index f1aa503..7a2edab 100644
+--- a/utils/mount/stropts.c
++++ b/utils/mount/stropts.c
+@@ -16,8 +16,8 @@
+  *
+  * You should have received a copy of the GNU General Public
+  * License along with this program; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+- * Boston, MA 021110-1307, USA.
++ * Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  */
+ 
+@@ -538,6 +538,8 @@ nfs_rewrite_pmap_mount_options(struct mount_options *options)
+ 		errno = ESPIPE;
+ 		if (rpc_createerr.cf_stat == RPC_PROGNOTREGISTERED)
+ 			errno = EOPNOTSUPP;
++		else if (rpc_createerr.cf_stat == RPC_AUTHERROR)
++			errno = EACCES;
+ 		else if (rpc_createerr.cf_error.re_errno != 0)
+ 			errno = rpc_createerr.cf_error.re_errno;
+ 		return 0;
+diff --git a/utils/mount/stropts.h b/utils/mount/stropts.h
+index b4fd888..37316eb 100644
+--- a/utils/mount/stropts.h
++++ b/utils/mount/stropts.h
+@@ -16,8 +16,8 @@
+  *
+  * You should have received a copy of the GNU General Public
+  * License along with this program; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+- * Boston, MA 021110-1307, USA.
++ * Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  */
+ 
+diff --git a/utils/mount/token.c b/utils/mount/token.c
+index 5ef9604..d7e2f4a 100644
+--- a/utils/mount/token.c
++++ b/utils/mount/token.c
+@@ -16,8 +16,8 @@
+  *
+  * You should have received a copy of the GNU General Public
+  * License along with this program; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+- * Boston, MA 021110-1307, USA.
++ * Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  */
+ 
+diff --git a/utils/mount/token.h b/utils/mount/token.h
+index 5a675ed..17a9c15 100644
+--- a/utils/mount/token.h
++++ b/utils/mount/token.h
+@@ -16,8 +16,8 @@
+  *
+  * You should have received a copy of the GNU General Public
+  * License along with this program; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+- * Boston, MA 021110-1307, USA.
++ * Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  */
+ 
+diff --git a/utils/mount/utils.c b/utils/mount/utils.c
+index 298db39..2778ed7 100644
+--- a/utils/mount/utils.c
++++ b/utils/mount/utils.c
+@@ -13,8 +13,8 @@
+  *
+  * You should have received a copy of the GNU General Public
+  * License along with this program; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+- * Boston, MA 021110-1307, USA.
++ * Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  */
+ 
+diff --git a/utils/mount/utils.h b/utils/mount/utils.h
+index 3fcd504..224918a 100644
+--- a/utils/mount/utils.h
++++ b/utils/mount/utils.h
+@@ -15,8 +15,8 @@
+  *
+  * You should have received a copy of the GNU General Public
+  * License along with this program; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+- * Boston, MA 021110-1307, USA.
++ * Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  */
+ 
+diff --git a/utils/mount/version.h b/utils/mount/version.h
+index af61a6f..d7cf680 100644
+--- a/utils/mount/version.h
++++ b/utils/mount/version.h
+@@ -15,16 +15,16 @@
+  *
+  * You should have received a copy of the GNU General Public
+  * License along with this program; if not, write to the
+- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+- * Boston, MA 021110-1307, USA.
++ * Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  */
+ 
+ #ifndef _NFS_UTILS_MOUNT_VERSION_H
+ #define _NFS_UTILS_MOUNT_VERSION_H
+ 
+-#include <stdlib.h>
+-#include <string.h>
++#include <stdio.h>
++#include <limits.h>
+ 
+ #include <sys/utsname.h>
+ 
+@@ -37,14 +37,16 @@ static inline unsigned int MAKE_VERSION(unsigned int p, unsigned int q,
+ static inline unsigned int linux_version_code(void)
+ {
+ 	struct utsname my_utsname;
+-	unsigned int p, q, r;
++	unsigned int p, q = 0, r = 0;
+ 
++	/* UINT_MAX as backward compatibility code should not be run */
+ 	if (uname(&my_utsname))
+-		return 0;
++		return UINT_MAX;
+ 
+-	p = (unsigned int)atoi(strtok(my_utsname.release, "."));
+-	q = (unsigned int)atoi(strtok(NULL, "."));
+-	r = (unsigned int)atoi(strtok(NULL, "."));
++	/* UINT_MAX as future versions might not start with an integer */
++	if (sscanf(my_utsname.release, "%u.%u.%u", &p, &q, &r) < 1)
++		return UINT_MAX;
++	
+ 	return MAKE_VERSION(p, q, r);
+ }
+ 
+diff --git a/utils/mountd/mountd.c b/utils/mountd/mountd.c
+index 035624c..bcf5080 100644
+--- a/utils/mountd/mountd.c
++++ b/utils/mountd/mountd.c
+@@ -633,7 +633,7 @@ static void insert_group(struct exportnode *e, char *newname)
+ 	struct groupnode *g;
+ 
+ 	for (g = e->ex_groups; g; g = g->gr_next)
+-		if (strcmp(g->gr_name, newname))
++		if (!strcmp(g->gr_name, newname))
+ 			return;
+ 
+ 	g = xmalloc(sizeof(*g));
+diff --git a/utils/mountd/mountd.man b/utils/mountd/mountd.man
+index 016a357..b60dc90 100644
+--- a/utils/mountd/mountd.man
++++ b/utils/mountd/mountd.man
+@@ -122,7 +122,10 @@ Ignored (compatibility with unfsd??).
+ Specifies the port number used for RPC listener sockets.
+ If this option is not specified,
+ .B rpc.mountd
+-chooses a random ephemeral port for each listener socket.
++will try to consult
++.IR /etc/services ,
++if gets port succeed, set the same port for all listener socket,
++otherwise chooses a random ephemeral port for each listener socket.
+ .IP
+ This option can be used to fix the port value of
+ .BR rpc.mountd 's
+diff --git a/utils/nfsd/nfssvc.h b/utils/nfsd/nfssvc.h
+index 1a01cec..08de0fe 100644
+--- a/utils/nfsd/nfssvc.h
++++ b/utils/nfsd/nfssvc.h
+@@ -16,7 +16,7 @@
+  *
+  * You should have received a copy of the GNU General Public License along
+  * with this program; if not, write to the Free Software Foundation, Inc.,
+- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
++ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
+  *
+  */
+ 
+diff --git a/utils/nfsidmap/nfsidmap.man b/utils/nfsidmap/nfsidmap.man
+index 6c1a2d4..2381908 100644
+--- a/utils/nfsidmap/nfsidmap.man
++++ b/utils/nfsidmap/nfsidmap.man
+@@ -25,9 +25,9 @@ will need to be modified so
+ can properly direct the upcall. The following line should be added before a call
+ to keyctl negate:
+ .PP
+-create	nfs_idmap	*	*	/usr/sbin/nfsidmap %k %d 600
++create	id_resolver	*	*	/usr/sbin/nfsidmap %k %d 600
+ .PP
+-This will direct all nfs_idmap requests to the program
++This will direct all id_resolver requests to the program
+ .I /usr/sbin/nfsidmap
+ The last parameter, 600, defines how many seconds into the future the key will
+ expire.  This is an optional parameter for
+@@ -48,9 +48,9 @@ You can choose to handle any of these individually, rather than using the
+ generic upcall program.  If you would like to use your own program for a uid
+ lookup then you would edit your request-key.conf so it looks similar to this:
+ .PP
+-create	nfs_idmap	uid:*	*	/some/other/program %k %d 600
++create	id_resolver	uid:*	*	/some/other/program %k %d 600
+ .br
+-create	nfs_idmap	*		*	/usr/sbin/nfsidmap %k %d 600
++create	id_resolver	*		*	/usr/sbin/nfsidmap %k %d 600
+ .PP
+ Notice that the new line was added above the line for the generic program.
+ request-key will find the first matching line and run the corresponding program.
+diff --git a/utils/statd/COPYRIGHT b/utils/statd/COPYRIGHT
+deleted file mode 100644
+index 47ff720..0000000
+--- a/utils/statd/COPYRIGHT
++++ /dev/null
+@@ -1,25 +0,0 @@
+-rpc.statd -- Network Status Monitor (NSM) protocol daemon for Linux.
+-Copyright (C) 1995-1999, 2002, 2005 Jeffrey A. Uphoff
+-
+-This program is free software; you can redistribute it and/or modify
+-it under the terms of the GNU General Public License as published by
+-the Free Software Foundation; either version 2 of the License, or
+-(at your option) any later version.
+-
+-This program is distributed in the hope that it will be useful,
+-but WITHOUT ANY WARRANTY; without even the implied warranty of
+-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-GNU General Public License for more details.
+-
+-You should have received a copy of the GNU General Public License
+-along with this program; if not, write to the Free Software
+-Foundation, Inc., 675 Massachusetts Ave, Cambridge, MA 02139, USA.
+-
+-Jeffrey A. Uphoff
+-Orion Multisystems, Inc.
+-3090 Oakmead Village Drive
+-Santa Clara, CA 95051
+-USA
+-
+-Phone:     +1-408-844-8481
+-Internet:  juphoff@users.sourceforge.net
+diff --git a/utils/statd/hostname.c b/utils/statd/hostname.c
+index 616a3cb..746ecc7 100644
+--- a/utils/statd/hostname.c
++++ b/utils/statd/hostname.c
+@@ -225,6 +225,49 @@ statd_canonical_name(const char *hostname)
+ 	return strdup(buf);
+ }
+ 
++/*
++ * Take care to perform an explicit reverse lookup on presentation
++ * addresses.  Otherwise we don't get a real canonical name or a
++ * complete list of addresses.
++ *
++ * Returns an addrinfo list that has ai_canonname filled in, or
++ * NULL if some error occurs.  Caller must free the returned
++ * list with freeaddrinfo(3).
++ */
++__attribute_malloc__
++static struct addrinfo *
++statd_canonical_list(const char *hostname)
++{
++	struct addrinfo hint = {
++#ifdef IPV6_SUPPORTED
++		.ai_family	= AF_UNSPEC,
++#else	/* !IPV6_SUPPORTED */
++		.ai_family	= AF_INET,
++#endif	/* !IPV6_SUPPORTED */
++		.ai_flags	= AI_NUMERICHOST,
++		.ai_protocol	= (int)IPPROTO_UDP,
++	};
++	char buf[NI_MAXHOST];
++	struct addrinfo *ai;
++
++	ai = get_addrinfo(hostname, &hint);
++	if (ai != NULL) {
++		/* @hostname was a presentation address */
++		_Bool result;
++		result = get_nameinfo(ai->ai_addr, ai->ai_addrlen,
++					buf, (socklen_t)sizeof(buf));
++		freeaddrinfo(ai);
++		if (result)
++			goto out;
++	}
++	/* @hostname was a hostname or had no reverse mapping */
++	strcpy(buf, hostname);
++
++out:
++	hint.ai_flags = AI_CANONNAME;
++	return get_addrinfo(buf, &hint);
++}
++
+ /**
+  * statd_matchhostname - check if two hostnames are equivalent
+  * @hostname1: C string containing hostname
+@@ -241,11 +284,6 @@ _Bool
+ statd_matchhostname(const char *hostname1, const char *hostname2)
+ {
+ 	struct addrinfo *ai1, *ai2, *results1 = NULL, *results2 = NULL;
+-	struct addrinfo hint = {
+-		.ai_family	= AF_UNSPEC,
+-		.ai_flags	= AI_CANONNAME,
+-		.ai_protocol	= (int)IPPROTO_UDP,
+-	};
+ 	_Bool result = false;
+ 
+ 	if (strcasecmp(hostname1, hostname2) == 0) {
+@@ -253,10 +291,10 @@ statd_matchhostname(const char *hostname1, const char *hostname2)
+ 		goto out;
+ 	}
+ 
+-	results1 = get_addrinfo(hostname1, &hint);
++	results1 = statd_canonical_list(hostname1);
+ 	if (results1 == NULL)
+ 		goto out;
+-	results2 = get_addrinfo(hostname2, &hint);
++	results2 = statd_canonical_list(hostname2);
+ 	if (results2 == NULL)
+ 		goto out;
+ 
+@@ -276,7 +314,8 @@ out:
+ 	freeaddrinfo(results2);
+ 	freeaddrinfo(results1);
+ 
+-	xlog(D_CALL, "%s: hostnames %s", __func__,
++	xlog(D_CALL, "%s: hostnames %s and %s %s", __func__,
++			hostname1, hostname2,
+ 			(result ? "matched" : "did not match"));
+ 	return result;
+ }
+diff --git a/utils/statd/monitor.c b/utils/statd/monitor.c
+index 325dfd3..286a5e2 100644
+--- a/utils/statd/monitor.c
++++ b/utils/statd/monitor.c
+@@ -249,7 +249,7 @@ void load_state(void)
+ 
+ 	count = nsm_load_monitor_list(load_one_host);
+ 	if (count)
+-		xlog(D_GENERAL, "Loaded %u previously monitored hosts");
++		xlog(D_GENERAL, "Loaded %u previously monitored hosts", count);
+ }
+ 
+ /*
+diff --git a/utils/statd/rmtcall.c b/utils/statd/rmtcall.c
+index 0e52fe2..4ecb03c 100644
+--- a/utils/statd/rmtcall.c
++++ b/utils/statd/rmtcall.c
+@@ -85,7 +85,7 @@ statd_get_socket(void)
+ 
+ 		memset(&sin, 0, sizeof(sin));
+ 		sin.sin_family = AF_INET;
+-		sin.sin_addr.s_addr = INADDR_ANY;
++		sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+ 
+ 		if (bindresvport(sockfd, &sin) < 0) {
+ 			xlog(D_GENERAL, "%s: can't bind to reserved port",
+diff --git a/utils/statd/sm-notify.c b/utils/statd/sm-notify.c
+index 1f490b0..2421f8b 100644
+--- a/utils/statd/sm-notify.c
++++ b/utils/statd/sm-notify.c
+@@ -93,6 +93,101 @@ smn_lookup(const char *name)
+ 	return ai;
+ }
+ 
++#ifdef HAVE_GETNAMEINFO
++static char *
++smn_get_hostname(const struct sockaddr *sap, const socklen_t salen,
++		const char *name)
++{
++	char buf[NI_MAXHOST];
++	int error;
++
++	error = getnameinfo(sap, salen, buf, sizeof(buf), NULL, 0, NI_NAMEREQD);
++	if (error != 0) {
++		xlog(L_ERROR, "my_name '%s' is unusable: %s",
++			name, gai_strerror(error));
++		return NULL;
++	}
++	return strdup(buf);
++}
++#else	/* !HAVE_GETNAMEINFO */
++static char *
++smn_get_hostname(const struct sockaddr *sap,
++		__attribute__ ((unused)) const socklen_t salen,
++		const char *name)
++{
++	const struct sockaddr_in *sin = (const struct sockaddr_in *)(char *)sap;
++	const struct in_addr *addr = &sin->sin_addr;
++	struct hostent *hp;
++
++	if (sap->sa_family != AF_INET) {
++		xlog(L_ERROR, "my_name '%s' is unusable: Bad address family",
++			name);
++		return NULL;
++	}
++
++	hp = gethostbyaddr(addr, (socklen_t)sizeof(addr), AF_INET);
++	if (hp == NULL) {
++		xlog(L_ERROR, "my_name '%s' is unusable: %s",
++			name, hstrerror(h_errno));
++		return NULL;
++	}
++	return strdup(hp->h_name);
++}
++#endif	/* !HAVE_GETNAMEINFO */
++
++/*
++ * Presentation addresses are converted to their canonical hostnames.
++ * If the IP address does not map to a hostname, it is an error:
++ * we never send a presentation address as the argument of SM_NOTIFY.
++ *
++ * If "name" is not a presentation address, it is left alone.  This
++ * allows the administrator some flexibility if DNS isn't configured
++ * exactly how sm-notify prefers it.
++ *
++ * Returns NUL-terminated C string containing the result, or NULL
++ * if the canonical name doesn't exist or cannot be determined.
++ * The caller must free the result with free(3).
++ */
++__attribute_malloc__
++static char *
++smn_verify_my_name(const char *name)
++{
++	struct addrinfo *ai = NULL;
++	struct addrinfo hint = {
++#ifdef IPV6_SUPPORTED
++		.ai_family	= AF_UNSPEC,
++#else	/* !IPV6_SUPPORTED */
++		.ai_family	= AF_INET,
++#endif	/* !IPV6_SUPPORTED */
++		.ai_flags	= AI_NUMERICHOST,
++	};
++	char *retval;
++	int error;
++
++	error = getaddrinfo(name, NULL, &hint, &ai);
++	switch (error) {
++	case 0:
++		/* @name was a presentation address */
++		retval = smn_get_hostname(ai->ai_addr, ai->ai_addrlen, name);
++		freeaddrinfo(ai);
++		if (retval == NULL)
++			return NULL;
++		break;
++	case EAI_NONAME:
++		/* @name was not a presentation address */
++		retval = strdup(name);
++		break;
++	default:
++		xlog(L_ERROR, "my_name '%s' is unusable: %s",
++			name, gai_strerror(error));
++		return NULL;
++	}
++
++	xlog(D_GENERAL, "Canonical name for my_name '%s': %s",
++			name, retval);
++	return retval;
++}
++
+ __attribute_malloc__
+ static struct nsm_host *
+ smn_alloc_host(const char *hostname, const char *mon_name,
+@@ -395,12 +490,14 @@ usage:		fprintf(stderr,
+ 		exit(1);
+ 	}
+ 
+-	xlog_syslog(1);
+ 	if (opt_debug) {
++		xlog_syslog(0);
+ 		xlog_stderr(1);
+ 		xlog_config(D_ALL, 1);
+-	} else
++	} else {
++		xlog_syslog(1);
+ 		xlog_stderr(0);
++	}
+ 
+ 	xlog_open(progname);
+ 	xlog(L_NOTICE, "Version " VERSION " starting");
+@@ -414,32 +511,14 @@ usage:		fprintf(stderr,
+ 	}
+ 
+ 	if (opt_srcaddr != NULL) {
+-		struct addrinfo *ai = NULL;
+-		struct addrinfo hint = {
+-			.ai_family	= AF_UNSPEC,
+-			.ai_flags	= AI_NUMERICHOST,
+-		};
+-
+-		if (getaddrinfo(opt_srcaddr, NULL, &hint, &ai))
+-			/* not a presentation address - use it */
+-			strncpy(nsm_hostname, opt_srcaddr, sizeof(nsm_hostname));
+-		else {
+-			/* was a presentation address - look it up in
+-			 * /etc/hosts, so it can be used for my_name */
+-			int error;
++		char *name;
+ 
+-			freeaddrinfo(ai);
+-			hint.ai_flags = AI_CANONNAME;
+-			error = getaddrinfo(opt_srcaddr, NULL, &hint, &ai);
+-			if (error != 0) {
+-				xlog(L_ERROR, "Bind address %s is unusable: %s",
+-						opt_srcaddr, gai_strerror(error));
+-				exit(1);
+-			}
+-			strncpy(nsm_hostname, ai->ai_canonname,
+-							sizeof(nsm_hostname));
+-			freeaddrinfo(ai);
+-		}
++		name = smn_verify_my_name(opt_srcaddr);
++		if (name == NULL)
++			exit(1);
++
++		strncpy(nsm_hostname, name, sizeof(nsm_hostname));
++		free(name);
+ 	}
+ 
+ 	(void)nsm_retire_monitored_hosts();
+diff --git a/utils/statd/start-statd b/utils/statd/start-statd
+index c7805ee..1b345a5 100644
+--- a/utils/statd/start-statd
++++ b/utils/statd/start-statd
+@@ -1,8 +1,8 @@
+-#!/bin/sh -p
++#!/bin/bash -p
+ # nfsmount calls this script when mounting a filesystem with locking
+ # enabled, but when statd does not seem to be running (based on
+ # /var/run/rpc.statd.pid).
+-# It should run run statd with whatever flags are apropriate for this
++# It should run statd with whatever flags are apropriate for this
+ # site.
+ PATH=/sbin:/usr/sbin
+ exec rpc.statd --no-notify
+diff --git a/utils/statd/statd.man b/utils/statd/statd.man
+index b72236c..c3c5354 100644
+--- a/utils/statd/statd.man
++++ b/utils/statd/statd.man
+@@ -219,7 +219,10 @@ for details.
+ Specifies the port number used for RPC listener sockets.
+ If this option is not specified,
+ .B rpc.statd
+-chooses a random ephemeral port for each listener socket.
++will try to consult
++.IR /etc/services ,
++if gets port succeed, set the same port for all listener socket,
++otherwise chooses a random ephemeral port for each listener socket.
+ .IP
+ This option can be used to fix the port value of its listeners when
+ SM_NOTIFY requests must traverse a firewall between clients and servers.
+@@ -347,8 +350,7 @@ of the requesting lock manager.
+ TI-RPC is a pre-requisite for supporting NFS on IPv6.
+ If TI-RPC support is built into
+ .BR rpc.statd ,
+-it attempts to start listeners on network transports marked
+-'visible' in
++it attempts to start listeners on network transports marked 'visible' in
+ .IR /etc/netconfig .
+ As long as at least one network transport listener starts successfully,
+ .B rpc.statd
