@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.4
-Release: 8%{?dist}
+Release: 9%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -16,9 +16,11 @@ Source12: nfs-secure.service
 Source13: nfs-secure-server.service
 Source14: nfs-server.service
 Source15: nfs-idmap.service
-Source16: var-lib-nfs-rpc_pipefs.mount
-Source17: proc-fs-nfsd.mount
-%define nfs_services %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} %{SOURCE16} %{SOURCE17}
+%define nfs_services %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15}
+
+Source20: var-lib-nfs-rpc_pipefs.mount
+Source21: proc-fs-nfsd.mount
+%define nfs_automounts %{SOURCE20} %{SOURCE21}
 
 Source50: nfs-lock.preconfig
 Source51: nfs-server.preconfig
@@ -134,6 +136,9 @@ install -m 644 %{SOURCE10} $RPM_BUILD_ROOT/etc/sysconfig/nfs
 for service in %{nfs_services} ; do
 	install -m 644 $service $RPM_BUILD_ROOT/lib/systemd/system
 done
+for service in %{nfs_automounts} ; do
+	install -m 644 $service $RPM_BUILD_ROOT/lib/systemd/system
+done
 for config in %{nfs_configs} ; do
 	install -m 755 $config $RPM_BUILD_ROOT/usr/lib/%{name}/scripts
 done
@@ -185,18 +190,15 @@ else
 fi
 
 %post
-if [ $1 -eq 1 ]; then
-	# Package install, not upgrade
-    /bin/systemctl enable nfs-idmap.service >/dev/null 2>&1 || :
-    /bin/systemctl enable nfs-lock.service >/dev/null 2>&1 || :
-fi
+/bin/systemctl enable nfs-idmap.service >/dev/null 2>&1 || :
+/bin/systemctl enable nfs-lock.service >/dev/null 2>&1 || :
 # Make sure statd used the correct uid/gid.
 chown -R rpcuser:rpcuser /var/lib/nfs/statd
 
 %preun
 if [ $1 -eq 0 ]; then
 	# Package removal, not upgrade
-	for service in %{nfs_services} ; do
+	for service in %(sed 's!\S*/!!g' <<< '%{nfs_services}') ; do
     	/bin/systemctl disable $service >/dev/null 2>&1 || :
     	/bin/systemctl stop $service >/dev/null 2>&1 || :
 	done
@@ -211,8 +213,7 @@ fi
 %postun
 if [ $1 -ge 1 ]; then
 	# Package upgrade, not uninstall
-	for service in %{nfs_services} ; do
-		echo "try-restart $service service"
+	for service in %(sed 's!\S*/!!g' <<< '%{nfs_services}') ; do
     	/bin/systemctl try-restart $service >/dev/null 2>&1 || :
 	done
 fi
@@ -274,6 +275,11 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Aug 30 2011 Steve Dickson <steved@redhat.com> 1.2.4-9
+- Both the nfs.lock and nfs.idmap services should always
+  enabled on both installs and upgrades (bz 699040)
+- Fixed the paths to the server scriptlets (bz 733531)
+
 * Mon Aug 29 2011 Steve Dickson <steved@redhat.com> 1.2.4-8
 - Update to upstream RC release: nfs-utils-1.2.5-rc2
 
