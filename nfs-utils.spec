@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.4
-Release: 9%{?dist}
+Release: 10%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -28,7 +28,6 @@ Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
 
 Patch001: nfs-utils-1.2.5-rc2.patch
-Patch002: nfs-utils-1.2.4-exportfs-nolog.patch
 Patch003: nfs-utils-1.2.4-mountshortcut.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
@@ -87,7 +86,6 @@ This package also contains the mount.nfs and umount.nfs program.
 %setup -q
 
 %patch001 -p1
-%patch002 -p1
 %patch003 -p1
 
 %patch100 -p1
@@ -151,6 +149,7 @@ mv $RPM_BUILD_ROOT/usr/sbin/rpc.statd $RPM_BUILD_ROOT/sbin
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/statd/sm
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/statd/sm.bak
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/v4recovery
+mkdir -p $RPM_BUILD_ROOT/etc/exports.d
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -236,6 +235,7 @@ fi
 %defattr(-,root,root)
 %config(noreplace) /etc/sysconfig/nfs
 %config(noreplace) /etc/nfsmount.conf
+%dir /etc/exports.d
 %dir /var/lib/nfs/v4recovery
 %dir /var/lib/nfs/rpc_pipefs
 %dir /var/lib/nfs
@@ -275,6 +275,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Sep 14 2011 Steve Dickson <steved@redhat.com> 1.2.4-10
+- Created /etc/exports.d to stop a warning (bz 697006)
+
 * Tue Aug 30 2011 Steve Dickson <steved@redhat.com> 1.2.4-9
 - Both the nfs.lock and nfs.idmap services should always
   enabled on both installs and upgrades (bz 699040)
