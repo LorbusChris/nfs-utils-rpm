@@ -1,8 +1,8 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
-Version: 1.2.4
-Release: 11%{?dist}
+Version: 1.2.5
+Release: 0%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -27,8 +27,7 @@ Source51: nfs-server.preconfig
 Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
 
-Patch001: nfs-utils-1.2.5-rc3.patch
-Patch002: nfs-utils-1.2.4-mountshortcut.patch
+Patch001: nfs-utils-1.2.4-mountshortcut.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -59,7 +58,7 @@ Requires: modutils >= 2.4.26-9
 BuildRequires: libgssglue-devel libevent-devel libcap-devel
 BuildRequires: libnfsidmap-devel libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
-BuildRequires: automake, libtool, glibc-headers
+BuildRequires: automake, libtool, glibc-headers, device-mapper-devel
 BuildRequires: krb5-devel, tcp_wrappers-devel, libmount-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
@@ -85,7 +84,6 @@ This package also contains the mount.nfs and umount.nfs program.
 %setup -q
 
 %patch001 -p1
-%patch002 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -112,7 +110,6 @@ CFLAGS="`echo $RPM_OPT_FLAGS $ARCH_OPT_FLAGS $PIE -D_FILE_OFFSET_BITS=64`"
     LDFLAGS="-pie" \
     --enable-mountconfig \
     --enable-ipv6 \
-    --enable-nfsv41 \
 	--with-statdpath=/var/lib/nfs/statd \
 	--enable-libmount-mount
 
@@ -263,6 +260,7 @@ fi
 /usr/sbin/mountstats
 /usr/sbin/nfsiostat
 /usr/sbin/nfsidmap
+/usr/sbin/blkmapd
 %{_mandir}/*/*
 /lib/systemd/system/*
 /usr/lib/%{name}/scripts/*
@@ -273,6 +271,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Sep 26 2011 Steve Dickson <steved@redhat.com> 1.2.5
+- Update to upstream release: nfs-utils-1.2.5 (bz 717931)
+
 * Wed Sep 21 2011 Steve Dickson <steved@redhat.com> 1.2.4-11
 - Update to upstream RC release: nfs-utils-1.2.5-rc3
 
