@@ -16,7 +16,8 @@ Source12: nfs-secure.service
 Source13: nfs-secure-server.service
 Source14: nfs-server.service
 Source15: nfs-idmap.service
-%define nfs_services %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15}
+Source16: nfs-blkmap.service
+%define nfs_services %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} %{SOURCE16}
 
 Source20: var-lib-nfs-rpc_pipefs.mount
 Source21: proc-fs-nfsd.mount
@@ -271,7 +272,7 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
-* Mon Sep 26 2011 Steve Dickson <steved@redhat.com> 1.2.5
+* Tue Sep 27 2011 Steve Dickson <steved@redhat.com> 1.2.5-0
 - Update to upstream release: nfs-utils-1.2.5 (bz 717931)
 
 * Wed Sep 21 2011 Steve Dickson <steved@redhat.com> 1.2.4-11
