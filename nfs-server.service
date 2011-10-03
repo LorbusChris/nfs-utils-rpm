@@ -1,7 +1,7 @@
 [Unit]
 Description=NFS Server
 Requires=proc-fs-nfsd.mount
-After=network.target rpcbind.service proc-fs-nfsd.mount
+After=network.target rpcbind.service proc-fs-nfsd.mount named.service
 
 [Service]
 Type=forking
