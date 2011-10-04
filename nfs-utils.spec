@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.5
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -268,12 +268,15 @@ fi
 /lib/systemd/system/*
 /usr/lib/%{name}/scripts/*
 
-%attr(4755,root,root)   /sbin/mount.nfs
-%attr(4755,root,root)   /sbin/mount.nfs4
-%attr(4755,root,root)   /sbin/umount.nfs
-%attr(4755,root,root)   /sbin/umount.nfs4
+%attr(0755,root,root)   /sbin/mount.nfs
+%attr(0755,root,root)   /sbin/mount.nfs4
+%attr(0755,root,root)   /sbin/umount.nfs
+%attr(0755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Oct  4 2011 Steve Dickson <steved@redhat.com> 1.2.5-2
+- Removed SUID bigs on mount commands (bz 528498)
+
 * Mon Oct  3 2011 Steve Dickson <steved@redhat.com> 1.2.5-1
 - Update to upstream RC release: nfs-utils-1.2.6-rc1
 - Added named.service to After list in nfs-server.service (bz 742746)
