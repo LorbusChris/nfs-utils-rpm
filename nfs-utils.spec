@@ -279,7 +279,7 @@ fi
 
 %changelog
 * Tue Oct  4 2011 Steve Dickson <steved@redhat.com> 1.2.5-2
-- Removed SUID bigs on mount commands (bz 528498)
+- Removed SUID bits on mount commands (bz 528498)
 - Fixed a few typos in a couple man pages (bz 668124, 673818, 664330)
 - Fixed a I/0 problem in rpc.idmapd (bz 684308)
 
