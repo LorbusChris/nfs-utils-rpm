@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.5
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -28,10 +28,8 @@ Source51: nfs-server.preconfig
 Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
 
-Patch001: nfs-utils-1.2.6-rc1.patch
+Patch001: nfs-utils-1.2.6-rc2.patch
 Patch002: nfs-utils-1.2.4-mountshortcut.patch
-Patch003: nfs-utils-1.2.5-manpage-typos.patch
-Patch004: nfs-utils-1.2.5-idmapd-ioerror.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -89,8 +87,6 @@ This package also contains the mount.nfs and umount.nfs program.
 
 %patch001 -p1
 %patch002 -p1
-%patch003 -p1
-%patch004 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -278,6 +274,9 @@ fi
 %attr(0755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Oct 18 2011 Steve Dickson <steved@redhat.com> 1.2.5-3
+- Update to upstream RC release: nfs-utils-1.2.6-rc2
+
 * Tue Oct  4 2011 Steve Dickson <steved@redhat.com> 1.2.5-2
 - Removed SUID bits on mount commands (bz 528498)
 - Fixed a few typos in a couple man pages (bz 668124, 673818, 664330)
