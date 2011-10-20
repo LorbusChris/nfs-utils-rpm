@@ -1,0 +1,42 @@
+commit 264ad7d77e7ebb5d83c0f02bcb1800b254cd5ccf
+Author: Steve Dickson <steved@redhat.com>
+Date:   Wed Oct 19 16:37:34 2011 -0400
+
+    rpcdebug: Add missing debug flags
+    
+    This patch added the following debug flags:
+    
+    fscache - enable FSCache debugging
+    pnfs - enable general pNFS debugging
+    pnfs_ld - enable pNFS layout debugging
+    
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff --git a/support/include/nfs/debug.h b/support/include/nfs/debug.h
+index d391e91..dbec5ba 100644
+--- a/support/include/nfs/debug.h
++++ b/support/include/nfs/debug.h
+@@ -76,6 +76,9 @@ enum {
+ #define NFSDBG_CALLBACK		0x0100
+ #define NFSDBG_CLIENT		0x0200
+ #define NFSDBG_MOUNT		0x0400
++#define NFSDBG_FSCACHE		0x0800
++#define NFSDBG_PNFS			0x1000
++#define NFSDBG_PNFS_LD		0x2000
+ #define NFSDBG_ALL		0xFFFF
+ 
+ #endif /* _NFS_DEBUG_H */
+diff --git a/tools/rpcdebug/rpcdebug.c b/tools/rpcdebug/rpcdebug.c
+index 275a491..444616d 100644
+--- a/tools/rpcdebug/rpcdebug.c
++++ b/tools/rpcdebug/rpcdebug.c
+@@ -167,6 +167,9 @@ static struct flagmap {
+ 	FLAG(NFS,       CALLBACK),
+ 	FLAG(NFS,       CLIENT),
+ 	FLAG(NFS,       MOUNT),
++	FLAG(NFS,       FSCACHE),
++	FLAG(NFS,       PNFS),
++	FLAG(NFS,       PNFS_LD),
+ 	FLAG(NFS,	ALL),
+ 
+ 	/* nfsd */
