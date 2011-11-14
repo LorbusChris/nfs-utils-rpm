@@ -28,9 +28,8 @@ Source51: nfs-server.preconfig
 Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
 
-Patch001: nfs-utils-1.2.6-rc2.patch
+Patch001: nfs-utils-1.2.6-rc3.patch
 Patch002: nfs-utils-1.2.4-mountshortcut.patch
-Patch003: nfs-utils-1.2.5-pnfs-rpcdebug.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -88,7 +87,6 @@ This package also contains the mount.nfs and umount.nfs program.
 
 %patch001 -p1
 %patch002 -p1
-%patch003 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -276,8 +274,9 @@ fi
 %attr(0755,root,root)   /sbin/umount.nfs4
 
 %changelog
-* Mon Nov 14 2011 Steve Dickson <steved@redhat.com> 1.2.5-4
+* Mon Nov 14 2011 Steve Dickson <steved@redhat.com> 1.2.5-5
 - Ensured nfs-idmap service is started after the DNS is up (bz 748275)
+- Update to upstream RC release: nfs-utils-1.2.6-rc3 (bz 746497)
 
 * Thu Oct 20 2011 Steve Dickson <steved@redhat.com> 1.2.5-4
 - Added pNFS debugging to rpcdebug.
