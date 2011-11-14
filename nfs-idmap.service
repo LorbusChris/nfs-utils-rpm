@@ -1,7 +1,8 @@
 [Unit]
 Description=NFSv4 ID-name mapping daemon
 Wants=var-lib-nfs-rpc_pipefs.mount
-Requires=var-lib-nfs-rpc_pipefs.mount
+Requires=network.target var-lib-nfs-rpc_pipefs.mount
+After=syslog.target network.target
 
 [Service]
 Type=forking

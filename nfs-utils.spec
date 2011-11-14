@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.5
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -276,7 +276,10 @@ fi
 %attr(0755,root,root)   /sbin/umount.nfs4
 
 %changelog
-* Thu Oct 20 2011 Steve Dickson <steved@redhat.com> 1.2.5-3
+* Mon Nov 14 2011 Steve Dickson <steved@redhat.com> 1.2.5-4
+- Ensured nfs-idmap service is started after the DNS is up (bz 748275)
+
+* Thu Oct 20 2011 Steve Dickson <steved@redhat.com> 1.2.5-4
 - Added pNFS debugging to rpcdebug.
 
 * Tue Oct 18 2011 Steve Dickson <steved@redhat.com> 1.2.5-3

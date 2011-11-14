@@ -1,6 +1,6 @@
 [Unit]
 Description=NFS file locking service.
-After=network.target rpcbind.service
+After=syslog.target network.target rpcbind.service
 
 [Service]
 Type=forking
