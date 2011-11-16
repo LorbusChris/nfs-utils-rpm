@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.5
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -274,6 +274,9 @@ fi
 %attr(0755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Nov 16 2011 Steve Dickson <steved@redhat.com> 1.2.5-6
+- Remove RQUOTAD_PORT and RQUOTAD from /etc/sysconfig/nfs (bz 754496)
+
 * Mon Nov 14 2011 Steve Dickson <steved@redhat.com> 1.2.5-5
 - Ensured nfs-idmap service is started after the DNS is up (bz 748275)
 - Update to upstream RC release: nfs-utils-1.2.6-rc3 (bz 746497)
