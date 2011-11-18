@@ -274,11 +274,12 @@ fi
 %attr(0755,root,root)   /sbin/umount.nfs4
 
 %changelog
-* Wed Nov 16 2011 Steve Dickson <steved@redhat.com> 1.2.5-6
+* Fri Nov 18 2011 Steve Dickson <steved@redhat.com> 1.2.5-6
 - Remove RQUOTAD_PORT and RQUOTAD from /etc/sysconfig/nfs (bz 754496)
+- Ensured nfs-idmap service is started after the named is up (bz 748275)
 
 * Mon Nov 14 2011 Steve Dickson <steved@redhat.com> 1.2.5-5
-- Ensured nfs-idmap service is started after the DNS is up (bz 748275)
+- Ensured nfs-idmap service is started after the network up (bz 748275)
 - Update to upstream RC release: nfs-utils-1.2.6-rc3 (bz 746497)
 
 * Thu Oct 20 2011 Steve Dickson <steved@redhat.com> 1.2.5-4
