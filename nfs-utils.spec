@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.5
-Release: 6%{?dist}
+Release: 7%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -10,6 +10,7 @@ Epoch: 1
 
 Source0: http://www.kernel.org/pub/linux/utils/nfs/%{name}-%{version}.tar.bz2
 
+Source9: id_resolver.conf
 Source10: nfs.sysconfig
 Source11: nfs-lock.service
 Source12: nfs-secure.service
@@ -28,12 +29,13 @@ Source51: nfs-server.preconfig
 Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
 
-Patch001: nfs-utils-1.2.6-rc3.patch
+Patch001: nfs-utils-1.2.6-rc4.patch
 Patch002: nfs-utils-1.2.4-mountshortcut.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
 Patch102: nfs-utils-1.2.3-sm-notify-res_init.patch
+Patch103: nfs-utils-1.2.5-idmap-errmsg.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -91,6 +93,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch100 -p1
 %patch101 -p1
 %patch102 -p1
+%patch103 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -124,9 +127,11 @@ mkdir -p $RPM_BUILD_ROOT{/sbin,/usr/sbin,/lib/systemd/system}
 mkdir -p $RPM_BUILD_ROOT/usr/lib/%{name}/scripts
 mkdir -p ${RPM_BUILD_ROOT}%{_mandir}/man8
 mkdir -p $RPM_BUILD_ROOT/etc/sysconfig
+mkdir -p $RPM_BUILD_ROOT/etc/request-key.d
 make DESTDIR=$RPM_BUILD_ROOT install
 install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT/usr/sbin
 install -m 644 utils/mount/nfsmount.conf  $RPM_BUILD_ROOT/etc
+install -m 644 %{SOURCE9} $RPM_BUILD_ROOT/etc/request-key.d
 install -m 644 %{SOURCE10} $RPM_BUILD_ROOT/etc/sysconfig/nfs
 
 for service in %{nfs_services} ; do
@@ -244,6 +249,7 @@ fi
 %config(noreplace) /var/lib/nfs/xtab
 %config(noreplace) /var/lib/nfs/etab
 %config(noreplace) /var/lib/nfs/rmtab
+%config(noreplace) %{_sysconfdir}/request-key.d/id_resolver.conf
 %doc linux-nfs/ChangeLog linux-nfs/KNOWNBUGS linux-nfs/NEW linux-nfs/README
 %doc linux-nfs/THANKS linux-nfs/TODO
 /sbin/rpc.statd
@@ -274,6 +280,10 @@ fi
 %attr(0755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Dec 13 2011 Steve Dickson <steved@redhat.com> 1.2.5-6
+- Enabled new idmaping by installing the id_resolver.conf file.
+- Update to upstream RC release: nfs-utils-1.2.6-rc4
+
 * Fri Nov 18 2011 Steve Dickson <steved@redhat.com> 1.2.5-6
 - Remove RQUOTAD_PORT and RQUOTAD from /etc/sysconfig/nfs (bz 754496)
 - Ensured nfs-idmap service is started after the named is up (bz 748275)
