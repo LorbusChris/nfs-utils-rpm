@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.5
-Release: 7%{?dist}
+Release: 8%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -16,9 +16,8 @@ Source11: nfs-lock.service
 Source12: nfs-secure.service
 Source13: nfs-secure-server.service
 Source14: nfs-server.service
-Source15: nfs-idmap.service
-Source16: nfs-blkmap.service
-%define nfs_services %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} %{SOURCE16}
+Source15: nfs-blkmap.service
+%define nfs_services %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15}
 
 Source20: var-lib-nfs-rpc_pipefs.mount
 Source21: proc-fs-nfsd.mount
@@ -192,7 +191,6 @@ else
 fi
 
 %post
-/bin/systemctl enable nfs-idmap.service >/dev/null 2>&1 || :
 /bin/systemctl enable nfs-lock.service >/dev/null 2>&1 || :
 # Make sure statd used the correct uid/gid.
 chown -R rpcuser:rpcuser /var/lib/nfs/statd
@@ -222,7 +220,6 @@ fi
 /bin/systemctl --system daemon-reload >/dev/null 2>&1 || :
 
 %triggerun -- nfs-utils < 1:1.2.4-2
-/bin/systemctl enable nfs-idmap.service >/dev/null 2>&1 || :
 /bin/systemctl enable nfs-lock.service >/dev/null 2>&1 || :
 if /sbin/chkconfig --level 3 nfs ; then
 	/bin/systemctl enable nfs-server.service >/dev/null 2>&1 || :
@@ -280,7 +277,11 @@ fi
 %attr(0755,root,root)   /sbin/umount.nfs4
 
 %changelog
-* Tue Dec 13 2011 Steve Dickson <steved@redhat.com> 1.2.5-6
+* Thu Dec 15 2011 Steve Dickson <steved@redhat.com> 1.2.5-8
+- Removed the nfs-idmap service. rpc.idmap is now part of
+  the nfs-server service
+
+* Tue Dec 13 2011 Steve Dickson <steved@redhat.com> 1.2.5-7
 - Enabled new idmaping by installing the id_resolver.conf file.
 - Update to upstream RC release: nfs-utils-1.2.6-rc4
 
