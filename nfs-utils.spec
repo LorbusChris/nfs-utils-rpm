@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.5
-Release: 8%{?dist}
+Release: 9%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -28,7 +28,7 @@ Source51: nfs-server.preconfig
 Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
 
-Patch001: nfs-utils-1.2.6-rc4.patch
+Patch001: nfs-utils-1.2.6-rc5.patch
 Patch002: nfs-utils-1.2.4-mountshortcut.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
@@ -277,6 +277,9 @@ fi
 %attr(0755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Thu Jan  5 2012 Steve Dickson <steved@redhat.com> 1.2.5-9
+- Update to upstream RC release: nfs-utils-1.2.6-rc5
+
 * Thu Dec 15 2011 Steve Dickson <steved@redhat.com> 1.2.5-8
 - Removed the nfs-idmap service. rpc.idmap is now part of
   the nfs-server service
