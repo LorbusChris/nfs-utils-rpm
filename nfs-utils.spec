@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.5
-Release: 9%{?dist}
+Release: 10%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -57,7 +57,7 @@ Provides: start-statd = %{epoch}:%{version}-%{release}
 License: MIT and GPLv2 and GPLv2+ and BSD
 Buildroot: %{_tmppath}/%{name}-%{version}-root
 Requires: rpcbind, sed, gawk, sh-utils, fileutils, textutils, grep
-Requires: modutils >= 2.4.26-9
+Requires: modutils >= 2.4.26-9, keyutils
 BuildRequires: libgssglue-devel libevent-devel libcap-devel
 BuildRequires: libnfsidmap-devel libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
@@ -271,12 +271,16 @@ fi
 /lib/systemd/system/*
 /usr/lib/%{name}/scripts/*
 
-%attr(0755,root,root)   /sbin/mount.nfs
-%attr(0755,root,root)   /sbin/mount.nfs4
-%attr(0755,root,root)   /sbin/umount.nfs
-%attr(0755,root,root)   /sbin/umount.nfs4
+%attr(4755,root,root)   /sbin/mount.nfs
+%attr(4755,root,root)   /sbin/mount.nfs4
+%attr(4755,root,root)   /sbin/umount.nfs
+%attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Jan  9 2012 Steve Dickson <steved@redhat.com> 1.2.5-10
+- Added back the SUID bits on mount commands (bz 772396)
+- Added a decency on keyutils (bz 769724)
+
 * Thu Jan  5 2012 Steve Dickson <steved@redhat.com> 1.2.5-9
 - Update to upstream RC release: nfs-utils-1.2.6-rc5
 
