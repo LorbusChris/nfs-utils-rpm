@@ -279,6 +279,7 @@ fi
 %changelog
 * Mon Jan 16 2012 Steve Dickson <steved@redhat.com> 1.2.5-11
 - Update to upstream RC release: nfs-utils-1.2.6-rc6
+- Reworked how the nfsd service requires the rpcbind service (bz 768550)
 
 * Mon Jan  9 2012 Steve Dickson <steved@redhat.com> 1.2.5-10
 - Added back the SUID bits on mount commands (bz 772396)

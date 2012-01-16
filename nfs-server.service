@@ -1,6 +1,6 @@
 [Unit]
 Description=NFS Server
-Requires=proc-fs-nfsd.mount var-lib-nfs-rpc_pipefs.mount
+Requires=proc-fs-nfsd.mount var-lib-nfs-rpc_pipefs.mount rpcbind.service
 After=network.target named.service rpcbind.service proc-fs-nfsd.mount var-lib-nfs-rpc_pipefs.mount
 
 [Service]
