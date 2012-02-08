@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.5
-Release: 11%{?dist}
+Release: 12%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -57,7 +57,7 @@ Provides: start-statd = %{epoch}:%{version}-%{release}
 License: MIT and GPLv2 and GPLv2+ and BSD
 Buildroot: %{_tmppath}/%{name}-%{version}-root
 Requires: rpcbind, sed, gawk, sh-utils, fileutils, textutils, grep
-Requires: modutils >= 2.4.26-9, keyutils
+Requires: kmod, keyutils
 BuildRequires: libgssglue-devel libevent-devel libcap-devel
 BuildRequires: libnfsidmap-devel libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
@@ -277,6 +277,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Feb 08 2012 Harald Hoyer <harald@redhat.com> 1.2.5-12
+- require kmod instead of modutils (bz 788571)
+
 * Mon Jan 16 2012 Steve Dickson <steved@redhat.com> 1.2.5-11
 - Update to upstream RC release: nfs-utils-1.2.6-rc6
 - Reworked how the nfsd service requires the rpcbind service (bz 768550)
