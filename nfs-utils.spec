@@ -33,6 +33,7 @@ Patch002: nfs-utils-1.2.4-mountshortcut.patch
 Patch003: nfs-utils-1.2.5-libidmap-hide-syms.patch
 Patch004: nfs-utils-1.2.5-nfsd-new-default.patch
 Patch005: nfs-utils-1.2.5-gssd-usercreds.patch
+Patch006: nfs-utils-1.2.5-gssd-nolibgssapi-krb5.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -94,6 +95,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch003 -p1
 %patch004 -p1
 %patch005 -p1
+%patch006 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -285,6 +287,7 @@ fi
 %changelog
 * Thu Mar 22 2012 Steve Dickson <steved@redhat.com> 1.2.5-14
 - gssd: Look for user creds in user defined directory (bz 786993)
+- gssd: Don't link with libgssapi_krb5 (bz 784908)
 
 * Fri Mar 16 2012 Steve Dickson <steved@redhat.com> 1.2.5-13
 - Make sure statd is start before NFS mounts (bz 786050)
