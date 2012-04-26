@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.5
-Release: 14%{?dist}
+Release: 15%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -27,6 +27,8 @@ Source50: nfs-lock.preconfig
 Source51: nfs-server.preconfig
 Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
+
+Source60: nfs4-modalias.conf
 
 Patch001: nfs-utils-1.2.6-rc6.patch
 Patch002: nfs-utils-1.2.4-mountshortcut.patch
@@ -135,11 +137,13 @@ mkdir -p $RPM_BUILD_ROOT/usr/lib/%{name}/scripts
 mkdir -p ${RPM_BUILD_ROOT}%{_mandir}/man8
 mkdir -p $RPM_BUILD_ROOT/etc/sysconfig
 mkdir -p $RPM_BUILD_ROOT/etc/request-key.d
+mkdir -p $RPM_BUILD_ROOT/lib/modprobe.d/
 make DESTDIR=$RPM_BUILD_ROOT install
 install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT/usr/sbin
 install -m 644 utils/mount/nfsmount.conf  $RPM_BUILD_ROOT/etc
 install -m 644 %{SOURCE9} $RPM_BUILD_ROOT/etc/request-key.d
 install -m 644 %{SOURCE10} $RPM_BUILD_ROOT/etc/sysconfig/nfs
+install -m 644 %{SOURCE60} $RPM_BUILD_ROOT/lib/modprobe.d/nfs.conf
 
 for service in %{nfs_services} ; do
 	install -m 644 $service $RPM_BUILD_ROOT/lib/systemd/system
@@ -278,6 +282,7 @@ fi
 %{_mandir}/*/*
 /lib/systemd/system/*
 /usr/lib/%{name}/scripts/*
+/lib/modprobe.d/nfs.conf
 
 %attr(4755,root,root)   /sbin/mount.nfs
 %attr(4755,root,root)   /sbin/mount.nfs4
@@ -285,6 +290,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Thu Apr 26 2012 Josh Boyer <jwboyer@redhat.com> 1.2.5-15
+- Add modprobe config file to alias 'nfs4' to 'nfs' (bz 806333)
+
 * Thu Mar 22 2012 Steve Dickson <steved@redhat.com> 1.2.5-14
 - gssd: Look for user creds in user defined directory (bz 786993)
 - gssd: Don't link with libgssapi_krb5 (bz 784908)
