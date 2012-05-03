@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.5
-Release: 15%{?dist}
+Release: 16%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -30,12 +30,7 @@ Source52: nfs-server.postconfig
 
 Source60: nfs4-modalias.conf
 
-Patch001: nfs-utils-1.2.6-rc6.patch
-Patch002: nfs-utils-1.2.4-mountshortcut.patch
-Patch003: nfs-utils-1.2.5-libidmap-hide-syms.patch
-Patch004: nfs-utils-1.2.5-nfsd-new-default.patch
-Patch005: nfs-utils-1.2.5-gssd-usercreds.patch
-Patch006: nfs-utils-1.2.5-gssd-nolibgssapi-krb5.patch
+Patch001: nfs-utils-1.2.6-rc7.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -93,11 +88,6 @@ This package also contains the mount.nfs and umount.nfs program.
 %setup -q
 
 %patch001 -p1
-%patch002 -p1
-%patch003 -p1
-%patch004 -p1
-%patch005 -p1
-%patch006 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -262,6 +252,7 @@ fi
 %doc linux-nfs/ChangeLog linux-nfs/KNOWNBUGS linux-nfs/NEW linux-nfs/README
 %doc linux-nfs/THANKS linux-nfs/TODO
 /sbin/rpc.statd
+/sbin/osd_login
 /usr/sbin/exportfs
 /usr/sbin/nfsstat
 /usr/sbin/rpcdebug
@@ -290,6 +281,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Thu May  3 2012 Steve Dickson <steved@redhat.com> 1.2.5-16
+- Update to the latest RC release: nfs-utils-1.2.6-rc7
+
 * Thu Apr 26 2012 Josh Boyer <jwboyer@redhat.com> 1.2.5-15
 - Add modprobe config file to alias 'nfs4' to 'nfs' (bz 806333)
 
