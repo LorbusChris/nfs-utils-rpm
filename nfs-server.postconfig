@@ -2,9 +2,6 @@
 
 . /etc/sysconfig/nfs
 
-# Tell idmapd the server is up and running
-/usr/bin/pkill -HUP rpc.idmapd
-
 #
 # Enabled the RDMA server support if configured to do so.
 # 

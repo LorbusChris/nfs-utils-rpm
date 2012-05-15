@@ -17,7 +17,11 @@ Source12: nfs-secure.service
 Source13: nfs-secure-server.service
 Source14: nfs-server.service
 Source15: nfs-blkmap.service
-%define nfs_services %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15}
+Source16: nfs-rquotad.service
+Source17: nfs-mountd.service
+Source18: nfs-idmap.service
+Source19: nfs.target
+%define nfs_services %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} %{SOURCE16} %{SOURCE17} %{SOURCE18} %{SOURCE19}
 
 Source20: var-lib-nfs-rpc_pipefs.mount
 Source21: proc-fs-nfsd.mount
@@ -283,6 +287,7 @@ fi
 %changelog
 * Tue May 15 2012 Steve Dickson <steved@redhat.com> 1.2.6-0
 - Update to the latest upstream release: nfs-utils-1.2.6
+- Split out NFS server daemons into individual service files (bz 769879) 
 
 * Thu May  3 2012 Steve Dickson <steved@redhat.com> 1.2.5-16
 - Update to the latest RC release: nfs-utils-1.2.6-rc7
