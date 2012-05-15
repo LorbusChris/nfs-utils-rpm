@@ -197,7 +197,15 @@ else
 fi
 
 %post
-/bin/systemctl enable nfs-lock.service >/dev/null 2>&1 || :
+if [ $1 -eq 1 ]; then
+	# Package install,
+	/bin/systemctl enable nfs-lock.service >/dev/null 2>&1 || :
+else
+	# Package upgrade
+	if /bin/systemctl --quiet is-enabled nfs-lock.service ; then
+		/bin/systemctl reenable nfs-lock.service >/dev/null 2>&1 || :
+	fi
+fi
 # Make sure statd used the correct uid/gid.
 chown -R rpcuser:rpcuser /var/lib/nfs/statd
 
@@ -289,6 +297,7 @@ fi
 - Update to the latest upstream release: nfs-utils-1.2.6 (bz 821673)
 - Split out NFS server daemons into individual service files (bz 769879) 
 - Removed Wants= from nfs-lock.service (bz 817895)
+- Only enable services if they are enabled on upgrades (bz 807020)
 
 * Thu May  3 2012 Steve Dickson <steved@redhat.com> 1.2.5-16
 - Update to the latest RC release: nfs-utils-1.2.6-rc7
