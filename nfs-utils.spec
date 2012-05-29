@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.6
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -179,7 +179,7 @@ done
 %define nfsnobody_uid   65534
 
 # Create nfsnobody gid as long as it does not already exist
-cat /etc/group | cut -d':' -f 3 | grep --quiet nfsnobody 2>/dev/null
+cat /etc/group | cut -d':' -f 1 | grep --quiet nfsnobody 2>/dev/null
 if [ "$?" -eq 1 ]; then
     /usr/sbin/groupadd -g %{nfsnobody_uid} nfsnobody 2>/dev/null || :
 else
@@ -187,7 +187,7 @@ else
 fi
 
 # Create nfsnobody uid as long as it does not already exist.
-cat /etc/passwd | cut -d':' -f 3 | grep --quiet nfsnobody 2>/dev/null
+cat /etc/passwd | cut -d':' -f 1 | grep --quiet nfsnobody 2>/dev/null
 if [ "$?" -eq 1 ]; then
     /usr/sbin/useradd -l -c "Anonymous NFS User" -r -g %{nfsnobody_uid} \
         -s /sbin/nologin -u %{nfsnobody_uid} -d /var/lib/nfs nfsnobody 2>/dev/null || :
@@ -293,6 +293,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue May 29 2012 Steve Dickson <steved@redhat.com> 1.2.6-1
+* Fixed typo in the checking of nfsnobody (bz 816149)
+
 * Fri May 25 2012 Steve Dickson <steved@redhat.com> 1.2.6-1
 - Correctly search for the existence of nfsnobody (bz 816149)
 - Correctly change the default group id for nfsnobody (bz 816149)
