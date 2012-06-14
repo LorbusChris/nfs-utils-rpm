@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.6
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -22,7 +22,11 @@ Source17: nfs-mountd.service
 Source18: nfs-idmap.service
 Source19: nfs.target
 %define nfs_services %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} %{SOURCE16} %{SOURCE17} %{SOURCE18} %{SOURCE19}
-
+# 
+# Services that need to be restarted.
+#
+%define nfs_start_services %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} %{SOURCE18} 
+ 
 Source20: var-lib-nfs-rpc_pipefs.mount
 Source21: proc-fs-nfsd.mount
 %define nfs_automounts %{SOURCE20} %{SOURCE21}
@@ -213,7 +217,7 @@ chown -R rpcuser:rpcuser /var/lib/nfs/statd
 %preun
 if [ $1 -eq 0 ]; then
 	# Package removal, not upgrade
-	for service in %(sed 's!\S*/!!g' <<< '%{nfs_services}') ; do
+	for service in %(sed 's!\S*/!!g' <<< '%{nfs_start_services}') ; do
     	/bin/systemctl disable $service >/dev/null 2>&1 || :
     	/bin/systemctl stop $service >/dev/null 2>&1 || :
 	done
@@ -228,7 +232,7 @@ fi
 %postun
 if [ $1 -ge 1 ]; then
 	# Package upgrade, not uninstall
-	for service in %(sed 's!\S*/!!g' <<< '%{nfs_services}') ; do
+	for service in %(sed 's!\S*/!!g' <<< '%{nfs_start_services}') ; do
     	/bin/systemctl try-restart $service >/dev/null 2>&1 || :
 	done
 fi
@@ -294,6 +298,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Jun 12 2012 Steve Dickson <steved@redhat.com> 1.2.6-5
+- Reworked how the services are restarted.
+
 * Tue Jun 12 2012 Steve Dickson <steved@redhat.com> 1.2.6-4
 - Enable legacy service names.
 
