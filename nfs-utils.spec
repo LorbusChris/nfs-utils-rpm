@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.6
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -142,6 +142,7 @@ install -m 644 %{SOURCE60} $RPM_BUILD_ROOT/lib/modprobe.d/nfs.conf
 for service in %{nfs_services} ; do
 	install -m 644 $service $RPM_BUILD_ROOT/lib/systemd/system
 done
+
 for service in %{nfs_automounts} ; do
 	install -m 644 $service $RPM_BUILD_ROOT/lib/systemd/system
 done
@@ -293,6 +294,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Jun 12 2012 Steve Dickson <steved@redhat.com> 1.2.6-4
+- Enable legacy service names.
+
 * Tue May 29 2012 Steve Dickson <steved@redhat.com> 1.2.6-3
 - Updated to latest upstream RC release: nfs-utils.1.2.7-rc1
 

@@ -3,6 +3,7 @@ Description=NFS Server
 Requires=proc-fs-nfsd.mount var-lib-nfs-rpc_pipefs.mount rpcbind.service
 Requires=nfs-idmap.service nfs-mountd.service nfs-rquotad.service
 After=network.target named.service
+Names=nfs.service
 
 [Service]
 Type=oneshot
