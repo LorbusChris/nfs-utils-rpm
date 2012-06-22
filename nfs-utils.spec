@@ -307,6 +307,7 @@ fi
 %changelog
 * Fri Jun 22 2012 Steve Dickson <steved@redhat.com> 1.2.6-7
 - Reworked how the legacy names are enabled in systemd
+- Fixed typo in nfs-mountd.service
 
 * Tue Jun 12 2012 Steve Dickson <steved@redhat.com> 1.2.6-6
 - Updated to latest upstream RC release: nfs-utils.1.2.7-rc2 (bz 833555)
