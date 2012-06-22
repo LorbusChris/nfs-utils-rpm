@@ -2,7 +2,6 @@
 Description=Secure NFS
 Requires=var-lib-nfs-rpc_pipefs.mount
 After=syslog.target var-lib-nfs-rpc_pipefs.mount
-Names=rpcgssd.service
 
 [Service]
 Type=forking

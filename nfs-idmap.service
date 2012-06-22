@@ -2,7 +2,6 @@
 Description=NFSv4 ID-name mapping daemon
 BindTo=nfs-server.service
 After=nfs-server.service
-Names=rpcidmapd.service
 
 [Service]
 Type=forking

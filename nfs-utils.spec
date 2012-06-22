@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.6
-Release: 6%{?dist}
+Release: 7%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -154,6 +154,13 @@ for config in %{nfs_configs} ; do
 	install -m 755 $config $RPM_BUILD_ROOT/usr/lib/%{name}/scripts
 done
 
+cd $RPM_BUILD_ROOT/lib/systemd/system
+ln -s nfs-idmap.service rpcidmapd.service
+ln -s nfs-lock.service nfslock.service
+ln -s nfs-secure-server.service rpcsvcgssd.service
+ln -s nfs-secure.service rpcgssd.service
+ln -s nfs-server.service nfs.service
+
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/rpc_pipefs
 
 touch $RPM_BUILD_ROOT/var/lib/nfs/rmtab
@@ -298,6 +305,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Fri Jun 22 2012 Steve Dickson <steved@redhat.com> 1.2.6-7
+- Reworked how the legacy names are enabled in systemd
+
 * Tue Jun 12 2012 Steve Dickson <steved@redhat.com> 1.2.6-6
 - Updated to latest upstream RC release: nfs-utils.1.2.7-rc2 (bz 833555)
 

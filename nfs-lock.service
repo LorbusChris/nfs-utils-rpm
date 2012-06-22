@@ -3,7 +3,6 @@ Description=NFS file locking service.
 Requires=rpcbind.service network.target
 After=network.target named.service rpcbind.service
 Before=remote-fs-pre.target
-Names=nfslock.service
 
 [Service]
 Type=forking
