@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.6
-Release: 7%{?dist}
+Release: 8%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -39,6 +39,7 @@ Source52: nfs-server.postconfig
 Source60: nfs4-modalias.conf
 
 Patch001: nfs-utils-1.2.7-rc2.patch
+Patch002: nfs-utils-1.2.6-nfsidmap-nodns.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -96,6 +97,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %setup -q
 
 %patch001 -p1
+%patch002 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -305,6 +307,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Thu Jul  5 2012 Steve Dickson <steved@redhat.com> 1.2.6-8
+- nfsidmap: default domain no being set (bz 829362)
+
 * Fri Jun 22 2012 Steve Dickson <steved@redhat.com> 1.2.6-7
 - Reworked how the legacy names are enabled in systemd
 - Fixed typo in nfs-mountd.service
