@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.6
-Release: 9%{?dist}
+Release: 10%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -35,8 +35,6 @@ Source50: nfs-lock.preconfig
 Source51: nfs-server.preconfig
 Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
-
-Source60: nfs4-modalias.conf
 
 Patch001: nfs-utils-1.2.7-rc3.patch
 
@@ -141,7 +139,6 @@ install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT/usr/sbin
 install -m 644 utils/mount/nfsmount.conf  $RPM_BUILD_ROOT/etc
 install -m 644 %{SOURCE9} $RPM_BUILD_ROOT/etc/request-key.d
 install -m 644 %{SOURCE10} $RPM_BUILD_ROOT/etc/sysconfig/nfs
-install -m 644 %{SOURCE60} $RPM_BUILD_ROOT/lib/modprobe.d/nfs.conf
 
 for service in %{nfs_services} ; do
 	install -m 644 $service $RPM_BUILD_ROOT/lib/systemd/system
@@ -297,7 +294,6 @@ fi
 %{_mandir}/*/*
 /lib/systemd/system/*
 /usr/lib/%{name}/scripts/*
-/lib/modprobe.d/nfs.conf
 
 %attr(4755,root,root)   /sbin/mount.nfs
 %attr(4755,root,root)   /sbin/mount.nfs4
@@ -305,6 +301,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Thu Aug  2 2012 Steve Dickson <steved@redhat.com> 1.2.6-10
+- Removed modprobe.d/nfs.conf 
+
 * Thu Jul 19 2012 Steve Dickson <steved@redhat.com> 1.2.6-9
 - Updated to latest upstream RC release: nfs-utils.1.2.7-rc3
 
