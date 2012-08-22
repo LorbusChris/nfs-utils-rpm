@@ -70,6 +70,7 @@ BuildRequires: libnfsidmap-devel libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, glibc-headers, device-mapper-devel
 BuildRequires: krb5-devel, tcp_wrappers-devel, libmount-devel
+BuildRequires: fedfs-utils-devel >= 0.8.0-7
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
 Requires: libnfsidmap libgssglue libevent
@@ -301,6 +302,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Aug 22 2012 Steve Dickson <steved@redhat.com> 1.2.6-12
+- Added FedFS support by added a BuildRequires for fedfs-utils-devel
+
 * Mon Aug  6 2012 Steve Dickson <steved@redhat.com> 1.2.6-11
 - Updated to latest upstream RC release: nfs-utils.1.2.7-rc4
 
