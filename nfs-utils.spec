@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.6
-Release: 11%{?dist}
+Release: 12%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -209,7 +209,7 @@ fi
 %post
 if [ $1 -eq 1 ]; then
 	# Package install,
-	/bin/systemctl enable nfs-lock.service >/dev/null 2>&1 || :
+	%systemd_post nfs-lock.service 
 else
 	# Package upgrade
 	if /bin/systemctl --quiet is-enabled nfs-lock.service ; then
@@ -223,8 +223,7 @@ chown -R rpcuser:rpcuser /var/lib/nfs/statd
 if [ $1 -eq 0 ]; then
 	# Package removal, not upgrade
 	for service in %(sed 's!\S*/!!g' <<< '%{nfs_start_services}') ; do
-    	/bin/systemctl disable $service >/dev/null 2>&1 || :
-    	/bin/systemctl stop $service >/dev/null 2>&1 || :
+		%systemd_preun $service
 	done
     /usr/sbin/userdel rpcuser 2>/dev/null || :
     /usr/sbin/groupdel rpcuser 2>/dev/null || :
@@ -302,8 +301,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
-* Wed Aug 22 2012 Steve Dickson <steved@redhat.com> 1.2.6-12
+* Thu Aug 23 2012 Steve Dickson <steved@redhat.com> 1.2.6-12 
 - Added FedFS support by added a BuildRequires for fedfs-utils-devel
+- Introduce new systemd-rpm macros (bz 850227)
 
 * Mon Aug  6 2012 Steve Dickson <steved@redhat.com> 1.2.6-11
 - Updated to latest upstream RC release: nfs-utils.1.2.7-rc4
