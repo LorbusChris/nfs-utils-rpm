@@ -36,7 +36,7 @@ Source51: nfs-server.preconfig
 Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
 
-Patch001: nfs-utils-1.2.7-rc4.patch
+Patch001: nfs-utils-1.2.7-rc5.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -304,6 +304,7 @@ fi
 * Thu Aug 23 2012 Steve Dickson <steved@redhat.com> 1.2.6-12 
 - Added FedFS support by added a BuildRequires for fedfs-utils-devel
 - Introduce new systemd-rpm macros (bz 850227)
+- Updated to latest upstream RC release: nfs-utils.1.2.7-rc5 (bz 833024)
 
 * Mon Aug  6 2012 Steve Dickson <steved@redhat.com> 1.2.6-11
 - Updated to latest upstream RC release: nfs-utils.1.2.7-rc4

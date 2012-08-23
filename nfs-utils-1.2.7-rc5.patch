@@ -1,0 +1,1200 @@
+diff --git a/README b/README
+index 348f5d4..e55b2dd 100644
+--- a/README
++++ b/README
+@@ -1,4 +1,4 @@
+-This is version 1.1.0 of nfs-utils, the Linux NFS utility package.
++This is version 1.2.6 of nfs-utils, the Linux NFS utility package.
+ 
+ 
+ 0. PROJECT RESOURCES
+diff --git a/aclocal/libcap.m4 b/aclocal/libcap.m4
+index 68a624c..f8a0ed1 100644
+--- a/aclocal/libcap.m4
++++ b/aclocal/libcap.m4
+@@ -3,7 +3,7 @@ dnl
+ AC_DEFUN([AC_LIBCAP], [
+ 
+   dnl look for prctl
+-  AC_CHECK_FUNC([prctl], , )
++  AC_CHECK_FUNC([prctl], , AC_MSG_ERROR([prctl syscall is not available]))
+ 
+   AC_ARG_ENABLE([caps],
+     [AS_HELP_STRING([--disable-caps], [Disable capabilities support])])
+diff --git a/aclocal/libsqlite3.m4 b/aclocal/libsqlite3.m4
+index 73d1e46..8c38993 100644
+--- a/aclocal/libsqlite3.m4
++++ b/aclocal/libsqlite3.m4
+@@ -29,5 +29,4 @@ AC_DEFUN([AC_SQLITE3_VERS], [
+     LIBS="$saved_LIBS"])
+ 
+   AC_MSG_RESULT($libsqlite3_cv_is_recent)
+-  AM_CONDITIONAL(CONFIG_SQLITE3, [test "$libsqlite3_cv_is_recent" = "yes"])
+ ])dnl
+diff --git a/configure.ac b/configure.ac
+index 9ba53e2..a174bf4 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -278,8 +278,6 @@ if test "$enable_nfsv4" = yes; then
+ 	fi
+   fi
+ 
+-  AM_CONDITIONAL(CONFIG_NFSDCLD, [test "$enable_nfsdcld" = "yes" ])
+-
+   dnl librpcsecgss already has a dependency on libgssapi,
+   dnl but we need to make sure we get the right version
+   if test "$enable_gss" = yes; then
+@@ -290,9 +288,11 @@ fi
+ if test "$enable_nfsv41" = yes; then
+   AC_CHECK_LIB([devmapper], [dm_task_create], [LIBDEVMAPPER="-ldevmapper"], AC_MSG_ERROR([libdevmapper needed]))
+   AC_CHECK_HEADER(libdevmapper.h, , AC_MSG_ERROR([Cannot find devmapper header file libdevmapper.h]))
++  AC_CHECK_HEADER(sys/inotify.h, , AC_MSG_ERROR([Cannot find header file sys/inotify.h]))
+ fi
+ 
+ dnl enable nfsidmap when its support by libnfsidmap
++AM_CONDITIONAL(CONFIG_NFSDCLD, [test "$enable_nfsdcld" = "yes" ])
+ AM_CONDITIONAL(CONFIG_NFSIDMAP, [test "$ac_cv_header_keyutils_h$ac_cv_lib_nfsidmap_nfs4_owner_to_uid" = "yesyes"])
+ 
+ 
+@@ -393,7 +393,7 @@ AC_CHECK_FUNCS([alarm atexit dup2 fdatasync ftruncate getcwd \
+                gethostbyaddr gethostbyname gethostname getmntent \
+                getnameinfo getrpcbyname getifaddrs \
+                gettimeofday hasmntopt inet_ntoa innetgr memset mkdir pathconf \
+-               realpath rmdir select socket strcasecmp strchr strdup \
++               ppoll realpath rmdir select socket strcasecmp strchr strdup \
+                strerror strrchr strtol strtoul sigprocmask])
+ 
+ 
+diff --git a/support/include/nfs/debug.h b/support/include/nfs/debug.h
+index dbec5ba..80a1b1d 100644
+--- a/support/include/nfs/debug.h
++++ b/support/include/nfs/debug.h
+@@ -79,6 +79,7 @@ enum {
+ #define NFSDBG_FSCACHE		0x0800
+ #define NFSDBG_PNFS			0x1000
+ #define NFSDBG_PNFS_LD		0x2000
++#define NFSDBG_STATE		0x4000
+ #define NFSDBG_ALL		0xFFFF
+ 
+ #endif /* _NFS_DEBUG_H */
+diff --git a/support/nsm/file.c b/support/nsm/file.c
+index 5dd52c1..4711c2c 100644
+--- a/support/nsm/file.c
++++ b/support/nsm/file.c
+@@ -338,10 +338,10 @@ nsm_is_default_parentdir(void)
+  *
+  * Returns true if successful, or false if some error occurred.
+  */
++#ifdef HAVE_SYS_CAPABILITY_H
+ static _Bool
+ nsm_clear_capabilities(void)
+ {
+-#ifdef HAVE_SYS_CAPABILITY_H
+ 	cap_t caps;
+ 
+ 	caps = cap_from_text("cap_net_bind_service=ep");
+@@ -357,10 +357,60 @@ nsm_clear_capabilities(void)
+ 	}
+ 
+ 	(void)cap_free(caps);
+-#endif
+ 	return true;
+ }
+ 
++#define CAP_BOUND_PROCFILE "/proc/sys/kernel/cap-bound"
++static _Bool
++prune_bounding_set(void)
++{
++#ifdef PR_CAPBSET_DROP
++	int ret;
++	unsigned long i;
++	struct stat st;
++
++	/*
++	 * Prior to kernel 2.6.25, the capabilities bounding set was a global
++	 * value. Check to see if /proc/sys/kernel/cap-bound exists and don't
++	 * bother to clear the bounding set if it does.
++	 */
++	ret = stat(CAP_BOUND_PROCFILE, &st);
++	if (!ret) {
++		xlog(L_WARNING, "%s exists. Not attempting to clear "
++				"capabilities bounding set.",
++				CAP_BOUND_PROCFILE);
++		return true;
++	} else if (errno != ENOENT) {
++		/* Warn, but attempt to clear the bounding set anyway. */
++		xlog(L_WARNING, "Unable to stat %s: %m", CAP_BOUND_PROCFILE);
++	}
++
++	/* prune the bounding set to nothing */
++	for (i = 0; prctl(PR_CAPBSET_READ, i, 0, 0, 0) >=0 ; ++i) {
++		ret = prctl(PR_CAPBSET_DROP, i, 0, 0, 0);
++		if (ret) {
++			xlog(L_ERROR, "Unable to prune capability %lu from "
++				      "bounding set: %m", i);
++			return false;
++		}
++	}
++#endif /* PR_CAPBSET_DROP */
++	return true;
++}
++#else /* !HAVE_SYS_CAPABILITY_H */
++static _Bool
++nsm_clear_capabilities(void)
++{
++	return true;
++}
++
++static _Bool
++prune_bounding_set(void)
++{
++	return true;
++}
++#endif /* HAVE_SYS_CAPABILITY_H */
++
+ /**
+  * nsm_drop_privileges - drop root privileges
+  * @pidfd: file descriptor of a pid file
+@@ -393,6 +443,9 @@ nsm_drop_privileges(const int pidfd)
+ 		return false;
+ 	}
+ 
++	if (!prune_bounding_set())
++		return false;
++
+ 	if (st.st_uid == 0) {
+ 		xlog_warn("Running as root.  "
+ 			"chown %s to choose different user", nsm_base_dirname);
+diff --git a/tests/nsm_client/Makefile.am b/tests/nsm_client/Makefile.am
+index 4bf0a45..4c15346 100644
+--- a/tests/nsm_client/Makefile.am
++++ b/tests/nsm_client/Makefile.am
+@@ -13,7 +13,7 @@ nsm_client_SOURCES = $(GENFILES) nsm_client.c
+ 
+ BUILT_SOURCES = $(GENFILES)
+ nsm_client_LDADD = ../../support/nfs/libnfs.a \
+-		   ../../support/nsm/libnsm.a $(LIBCAP)
++		   ../../support/nsm/libnsm.a $(LIBCAP) $(LIBTIRPC)
+ 
+ if CONFIG_RPCGEN
+ RPCGEN	= $(top_builddir)/tools/rpcgen/rpcgen
+diff --git a/tools/rpcdebug/rpcdebug.c b/tools/rpcdebug/rpcdebug.c
+index 444616d..d6e10d3 100644
+--- a/tools/rpcdebug/rpcdebug.c
++++ b/tools/rpcdebug/rpcdebug.c
+@@ -170,6 +170,7 @@ static struct flagmap {
+ 	FLAG(NFS,       FSCACHE),
+ 	FLAG(NFS,       PNFS),
+ 	FLAG(NFS,       PNFS_LD),
++	FLAG(NFS,	STATE),
+ 	FLAG(NFS,	ALL),
+ 
+ 	/* nfsd */
+diff --git a/utils/blkmapd/device-discovery.c b/utils/blkmapd/device-discovery.c
+index c21de3e..df4627e 100644
+--- a/utils/blkmapd/device-discovery.c
++++ b/utils/blkmapd/device-discovery.c
+@@ -31,10 +31,12 @@
+ #include <sys/ioctl.h>
+ #include <sys/mount.h>
+ #include <sys/select.h>
++#include <sys/inotify.h>
+ #include <linux/kdev_t.h>
+ #include <scsi/scsi.h>
+ #include <scsi/scsi_ioctl.h>
+ #include <scsi/sg.h>
++#include <signal.h>
+ 
+ #include <stdlib.h>
+ #include <stdio.h>
+@@ -50,10 +52,17 @@
+ 
+ #include "device-discovery.h"
+ 
++#define EVENT_SIZE (sizeof(struct inotify_event))
++#define EVENT_BUFSIZE (1024 * EVENT_SIZE)
++
+ #define BL_PIPE_FILE	"/var/lib/nfs/rpc_pipefs/nfs/blocklayout"
++#define NFSPIPE_DIR	"/var/lib/nfs/rpc_pipefs/nfs"
++#define RPCPIPE_DIR	"/var/lib/nfs/rpc_pipefs"
+ #define PID_FILE	"/var/run/blkmapd.pid"
+ 
+ struct bl_disk *visible_disk_list;
++int    bl_watch_fd, bl_pipe_fd, nfs_pipedir_wfd, rpc_pipedir_wfd;
++int    pidfd = -1;
+ 
+ struct bl_disk_path *bl_get_path(const char *filepath,
+ 				 struct bl_disk_path *paths)
+@@ -262,7 +271,7 @@ int bl_discover_devices(void)
+  * return 1: request processed, and more requests waiting;
+  * return < 0: error
+  */
+-int bl_disk_inquiry_process(int fd)
++static int bl_disk_inquiry_process(int fd)
+ {
+ 	int ret = 0;
+ 	struct bl_pipemsg_hdr head;
+@@ -338,23 +347,70 @@ int bl_disk_inquiry_process(int fd)
+ 	return ret;
+ }
+ 
+-/* TODO: set bl_process_stop to 1 in command */
+-unsigned int bl_process_stop;
++static void bl_watch_dir(const char* dir, int *wd)
++{
++	*wd = inotify_add_watch(bl_watch_fd, dir, IN_CREATE|IN_DELETE);
++	if (*wd < 0)
++		BL_LOG_ERR("failed to watch %s: %s\n", dir, strerror(errno));
++}
+ 
+-int bl_run_disk_inquiry_process(int fd)
++static void bl_rpcpipe_cb(void)
+ {
+-	fd_set rset;
+-	int ret;
++	int rc, curr_byte = 0;
++	char eventArr[EVENT_BUFSIZE];
++	struct inotify_event *event;
++
++	rc = read(bl_watch_fd, &eventArr, EVENT_BUFSIZE);
++	if (rc < 0)
++		BL_LOG_ERR("read event fail: %s", strerror(errno));
++
++	while (rc > curr_byte) {
++		event = (struct inotify_event *)&eventArr[curr_byte];
++		curr_byte += EVENT_SIZE + event->len;
++		if (event->wd == rpc_pipedir_wfd) {
++			if (strncmp(event->name, "nfs", 3))
++				continue;
++			if (event->mask & IN_CREATE) {
++				BL_LOG_WARNING("nfs pipe dir created\n");
++				bl_watch_dir(NFSPIPE_DIR, &nfs_pipedir_wfd);
++				bl_pipe_fd = open(BL_PIPE_FILE, O_RDWR);
++			} else if (event->mask & IN_DELETE) {
++				BL_LOG_WARNING("nfs pipe dir deleted\n");
++				inotify_rm_watch(bl_watch_fd, nfs_pipedir_wfd);
++				close(bl_pipe_fd);
++				nfs_pipedir_wfd = -1;
++				bl_pipe_fd = -1;
++			}
++		} else if (event->wd == nfs_pipedir_wfd) {
++			if (strncmp(event->name, "blocklayout", 11))
++				continue;
++			if (event->mask & IN_CREATE) {
++				BL_LOG_WARNING("blocklayout pipe file created\n");
++				bl_pipe_fd = open(BL_PIPE_FILE, O_RDWR);
++				if (bl_pipe_fd < 0)
++					BL_LOG_ERR("open %s failed: %s\n",
++						event->name, strerror(errno));
++			} else if (event->mask & IN_DELETE) {
++				BL_LOG_WARNING("blocklayout pipe file deleted\n");
++				close(bl_pipe_fd);
++				bl_pipe_fd = -1;
++			}
++		}
++	}
++}
+ 
+-	bl_process_stop = 0;
++static int bl_event_helper(void)
++{
++	fd_set rset;
++	int ret = 0, maxfd;
+ 
+ 	for (;;) {
+-		if (bl_process_stop)
+-			return 1;
+ 		FD_ZERO(&rset);
+-		FD_SET(fd, &rset);
+-		ret = 0;
+-		switch (select(fd + 1, &rset, NULL, NULL, NULL)) {
++		FD_SET(bl_watch_fd, &rset);
++		if (bl_pipe_fd > 0)
++			FD_SET(bl_pipe_fd, &rset);
++		maxfd = (bl_watch_fd>bl_pipe_fd)?bl_watch_fd:bl_pipe_fd;
++		switch (select(maxfd + 1, &rset, NULL, NULL, NULL)) {
+ 		case -1:
+ 			if (errno == EINTR)
+ 				continue;
+@@ -365,18 +421,32 @@ int bl_run_disk_inquiry_process(int fd)
+ 		case 0:
+ 			goto out;
+ 		default:
+-			if (FD_ISSET(fd, &rset))
+-				ret = bl_disk_inquiry_process(fd);
++			if (FD_ISSET(bl_watch_fd, &rset))
++				bl_rpcpipe_cb();
++			else if (bl_pipe_fd > 0 && FD_ISSET(bl_pipe_fd, &rset))
++				ret = bl_disk_inquiry_process(bl_pipe_fd);
++			if (ret)
++				goto out;
+ 		}
+ 	}
+  out:
+ 	return ret;
+ }
+ 
++void sig_die(int signal)
++{
++	if (pidfd >= 0) {
++		close(pidfd);
++		unlink(PID_FILE);
++	}
++	BL_LOG_ERR("exit on signal(%d)\n", signal);
++	exit(1);
++}
++
+ /* Daemon */
+ int main(int argc, char **argv)
+ {
+-	int fd, pidfd = -1, opt, dflag = 0, fg = 0, ret = 1;
++	int opt, dflag = 0, fg = 0, ret = 1;
+ 	struct stat statbuf;
+ 	char pidbuf[64];
+ 
+@@ -421,23 +491,33 @@ int main(int argc, char **argv)
+ 		write(pidfd, pidbuf, strlen(pidbuf));
+ 	}
+ 
++	signal(SIGINT, sig_die);
++	signal(SIGTERM, sig_die);
++	signal(SIGHUP, SIG_IGN);
++
+ 	if (dflag) {
+ 		bl_discover_devices();
+ 		exit(0);
+ 	}
+ 
+-	/* open pipe file */
+-	fd = open(BL_PIPE_FILE, O_RDWR);
+-	if (fd < 0) {
+-		BL_LOG_ERR("open pipe file %s error\n", BL_PIPE_FILE);
++	if ((bl_watch_fd = inotify_init()) < 0) {
++		BL_LOG_ERR("init inotify failed %s\n", strerror(errno));
+ 		exit(1);
+ 	}
+ 
++	/* open pipe file */
++	bl_watch_dir(RPCPIPE_DIR, &rpc_pipedir_wfd);
++	bl_watch_dir(NFSPIPE_DIR, &nfs_pipedir_wfd);
++
++	bl_pipe_fd = open(BL_PIPE_FILE, O_RDWR);
++	if (bl_pipe_fd < 0)
++		BL_LOG_ERR("open pipe file %s failed: %s\n", BL_PIPE_FILE, strerror(errno));
++
+ 	while (1) {
+ 		/* discover device when needed */
+ 		bl_discover_devices();
+ 
+-		ret = bl_run_disk_inquiry_process(fd);
++		ret = bl_event_helper();
+ 		if (ret < 0) {
+ 			/* what should we do with process error? */
+ 			BL_LOG_ERR("inquiry process return %d\n", ret);
+diff --git a/utils/blkmapd/device-process.c b/utils/blkmapd/device-process.c
+index 652a7a8..5fe3dff 100644
+--- a/utils/blkmapd/device-process.c
++++ b/utils/blkmapd/device-process.c
+@@ -49,28 +49,6 @@
+ 
+ #include "device-discovery.h"
+ 
+-static char *pretty_sig(char *sig, uint32_t siglen)
+-{
+-	static char rs[100];
+-	uint64_t sigval;
+-	unsigned int i;
+-
+-	if (siglen <= sizeof(sigval)) {
+-		sigval = 0;
+-		for (i = 0; i < siglen; i++)
+-			sigval |= ((unsigned char *)sig)[i] << (i * 8);
+-		sprintf(rs, "0x%0llx", (unsigned long long) sigval);
+-	} else {
+-		if (siglen > sizeof rs - 4) {
+-			siglen = sizeof rs - 4;
+-			sprintf(&rs[siglen], "...");
+-		} else
+-			rs[siglen] = '\0';
+-		memcpy(rs, sig, siglen);
+-	}
+-	return rs;
+-}
+-
+ uint32_t *blk_overflow(uint32_t * p, uint32_t * end, size_t nbytes)
+ {
+ 	uint32_t *q = p + ((nbytes + 3) >> 2);
+@@ -109,9 +87,6 @@ static int decode_blk_signature(uint32_t **pp, uint32_t * end,
+ 		 * for mapping, then thrown away.
+ 		 */
+ 		comp->bs_string = (char *)p;
+-		BL_LOG_INFO("%s: si_comps[%d]: bs_length %d, bs_string %s\n",
+-			    __func__, i, siglen,
+-			    pretty_sig(comp->bs_string, siglen));
+ 		p += ((siglen + 3) >> 2);
+ 	}
+ 	*pp = p;
+@@ -152,10 +127,6 @@ read_cmp_blk_sig(struct bl_disk *disk, int fd, struct bl_sig_comp *comp)
+ 	}
+ 
+ 	ret = memcmp(sig, comp->bs_string, siglen);
+-	if (!ret)
+-		BL_LOG_INFO("%s: %s sig %s at %lld\n", __func__, dev_name,
+-			    pretty_sig(sig, siglen),
+-			    (long long)comp->bs_offset);
+ 
+  out:
+ 	if (sig)
+diff --git a/utils/exportfs/exportfs.c b/utils/exportfs/exportfs.c
+index a3323d7..9f79541 100644
+--- a/utils/exportfs/exportfs.c
++++ b/utils/exportfs/exportfs.c
+@@ -40,7 +40,7 @@ static void	unexportfs(char *arg, int verbose);
+ static void	exports_update(int verbose);
+ static void	dump(int verbose);
+ static void	error(nfs_export *exp, int err);
+-static void	usage(const char *progname);
++static void	usage(const char *progname, int n);
+ static void	validate_export(nfs_export *exp);
+ static int	matchhostname(const char *hostname1, const char *hostname2);
+ static void	export_d_read(const char *dname);
+@@ -105,11 +105,17 @@ main(int argc, char **argv)
+ 
+ 	export_errno = 0;
+ 
+-	while ((c = getopt(argc, argv, "aio:ruvf")) != EOF) {
++	while ((c = getopt(argc, argv, "afhio:ruv")) != EOF) {
+ 		switch(c) {
+ 		case 'a':
+ 			f_all = 1;
+ 			break;
++		case 'f':
++			force_flush = 1;
++			break;
++		case 'h':
++			usage(progname, 0);
++			break;
+ 		case 'i':
+ 			f_ignore = 1;
+ 			break;
+@@ -126,11 +132,8 @@ main(int argc, char **argv)
+ 		case 'v':
+ 			f_verbose = 1;
+ 			break;
+-		case 'f':
+-			force_flush = 1;
+-			break;
+ 		default:
+-			usage(progname);
++			usage(progname, 1);
+ 			break;
+ 		}
+ 	}
+@@ -723,8 +726,8 @@ error(nfs_export *exp, int err)
+ }
+ 
+ static void
+-usage(const char *progname)
++usage(const char *progname, int n)
+ {
+-	fprintf(stderr, "usage: %s [-aruv] [host:/path]\n", progname);
+-	exit(1);
++	fprintf(stderr, "usage: %s [-afhioruv] [host:/path]\n", progname);
++	exit(n);
+ }
+diff --git a/utils/gssd/gssd.h b/utils/gssd/gssd.h
+index 28a8206..86472a1 100644
+--- a/utils/gssd/gssd.h
++++ b/utils/gssd/gssd.h
+@@ -45,8 +45,8 @@
+ #define DNOTIFY_SIGNAL		(SIGRTMIN + 3)
+ 
+ #define GSSD_DEFAULT_CRED_DIR			"/tmp"
+-#define GSSD_USER_CRED_DIR			"/run/user"
+-#define GSSD_DEFAULT_CRED_PREFIX		"krb5cc_"
++#define GSSD_USER_CRED_DIR			"/run/user/%U"
++#define GSSD_DEFAULT_CRED_PREFIX		"krb5cc"
+ #define GSSD_DEFAULT_MACHINE_CRED_SUFFIX	"machine"
+ #define GSSD_DEFAULT_KEYTAB_FILE		"/etc/krb5.keytab"
+ #define GSSD_SERVICE_NAME			"nfs"
+@@ -81,8 +81,10 @@ struct clnt_info {
+ 	char			*protocol;
+ 	int			krb5_fd;
+ 	int			krb5_poll_index;
++	int			krb5_close_me;
+ 	int                     gssd_fd;
+ 	int                     gssd_poll_index;
++	int			gssd_close_me;
+ 	struct sockaddr_storage addr;
+ };
+ 
+diff --git a/utils/gssd/gssd.man b/utils/gssd/gssd.man
+index d8138fa..c74b7e8 100644
+--- a/utils/gssd/gssd.man
++++ b/utils/gssd/gssd.man
+@@ -103,9 +103,12 @@ where to look for the rpc_pipefs filesystem.  The default value is
+ .B -d directory
+ Tells
+ .B rpc.gssd
+-where to look for Kerberos credential files.  The default value is "/tmp".
+-This can also be a colon separated list of directories to be searched
+-for Kerberos credential files.  Note that if machine credentials are being
++where to look for Kerberos credential files.  The default value is
++"/tmp:/run/user/%U".
++This can also be a colon separated list of directories to be searched for
++Kerberos credential files.  The sequence "%U", if used, is replaced with
++the UID of the user for whom credentials are being searched.
++Note that if machine credentials are being
+ stored in files, then the first directory on this list is where the
+ machine credentials are stored.
+ .TP
+diff --git a/utils/gssd/gssd_main_loop.c b/utils/gssd/gssd_main_loop.c
+index cec09ea..ccf7fe5 100644
+--- a/utils/gssd/gssd_main_loop.c
++++ b/utils/gssd/gssd_main_loop.c
+@@ -55,16 +55,14 @@
+ #include "err_util.h"
+ 
+ extern struct pollfd *pollarray;
+-extern int pollsize;
++extern unsigned long pollsize;
+ 
+ #define POLL_MILLISECS	500
+ 
+ static volatile int dir_changed = 1;
+ 
+-static void dir_notify_handler(int sig, siginfo_t *si, void *data)
++static void dir_notify_handler(__attribute__((unused))int sig)
+ {
+-	printerr(2, "dir_notify_handler: sig %d si %p data %p\n", sig, si, data);
+-
+ 	dir_changed = 1;
+ }
+ 
+@@ -78,8 +76,10 @@ scan_poll_results(int ret)
+ 	{
+ 		i = clp->gssd_poll_index;
+ 		if (i >= 0 && pollarray[i].revents) {
+-			if (pollarray[i].revents & POLLHUP)
++			if (pollarray[i].revents & POLLHUP) {
++				clp->gssd_close_me = 1;
+ 				dir_changed = 1;
++			}
+ 			if (pollarray[i].revents & POLLIN)
+ 				handle_gssd_upcall(clp);
+ 			pollarray[clp->gssd_poll_index].revents = 0;
+@@ -89,8 +89,10 @@ scan_poll_results(int ret)
+ 		}
+ 		i = clp->krb5_poll_index;
+ 		if (i >= 0 && pollarray[i].revents) {
+-			if (pollarray[i].revents & POLLHUP)
++			if (pollarray[i].revents & POLLHUP) {
++				clp->krb5_close_me = 1;
+ 				dir_changed = 1;
++			}
+ 			if (pollarray[i].revents & POLLIN)
+ 				handle_krb5_upcall(clp);
+ 			pollarray[clp->krb5_poll_index].revents = 0;
+@@ -99,7 +101,7 @@ scan_poll_results(int ret)
+ 				break;
+ 		}
+ 	}
+-};
++}
+ 
+ static int
+ topdirs_add_entry(struct dirent *dent)
+@@ -119,11 +121,13 @@ topdirs_add_entry(struct dirent *dent)
+ 	}
+ 	snprintf(tdi->dirname, PATH_MAX, "%s/%s", pipefs_dir, dent->d_name);
+ 	tdi->fd = open(tdi->dirname, O_RDONLY);
+-	if (tdi->fd != -1) {
+-		fcntl(tdi->fd, F_SETSIG, DNOTIFY_SIGNAL);
+-		fcntl(tdi->fd, F_NOTIFY,
+-		      DN_CREATE|DN_DELETE|DN_MODIFY|DN_MULTISHOT);
++	if (tdi->fd == -1) {
++		printerr(0, "ERROR: failed to open %s\n", tdi->dirname);
++		free(tdi);
++		return -1;
+ 	}
++	fcntl(tdi->fd, F_SETSIG, DNOTIFY_SIGNAL);
++	fcntl(tdi->fd, F_NOTIFY, DN_CREATE|DN_DELETE|DN_MODIFY|DN_MULTISHOT);
+ 
+ 	TAILQ_INSERT_HEAD(&topdirs_list, tdi, list);
+ 	return 0;
+@@ -175,17 +179,52 @@ out_err:
+ 	return -1;
+ }
+ 
++#ifdef HAVE_PPOLL
++static void gssd_poll(struct pollfd *fds, unsigned long nfds)
++{
++	sigset_t emptyset;
++	int ret;
++
++	sigemptyset(&emptyset);
++	ret = ppoll(fds, nfds, NULL, &emptyset);
++	if (ret < 0) {
++		if (errno != EINTR)
++			printerr(0, "WARNING: error return from poll\n");
++	} else if (ret == 0) {
++		printerr(0, "WARNING: unexpected timeout\n");
++	} else {
++		scan_poll_results(ret);
++	}
++}
++#else	/* !HAVE_PPOLL */
++static void gssd_poll(struct pollfd *fds, unsigned long nfds)
++{
++	int ret;
++
++	/* race condition here: dir_changed could be set before we
++	 * enter the poll, and we'd never notice if it weren't for the
++	 * timeout. */
++	ret = poll(fds, nfds, POLL_MILLISECS);
++	if (ret < 0) {
++		if (errno != EINTR)
++			printerr(0, "WARNING: error return from poll\n");
++	} else if (ret == 0) {
++		/* timeout */
++	} else { /* ret > 0 */
++		scan_poll_results(ret);
++	}
++}
++#endif	/* !HAVE_PPOLL */
++
+ void
+ gssd_run()
+ {
+-	int			ret;
+-	struct sigaction	dn_act;
++	struct sigaction	dn_act = {
++		.sa_handler = dir_notify_handler
++	};
+ 	sigset_t		set;
+ 
+-	/* Taken from linux/Documentation/dnotify.txt: */
+-	dn_act.sa_sigaction = dir_notify_handler;
+ 	sigemptyset(&dn_act.sa_mask);
+-	dn_act.sa_flags = SA_SIGINFO;
+ 	sigaction(DNOTIFY_SIGNAL, &dn_act, NULL);
+ 
+ 	/* just in case the signal is blocked... */
+@@ -207,19 +246,7 @@ gssd_run()
+ 				exit(1);
+ 			}
+ 		}
+-		/* race condition here: dir_changed could be set before we
+-		 * enter the poll, and we'd never notice if it weren't for the
+-		 * timeout. */
+-		ret = poll(pollarray, pollsize, POLL_MILLISECS);
+-		if (ret < 0) {
+-			if (errno != EINTR)
+-				printerr(0,
+-					 "WARNING: error return from poll\n");
+-		} else if (ret == 0) {
+-			/* timeout */
+-		} else { /* ret > 0 */
+-			scan_poll_results(ret);
+-		}
++		gssd_poll(pollarray, pollsize);
+ 	}
+ 	topdirs_free_list();
+ 
+diff --git a/utils/gssd/gssd_proc.c b/utils/gssd/gssd_proc.c
+index aa39435..336f3e9 100644
+--- a/utils/gssd/gssd_proc.c
++++ b/utils/gssd/gssd_proc.c
+@@ -104,7 +104,7 @@
+ 
+ struct pollfd * pollarray;
+ 
+-int pollsize;  /* the size of pollaray (in pollfd's) */
++unsigned long pollsize;  /* the size of pollaray (in pollfd's) */
+ 
+ /*
+  * convert a presentation address string to a sockaddr_storage struct. Returns
+@@ -340,6 +340,25 @@ process_clnt_dir_files(struct clnt_info * clp)
+ 	char	gname[PATH_MAX];
+ 	char	info_file_name[PATH_MAX];
+ 
++	if (clp->gssd_close_me) {
++		printerr(2, "Closing 'gssd' pipe for %s\n", clp->dirname);
++		close(clp->gssd_fd);
++		memset(&pollarray[clp->gssd_poll_index], 0,
++			sizeof(struct pollfd));
++		clp->gssd_fd = -1;
++		clp->gssd_poll_index = -1;
++		clp->gssd_close_me = 0;
++	}
++	if (clp->krb5_close_me) {
++		printerr(2, "Closing 'krb5' pipe for %s\n", clp->dirname);
++		close(clp->krb5_fd);
++		memset(&pollarray[clp->krb5_poll_index], 0,
++			sizeof(struct pollfd));
++		clp->krb5_fd = -1;
++		clp->krb5_poll_index = -1;
++		clp->krb5_close_me = 0;
++	}
++
+ 	if (clp->gssd_fd == -1) {
+ 		snprintf(gname, sizeof(gname), "%s/gssd", clp->dirname);
+ 		clp->gssd_fd = open(gname, O_RDWR);
+@@ -918,23 +937,6 @@ int create_auth_rpc_client(struct clnt_info *clp,
+ 	goto out;
+ }
+ 
+-static char *
+-user_cachedir(char *dirname, uid_t uid)
+-{
+-	struct passwd *pw;
+-	char *ptr;
+-
+-	if ((pw = getpwuid(uid)) == NULL) {
+-		printerr(0, "user_cachedir: Failed to find '%d' uid"
+-			    " for cache directory\n");
+-		return NULL;
+-	}
+-	ptr = malloc(strlen(dirname)+strlen(pw->pw_name)+2);
+-	if (ptr)
+-		sprintf(ptr, "%s/%s", dirname, pw->pw_name);
+-
+-	return ptr;
+-}
+ /*
+  * this code uses the userland rpcsec gss library to create a krb5
+  * context on behalf of the kernel
+@@ -949,7 +951,7 @@ process_krb5_upcall(struct clnt_info *clp, uid_t uid, int fd, char *tgtname,
+ 	gss_buffer_desc		token;
+ 	char			**credlist = NULL;
+ 	char			**ccname;
+-	char			**dirname, *dir, *userdir;
++	char			**dirname;
+ 	int			create_resp = -1;
+ 	int			err, downcall_err = -EACCES;
+ 
+@@ -992,22 +994,7 @@ process_krb5_upcall(struct clnt_info *clp, uid_t uid, int fd, char *tgtname,
+ 				service == NULL)) {
+ 		/* Tell krb5 gss which credentials cache to use */
+ 		for (dirname = ccachesearch; *dirname != NULL; dirname++) {
+-			/* See if the user name is needed */
+-			if (strncmp(*dirname, GSSD_USER_CRED_DIR, 
+-					strlen(GSSD_USER_CRED_DIR)) == 0) {
+-				userdir = user_cachedir(*dirname, uid);
+-				if (userdir == NULL) 
+-					continue;
+-				dir = userdir;
+-			} else
+-				dir = *dirname;
+-
+-			err = gssd_setup_krb5_user_gss_ccache(uid, clp->servername, dir);
+-
+-			if (userdir) {
+-				free(userdir);
+-				userdir = NULL;
+-			}
++			err = gssd_setup_krb5_user_gss_ccache(uid, clp->servername, *dirname);
+ 			if (err == -EKEYEXPIRED)
+ 				downcall_err = -EKEYEXPIRED;
+ 			else if (!err)
+diff --git a/utils/gssd/krb5_util.c b/utils/gssd/krb5_util.c
+index 887d118..60ba594 100644
+--- a/utils/gssd/krb5_util.c
++++ b/utils/gssd/krb5_util.c
+@@ -139,7 +139,7 @@ int limit_to_legacy_enctypes = 0;
+ 
+ static int select_krb5_ccache(const struct dirent *d);
+ static int gssd_find_existing_krb5_ccache(uid_t uid, char *dirname,
+-		struct dirent **d);
++		const char **cctype, struct dirent **d);
+ static int gssd_get_single_krb5_cred(krb5_context context,
+ 		krb5_keytab kt, struct gssd_k5_kt_princ *ple, int nocache);
+ static int query_krb5_ccache(const char* cred_cache, char **ret_princname,
+@@ -178,7 +178,8 @@ select_krb5_ccache(const struct dirent *d)
+  * code otherwise.
+  */
+ static int
+-gssd_find_existing_krb5_ccache(uid_t uid, char *dirname, struct dirent **d)
++gssd_find_existing_krb5_ccache(uid_t uid, char *dirname,
++			       const char **cctype, struct dirent **d)
+ {
+ 	struct dirent **namelist;
+ 	int n;
+@@ -192,6 +193,7 @@ gssd_find_existing_krb5_ccache(uid_t uid, char *dirname, struct dirent **d)
+ 	int score, best_match_score = 0, err = -EACCES;
+ 
+ 	memset(&best_match_stat, 0, sizeof(best_match_stat));
++	*cctype = NULL;
+ 	*d = NULL;
+ 	n = scandir(dirname, &namelist, select_krb5_ccache, 0);
+ 	if (n < 0) {
+@@ -203,41 +205,51 @@ gssd_find_existing_krb5_ccache(uid_t uid, char *dirname, struct dirent **d)
+ 		for (i = 0; i < n; i++) {
+ 			snprintf(statname, sizeof(statname),
+ 				 "%s/%s", dirname, namelist[i]->d_name);
+-			printerr(3, "CC file '%s' being considered, "
++			printerr(3, "CC '%s' being considered, "
+ 				 "with preferred realm '%s'\n",
+ 				 statname, preferred_realm ?
+ 					preferred_realm : "<none selected>");
+-			snprintf(buf, sizeof(buf), "FILE:%s/%s", dirname, 
+-					namelist[i]->d_name);
+ 			if (lstat(statname, &tmp_stat)) {
+-				printerr(0, "Error doing stat on file '%s'\n",
++				printerr(0, "Error doing stat on '%s'\n",
+ 					 statname);
+ 				free(namelist[i]);
+ 				continue;
+ 			}
+ 			/* Only pick caches owned by the user (uid) */
+ 			if (tmp_stat.st_uid != uid) {
+-				printerr(3, "CC file '%s' owned by %u, not %u\n",
++				printerr(3, "CC '%s' owned by %u, not %u\n",
+ 					 statname, tmp_stat.st_uid, uid);
+ 				free(namelist[i]);
+ 				continue;
+ 			}
+-			if (!S_ISREG(tmp_stat.st_mode)) {
+-				printerr(3, "CC file '%s' is not a regular file\n",
++			if (!S_ISREG(tmp_stat.st_mode) &&
++			    !S_ISDIR(tmp_stat.st_mode)) {
++				printerr(3, "CC '%s' is not a regular "
++					 "file or directory\n",
+ 					 statname);
+ 				free(namelist[i]);
+ 				continue;
+ 			}
+ 			if (uid == 0 && !root_uses_machine_creds && 
+ 				strstr(namelist[i]->d_name, "_machine_")) {
+-				printerr(3, "CC file '%s' not available to root\n",
++				printerr(3, "CC '%s' not available to root\n",
+ 					 statname);
+ 				free(namelist[i]);
+ 				continue;
+ 			}
++			if (S_ISDIR(tmp_stat.st_mode)) {
++				*cctype = "DIR";
++			} else
++			if (S_ISREG(tmp_stat.st_mode)) {
++				*cctype = "FILE";
++			} else {
++				continue;
++			}
++			snprintf(buf, sizeof(buf), "%s:%s/%s", *cctype,
++				 dirname, namelist[i]->d_name);
+ 			if (!query_krb5_ccache(buf, &princname, &realm)) {
+-				printerr(3, "CC file '%s' is expired or corrupt\n",
+-					 statname);
++				printerr(3, "CC '%s' is expired or corrupt\n",
++					 buf);
+ 				free(namelist[i]);
+ 				err = -EKEYEXPIRED;
+ 				continue;
+@@ -248,9 +260,9 @@ gssd_find_existing_krb5_ccache(uid_t uid, char *dirname, struct dirent **d)
+ 					strcmp(realm, preferred_realm) == 0) 
+ 				score++;
+ 
+-			printerr(3, "CC file '%s'(%s@%s) passed all checks and"
++			printerr(3, "CC '%s'(%s@%s) passed all checks and"
+ 				    " has mtime of %u\n",
+-				 statname, princname, realm, 
++				 buf, princname, realm, 
+ 				 tmp_stat.st_mtime);
+ 			/*
+ 			 * if more than one match is found, return the most
+@@ -284,10 +296,11 @@ gssd_find_existing_krb5_ccache(uid_t uid, char *dirname, struct dirent **d)
+ 				else {
+ 					free(namelist[i]);
+ 				}
+-				printerr(3, "CC file '%s/%s' is our "
++				printerr(3, "CC '%s:%s/%s' is our "
+ 					    "current best match "
+ 					    "with mtime of %u\n",
+-					 dirname, best_match_dir->d_name,
++					 cctype, dirname,
++					 best_match_dir->d_name,
+ 					 best_match_stat.st_mtime);
+ 			}
+ 			free(princname);
+@@ -1023,20 +1036,43 @@ err_cache:
+  * Returns 0 if a ccache was found, and a non-zero error code otherwise.
+  */
+ int
+-gssd_setup_krb5_user_gss_ccache(uid_t uid, char *servername, char *dirname)
++gssd_setup_krb5_user_gss_ccache(uid_t uid, char *servername, char *dirpattern)
+ {
+-	char			buf[MAX_NETOBJ_SZ];
++	char			buf[MAX_NETOBJ_SZ], dirname[PATH_MAX];
++	const char		*cctype;
+ 	struct dirent		*d;
+-	int			err;
++	int			err, i, j;
+ 
+ 	printerr(2, "getting credentials for client with uid %u for "
+ 		    "server %s\n", uid, servername);
+-	memset(buf, 0, sizeof(buf));
+-	err = gssd_find_existing_krb5_ccache(uid, dirname, &d);
++
++	for (i = 0, j = 0; dirpattern[i] != '\0'; i++) {
++		switch (dirpattern[i]) {
++		case '%':
++			switch (dirpattern[i + 1]) {
++			case '%':
++				dirname[j++] = dirpattern[i];
++				i++;
++				break;
++			case 'U':
++				j += sprintf(dirname + j, "%lu",
++					     (unsigned long) uid);
++				i++;
++				break;
++			}
++			break;
++		default:
++			dirname[j++] = dirpattern[i];
++			break;
++		}
++	}
++	dirname[j] = '\0';
++
++	err = gssd_find_existing_krb5_ccache(uid, dirname, &cctype, &d);
+ 	if (err)
+ 		return err;
+ 
+-	snprintf(buf, sizeof(buf), "FILE:%s/%s", dirname, d->d_name);
++	snprintf(buf, sizeof(buf), "%s:%s/%s", cctype, dirname, d->d_name);
+ 	free(d);
+ 
+ 	printerr(2, "using %s as credentials cache for client with "
+diff --git a/utils/mount/Makefile.am b/utils/mount/Makefile.am
+index 7627854..5810936 100644
+--- a/utils/mount/Makefile.am
++++ b/utils/mount/Makefile.am
+@@ -1,7 +1,7 @@
+ ## Process this file with automake to produce Makefile.in
+ 
+ # These binaries go in /sbin (not /usr/sbin), and that cannot be
+-# overriden at config time.
++# overridden at config time.
+ sbindir = /sbin
+ 
+ man8_MANS	= mount.nfs.man umount.nfs.man
+diff --git a/utils/mount/mount_libmount.c b/utils/mount/mount_libmount.c
+index e8f17a9..701d41e 100644
+--- a/utils/mount/mount_libmount.c
++++ b/utils/mount/mount_libmount.c
+@@ -140,14 +140,14 @@ static int try_mount(struct libmnt_context *cxt, int bg)
+ 	return ret;
+ }
+ 
+-/* returns: error = -1, success = 0 , unknown = 1 */
++/* returns: error = -1, success = 1 , not vers4 == 0 */
+ static int is_vers4(struct libmnt_context *cxt)
+ {
+ 	struct libmnt_fs *fs = mnt_context_get_fs(cxt);
+ 	struct libmnt_table *tb = NULL;
+ 	const char *src = mnt_context_get_source(cxt),
+ 		   *tgt = mnt_context_get_target(cxt);
+-	int rc = 1;
++	int rc = 0;
+ 
+ 	if (!src || !tgt)
+ 		return -1;
+@@ -163,7 +163,7 @@ static int is_vers4(struct libmnt_context *cxt)
+ 	if (fs) {
+ 		const char *type = mnt_fs_get_fstype(fs);
+ 		if (type && strcmp(type, "nfs4") == 0)
+-			rc = 0;
++			rc = 1;
+ 	}
+ 	mnt_free_table(tb);
+ 	return rc;
+@@ -173,6 +173,7 @@ static int umount_main(struct libmnt_context *cxt, int argc, char **argv)
+ {
+ 	int rc, c;
+ 	char *spec = NULL, *opts = NULL;
++	int ret = EX_FAIL;
+ 
+ 	static const struct option longopts[] = {
+ 		{ "force", 0, 0, 'f' },
+@@ -209,8 +210,6 @@ static int umount_main(struct libmnt_context *cxt, int argc, char **argv)
+ 
+ 	if (mnt_context_set_target(cxt, spec))
+ 		goto err;
+-	if (mnt_context_set_fstype_pattern(cxt, "nfs,nfs4"))	/* restrict filesystems */
+-		goto err;
+ 
+ 	/* read mtab/fstab, evaluate permissions, etc. */
+ 	rc = mnt_context_prepare_umount(cxt);
+@@ -220,6 +219,14 @@ static int umount_main(struct libmnt_context *cxt, int argc, char **argv)
+ 		goto err;
+ 	}
+ 
++	if (mnt_context_get_fstype(cxt) &&
++	    !mnt_match_fstype(mnt_context_get_fstype(cxt), "nfs,nfs4")) {
++
++		nfs_error(_("%s: %s: is not an NFS filesystem"), progname, spec);
++		ret = EX_USAGE;
++		goto err;
++	}
++
+ 	opts = retrieve_mount_options(mnt_context_get_fs(cxt));
+ 
+ 	if (!mnt_context_is_lazy(cxt)) {
+@@ -244,6 +251,7 @@ static int umount_main(struct libmnt_context *cxt, int argc, char **argv)
+ 			nfs_umount23(spec, "tcp,v3");
+ 	}
+ 
++	ret = EX_FILEIO;
+ 	rc = mnt_context_do_umount(cxt);	/* call umount(2) syscall */
+ 	mnt_context_finalize_mount(cxt);	/* mtab update */
+ 
+@@ -252,12 +260,10 @@ static int umount_main(struct libmnt_context *cxt, int argc, char **argv)
+ 		umount_error(rc, spec);
+ 		goto err;
+ 	}
+-
+-	free(opts);
+-	return EX_SUCCESS;
++	ret = EX_SUCCESS;
+ err:
+ 	free(opts);
+-	return EX_FAIL;
++	return ret;
+ }
+ 
+ static int mount_main(struct libmnt_context *cxt, int argc, char **argv)
+diff --git a/utils/mount/nfs.man b/utils/mount/nfs.man
+index 87e27e1..da6d6d3 100644
+--- a/utils/mount/nfs.man
++++ b/utils/mount/nfs.man
+@@ -460,6 +460,13 @@ by other clients, but can impact application and server performance.
+ .IP
+ The DATA AND METADATA COHERENCE section contains a
+ detailed discussion of these trade-offs.
++.TP 1.5i
++.BR fsc " / " nofsc
++Enable/Disables the cache of (read-only) data pages to the local disk 
++using the FS-Cache facility. See cachefilesd(8) 
++and <kernel_soruce>/Documentation/filesystems/caching
++for detail on how to configure the FS-Cache facility.
++Default value is nofsc.
+ .SS "Options for NFS versions 2 and 3 only"
+ Use these options, along with the options in the above subsection,
+ for NFS versions 2 and 3 only.
+diff --git a/utils/mount/stropts.c b/utils/mount/stropts.c
+index e09aa7c..0aa9a75 100644
+--- a/utils/mount/stropts.c
++++ b/utils/mount/stropts.c
+@@ -665,6 +665,7 @@ static int nfs_try_mount_v3v2(struct nfsmount_info *mi)
+ 		case ECONNREFUSED:
+ 		case EOPNOTSUPP:
+ 		case EHOSTUNREACH:
++		case ETIMEDOUT:
+ 			continue;
+ 		default:
+ 			goto out;
+@@ -752,6 +753,7 @@ static int nfs_try_mount_v4(struct nfsmount_info *mi)
+ 		switch (errno) {
+ 		case ECONNREFUSED:
+ 		case EHOSTUNREACH:
++		case ETIMEDOUT:
+ 			continue;
+ 		default:
+ 			goto out;
+diff --git a/utils/mountd/v4root.c b/utils/mountd/v4root.c
+index 708eb61..726b50d 100644
+--- a/utils/mountd/v4root.c
++++ b/utils/mountd/v4root.c
+@@ -62,6 +62,8 @@ void set_pseudofs_security(struct exportent *pseudo, struct exportent *source)
+ 
+ 	if (source->e_flags & NFSEXP_INSECURE_PORT)
+ 		pseudo->e_flags |= NFSEXP_INSECURE_PORT;
++	if ((source->e_flags & NFSEXP_ROOTSQUASH) == 0)
++		pseudo->e_flags &= ~NFSEXP_ROOTSQUASH;
+ 	for (se = source->e_secinfo; se->flav; se++) {
+ 		struct sec_entry *new;
+ 
+@@ -92,7 +94,8 @@ v4root_create(char *path, nfs_export *export)
+ 	exp = export_create(&eep, 0);
+ 	if (exp == NULL)
+ 		return NULL;
+-	xlog(D_CALL, "v4root_create: path '%s'", exp->m_export.e_path);
++	xlog(D_CALL, "v4root_create: path '%s' flags 0x%x", 
++		exp->m_export.e_path, exp->m_export.e_flags);
+ 	return &exp->m_export;
+ }
+ 
+diff --git a/utils/nfsdcld/nfsdcld.c b/utils/nfsdcld/nfsdcld.c
+index e7af4e3..473d069 100644
+--- a/utils/nfsdcld/nfsdcld.c
++++ b/utils/nfsdcld/nfsdcld.c
+@@ -102,8 +102,8 @@ cld_set_caps(void)
+ 	}
+ 
+ 	/* prune the bounding set to nothing */
+-	for (i = 0; i <= CAP_LAST_CAP; ++i) {
+-		ret = prctl(PR_CAPBSET_DROP, i);
++	for (i = 0; prctl(PR_CAPBSET_READ, i, 0, 0, 0) >= 0 ; ++i) {
++		ret = prctl(PR_CAPBSET_DROP, i, 0, 0, 0);
+ 		if (ret) {
+ 			xlog(L_ERROR, "Unable to prune capability %lu from "
+ 				      "bounding set: %m", i);
+diff --git a/utils/nfsidmap/nfsidmap.c b/utils/nfsidmap/nfsidmap.c
+index cf11551..e14543c 100644
+--- a/utils/nfsidmap/nfsidmap.c
++++ b/utils/nfsidmap/nfsidmap.c
+@@ -12,6 +12,7 @@
+ 
+ #include <unistd.h>
+ #include "xlog.h"
++#include "conffile.h"
+ 
+ int verbose = 0;
+ char *usage="Usage: %s [-v] [-c || [-u|-g|-r key] || [-t timeout] key desc]";
+@@ -26,6 +27,10 @@ char *usage="Usage: %s [-v] [-c || [-u|-g|-r key] || [-t timeout] key desc]";
+ #define DEFAULT_KEYRING "id_resolver"
+ #endif
+ 
++#ifndef PATH_IDMAPDCONF
++#define PATH_IDMAPDCONF "/etc/idmapd.conf"
++#endif
++
+ static int keyring_clear(char *keyring);
+ 
+ #define UIDKEYS 0x1
+@@ -267,6 +272,13 @@ int main(int argc, char **argv)
+ 		}
+ 	}
+ 
++	if (nfs4_init_name_mapping(PATH_IDMAPDCONF))  {
++		xlog_err("Unable to create name to user id mappings.");
++		return 1;
++	}
++	if (!verbose)
++		verbose = conf_get_num("General", "Verbosity", 0);
++
+ 	if (keystr) {
+ 		rc = key_revoke(keystr, keymask);
+ 		return rc;		
+diff --git a/utils/osd_login/Makefile.am b/utils/osd_login/Makefile.am
+index adc493a..20c2d8c 100644
+--- a/utils/osd_login/Makefile.am
++++ b/utils/osd_login/Makefile.am
+@@ -1,12 +1,9 @@
+ ## Process this file with automake to produce Makefile.in
+ 
+-OSD_LOGIN_FILES= osd_login
++# These binaries go in /sbin (not /usr/sbin), and that cannot be
++# overridden at config time.
++sbindir = /sbin
+ 
+-EXTRA_DIST= $(OSD_LOGIN_FILES)
+-
+-all-local: $(OSD_LOGIN_FILES)
+-
+-install-data-hook:
+-	$(INSTALL) --mode 755 osd_login $(DESTDIR)/sbin/osd_login
++sbin_SCRIPTS = osd_login
+ 
+ MAINTAINERCLEANFILES = Makefile.in
