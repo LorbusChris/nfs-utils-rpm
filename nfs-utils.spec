@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.6
-Release: 12%{?dist}
+Release: 13%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -64,7 +64,7 @@ Provides: start-statd = %{epoch}:%{version}-%{release}
 License: MIT and GPLv2 and GPLv2+ and BSD
 Buildroot: %{_tmppath}/%{name}-%{version}-root
 Requires: rpcbind, sed, gawk, sh-utils, fileutils, textutils, grep
-Requires: kmod, keyutils
+Requires: kmod, keyutils, quota
 BuildRequires: libgssglue-devel libevent-devel libcap-devel
 BuildRequires: libnfsidmap-devel libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
@@ -301,6 +301,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Oct 15 2012 Steve Dickson <steved@redhat.com> 1.2.6-13
+- Added a Requires for the quota package (bz 866225)
+
 * Thu Aug 23 2012 Steve Dickson <steved@redhat.com> 1.2.6-12 
 - Added FedFS support by added a BuildRequires for fedfs-utils-devel
 - Introduce new systemd-rpm macros (bz 850227)
