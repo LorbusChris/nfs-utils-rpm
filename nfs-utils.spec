@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.6
-Release: 13%{?dist}
+Release: 14%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -301,6 +301,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Thu Nov  8 2012 Steve Dickson <steved@redhat.com> 1.2.6-14
+- Allow the service to start when RPCNFSDCOUNT is comment out. (bz 870143)
+
 * Mon Oct 15 2012 Steve Dickson <steved@redhat.com> 1.2.6-13
 - Added a Requires for the quota package (bz 866225)
 
