@@ -62,7 +62,6 @@ Provides: sm-notify   = %{epoch}:%{version}-%{release}
 Provides: start-statd = %{epoch}:%{version}-%{release}
 
 License: MIT and GPLv2 and GPLv2+ and BSD
-Buildroot: %{_tmppath}/%{name}-%{version}-root
 Requires: rpcbind, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: kmod, keyutils, quota
 BuildRequires: libgssglue-devel libevent-devel libcap-devel
@@ -128,7 +127,6 @@ CFLAGS="`echo $RPM_OPT_FLAGS $ARCH_OPT_FLAGS $PIE -D_FILE_OFFSET_BITS=64`"
 make %{?_smp_mflags} all
 
 %install
-rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT{/sbin,/usr/sbin,/lib/systemd/system}
 mkdir -p $RPM_BUILD_ROOT/usr/lib/%{name}/scripts
 mkdir -p ${RPM_BUILD_ROOT}%{_mandir}/man8
@@ -168,9 +166,6 @@ mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/statd/sm
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/statd/sm.bak
 mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/v4recovery
 mkdir -p $RPM_BUILD_ROOT/etc/exports.d
-
-%clean
-rm -rf $RPM_BUILD_ROOT
 
 %pre
 
@@ -255,7 +250,6 @@ if /sbin/chkconfig --level 3 rpcsvcgssd ; then
 fi
 
 %files
-%defattr(-,root,root)
 %config(noreplace) /etc/sysconfig/nfs
 %config(noreplace) /etc/nfsmount.conf
 %dir /etc/exports.d
@@ -303,6 +297,7 @@ fi
 %changelog
 * Thu Nov  8 2012 Steve Dickson <steved@redhat.com> 1.2.6-14
 - Allow the service to start when RPCNFSDCOUNT is comment out. (bz 870143)
+- Removed some old cruft from the spec file (bz 226198)
 
 * Mon Oct 15 2012 Steve Dickson <steved@redhat.com> 1.2.6-13
 - Added a Requires for the quota package (bz 866225)
