@@ -1,14 +1,14 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
-Version: 1.2.6
-Release: 14%{?dist}
+Version: 1.2.7
+Release: 0%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i486 i586 i686 athlon ppc sparcv9
 
-Source0: http://www.kernel.org/pub/linux/utils/nfs/%{name}-%{version}.tar.bz2
+Source0: http://www.kernel.org/pub/linux/utils/nfs-utils/%{name}-%{version}.tar.bz2
 
 Source9: id_resolver.conf
 Source10: nfs.sysconfig
@@ -35,8 +35,6 @@ Source50: nfs-lock.preconfig
 Source51: nfs-server.preconfig
 Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
-
-Patch001: nfs-utils-1.2.7-rc5.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -69,7 +67,7 @@ BuildRequires: libnfsidmap-devel libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, glibc-headers, device-mapper-devel
 BuildRequires: krb5-devel, tcp_wrappers-devel, libmount-devel
-BuildRequires: fedfs-utils-devel >= 0.8.0-7
+BuildRequires: fedfs-utils-devel >= 0.8.0-7, sqlite-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
 Requires: libnfsidmap libgssglue libevent
@@ -92,8 +90,6 @@ This package also contains the mount.nfs and umount.nfs program.
 
 %prep
 %setup -q
-
-%patch001 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -285,6 +281,7 @@ fi
 /usr/sbin/nfsiostat
 /usr/sbin/nfsidmap
 /usr/sbin/blkmapd
+/usr/sbin/nfsdcltrack
 %{_mandir}/*/*
 /lib/systemd/system/*
 /usr/lib/%{name}/scripts/*
@@ -295,6 +292,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Fri Nov  9 2012 Steve Dickson <steved@redhat.com> 1.2.7-0
+- Updated to latest upstream release: nfs-utils.1.2.7
+
 * Thu Nov  8 2012 Steve Dickson <steved@redhat.com> 1.2.6-14
 - Allow the service to start when RPCNFSDCOUNT is comment out. (bz 870143)
 - Removed some old cruft from the spec file (bz 226198)
