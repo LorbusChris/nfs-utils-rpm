@@ -93,6 +93,8 @@ This package also contains the mount.nfs and umount.nfs program.
 %prep
 %setup -q
 
+%patch001 -p1
+
 %patch100 -p1
 %patch101 -p1
 %patch102 -p1
