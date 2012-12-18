@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.7
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -36,7 +36,7 @@ Source51: nfs-server.preconfig
 Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
 
-Patch001: nfs-utils.1.2.7-rc1.patch
+Patch001: nfs-utils.1.2.8.rc2.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -296,8 +296,11 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Dec 17 2012 Steve Dickson <steved@redhat.com> 1.2.7-2
+- Update to latest upstream RC release: nfs-utils.1.2.8-rc2
+
 * Wed Nov 28 2012 Steve Dickson <steved@redhat.com> 1.2.7-1
-- Update to latest upstream RC release: nfs-utils.1.2.7-rc1
+- Update to latest upstream RC release: nfs-utils.1.2.8-rc1
 
 * Fri Nov  9 2012 Steve Dickson <steved@redhat.com> 1.2.7-0
 - Updated to latest upstream release: nfs-utils.1.2.7
