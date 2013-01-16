@@ -36,7 +36,7 @@ Source51: nfs-server.preconfig
 Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
 
-Patch001: nfs-utils.1.2.8.rc2.patch
+Patch001: nfs-utils.1.2.8.rc3.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -299,6 +299,7 @@ fi
 
 %changelog
 * Wed Jan 16 2013 Steve Dickson <steved@redhat.com> 1.2.7-3
+- Updated to latest upstream RC release: nfs-utils.1.2.8-rc3
 - Took ownership of /usr/lib/nfs-utils (bz 894535)
 
 * Mon Dec 17 2012 Steve Dickson <steved@redhat.com> 1.2.7-2
