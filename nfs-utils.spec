@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.7
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -256,6 +256,8 @@ fi
 %dir /var/lib/nfs/v4recovery
 %dir /var/lib/nfs/rpc_pipefs
 %dir /var/lib/nfs
+%dir /usr/lib/%{name}/scripts
+%dir /usr/lib/%{name}
 %dir %attr(700,rpcuser,rpcuser) /var/lib/nfs/statd
 %dir %attr(700,rpcuser,rpcuser) /var/lib/nfs/statd/sm
 %dir %attr(700,rpcuser,rpcuser) /var/lib/nfs/statd/sm.bak
@@ -296,6 +298,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Wed Jan 16 2013 Steve Dickson <steved@redhat.com> 1.2.7-3
+- Took ownership of /usr/lib/nfs-utils (bz 894535)
+
 * Mon Dec 17 2012 Steve Dickson <steved@redhat.com> 1.2.7-2
 - Update to latest upstream RC release: nfs-utils.1.2.8-rc2
 
