@@ -36,7 +36,7 @@ Source51: nfs-server.preconfig
 Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
 
-Patch001: nfs-utils.1.2.8.rc3.patch
+Patch001: nfs-utils.1.2.8.rc4.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -299,6 +299,7 @@ fi
 
 %changelog
 * Mon Mar 25 2013 Steve Dickson <steved@redhat.com> 1.2.7-5
+- Updated to latest upstream RC release: nfs-utils.1.2.8-rc4
 - Added nfs-lock.service to After line in nfs-server.service (bz 914792)
 
 * Thu Feb 14 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:1.2.7-4
