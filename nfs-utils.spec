@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.7
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -298,6 +298,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Mar 25 2013 Steve Dickson <steved@redhat.com> 1.2.7-5
+- Added nfs-lock.service to After line in nfs-server.service (bz 914792)
+
 * Thu Feb 14 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:1.2.7-4
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_19_Mass_Rebuild
 
