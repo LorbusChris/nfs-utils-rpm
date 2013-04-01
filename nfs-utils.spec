@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.7
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -37,6 +37,7 @@ Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
 
 Patch001: nfs-utils.1.2.8.rc4.patch
+Patch002: nfs-utils-1.2.7-nfsd-v41.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -94,6 +95,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %setup -q
 
 %patch001 -p1
+%patch002 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -298,6 +300,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Apr  1 2013 Steve Dickson <steved@redhat.com> 1.2.7-6
+- Added v4.1 support rpc.nfsd (bz 947073)
+
 * Mon Mar 25 2013 Steve Dickson <steved@redhat.com> 1.2.7-5
 - Updated to latest upstream RC release: nfs-utils.1.2.8-rc4
 - Added nfs-lock.service to After line in nfs-server.service (bz 914792)
