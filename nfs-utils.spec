@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.8
-Release: 0%{?dist}
+Release: 1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -35,6 +35,8 @@ Source50: nfs-lock.preconfig
 Source51: nfs-server.preconfig
 Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
+
+Patch001: nfs-utils-1-2-9-rc1.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -90,6 +92,8 @@ This package also contains the mount.nfs and umount.nfs program.
 
 %prep
 %setup -q
+
+%patch001 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -294,6 +298,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue May  7 2013 Steve Dickson <steved@redhat.com> 1.2.8-1
+- Updated to the latest upstream RC release: nfs-utils.1.2.9-rc1
+
 * Tue Apr 23 2013 Steve Dickson <steved@redhat.com> 1.2.8-0
 - Updated to latest upstream release: 1.2.8
 - Removed the libgssglue dependency
