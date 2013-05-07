@@ -10,5 +10,5 @@ EnvironmentFile=-/etc/sysconfig/nfs
 ExecStart=/usr/sbin/rpc.svcgssd $RPCSVCGSSDARGS
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=nfs.target
 
