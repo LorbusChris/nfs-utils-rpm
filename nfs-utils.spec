@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.8
-Release: 1.1%{?dist}
+Release: 2.0%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -36,7 +36,7 @@ Source51: nfs-server.preconfig
 Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
 
-Patch001: nfs-utils-1-2-9-rc1.patch
+Patch001: nfs-utils-1-2-9-rc2.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -298,6 +298,10 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Fri May 31 2013 Steve Dickson <steved@redhat.com> 1.2.8-2.0
+- Update to latest upstream RC release: nfs-utils.1.2.9-rc1
+- Added GSS_USE_PROXY variable to nfs.sysconfig (bz 967112)
+
 * Tue May  7 2013 Steve Dickson <steved@redhat.com> 1.2.8-1.1
   systemd: nfs-server.service needs to be split up (bz 769879)
 
