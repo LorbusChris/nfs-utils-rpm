@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.8
-Release: 2.0%{?dist}
+Release: 2.1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -25,7 +25,7 @@ Source19: nfs.target
 # 
 # Services that need to be restarted.
 #
-%define nfs_start_services %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} %{SOURCE18} 
+%define nfs_start_services %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} %{SOURCE18} %{SOURCE19}
  
 Source20: var-lib-nfs-rpc_pipefs.mount
 Source21: proc-fs-nfsd.mount
@@ -128,6 +128,7 @@ make %{?_smp_mflags} all
 
 %install
 mkdir -p $RPM_BUILD_ROOT{/sbin,/usr/sbin,/lib/systemd/system}
+mkdir -p $RPM_BUILD_ROOT%{_prefix}/lib/systemd/system/nfs.target.wants
 mkdir -p $RPM_BUILD_ROOT/usr/lib/%{name}/scripts
 mkdir -p ${RPM_BUILD_ROOT}%{_mandir}/man8
 mkdir -p $RPM_BUILD_ROOT/etc/sysconfig
@@ -204,9 +205,14 @@ fi
 %post
 if [ $1 -eq 1 ]; then
 	# Package install,
-	%systemd_post nfs-lock.service 
+	/bin/systemctl enable nfs.target >/dev/null 2>&1 || :
+	/bin/systemctl enable nfs-lock.service >/dev/null 2>&1 || : 
+	/bin/systemctl start nfs-lock.service >/dev/null 2>&1 || :
 else
 	# Package upgrade
+	if /bin/systemctl --quiet is-enabled nfs.target ; then
+		/bin/systemctl reenable nfs.target >/dev/null 2>&1 || :
+	fi
 	if /bin/systemctl --quiet is-enabled nfs-lock.service ; then
 		/bin/systemctl reenable nfs-lock.service >/dev/null 2>&1 || :
 	fi
@@ -298,6 +304,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Tue Jul 23 2013 Steve Dickson <steved@redhat.com> 1.2.8-2.1
+- Make sure nfs.target is enabled (bz 970595)
+
 * Fri May 31 2013 Steve Dickson <steved@redhat.com> 1.2.8-2.0
 - Update to latest upstream RC release: nfs-utils.1.2.9-rc1
 - Added GSS_USE_PROXY variable to nfs.sysconfig (bz 967112)
