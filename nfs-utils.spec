@@ -306,6 +306,7 @@ fi
 %changelog
 * Tue Jul 23 2013 Steve Dickson <steved@redhat.com> 1.2.8-2.1
 - Make sure nfs.target is enabled (bz 970595)
+- Fix nfs server reloads (bz 951247)
 
 * Fri May 31 2013 Steve Dickson <steved@redhat.com> 1.2.8-2.0
 - Update to latest upstream RC release: nfs-utils.1.2.9-rc1
