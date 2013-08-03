@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.8
-Release: 3.0%{?dist}
+Release: 4.0%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -304,6 +304,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Sat Aug 03 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:1.2.8-4.0
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
+
 * Tue Jul 23 2013 Steve Dickson <steved@redhat.com> 1.2.8-3.0
 - Updated to latest upstream RC release: nfs-utils-1-2-9-rc3
 
