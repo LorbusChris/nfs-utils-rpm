@@ -36,7 +36,7 @@ Source51: nfs-server.preconfig
 Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
 
-Patch001: nfs-utils-1-2-9-rc3.patch
+Patch001: nfs-utils-1-2-9-rc4.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -304,6 +304,9 @@ fi
 %attr(4755,root,root)   /sbin/umount.nfs4
 
 %changelog
+* Mon Aug 19 2013 Steve Dickson <steved@redhat.com> 1.2.8-4.0
+- Updated to latest upstream RC release: nfs-utils-1-2-9-rc4
+
 * Sat Aug 03 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:1.2.8-4.0
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
 
