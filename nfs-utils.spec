@@ -2,13 +2,13 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.8
-Release: 4.0%{?dist}
+Release: 4.1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i486 i586 i686 athlon ppc sparcv9
 
-Source0: http://www.kernel.org/pub/linux/utils/nfs-utils/%{name}-%{version}.tar.bz2
+Source0: http://sourceforge.net/projects/nfs/files/nfs-utils/%{version}/%{name}-%{version}.tar.bz2
 
 Source9: id_resolver.conf
 Source10: nfs.sysconfig
@@ -127,62 +127,69 @@ CFLAGS="`echo $RPM_OPT_FLAGS $ARCH_OPT_FLAGS $PIE -D_FILE_OFFSET_BITS=64`"
 make %{?_smp_mflags} all
 
 %install
-mkdir -p $RPM_BUILD_ROOT{/sbin,/usr/sbin,/lib/systemd/system}
-mkdir -p $RPM_BUILD_ROOT%{_prefix}/lib/systemd/system/nfs.target.wants
-mkdir -p $RPM_BUILD_ROOT/usr/lib/%{name}/scripts
+rm -rf $RPM_BUILD_ROOT/*
+
+mkdir -p $RPM_BUILD_ROOT%/sbin
+mkdir -p $RPM_BUILD_ROOT%{_sbindir}
+mkdir -p $RPM_BUILD_ROOT%{_unitdir}
+mkdir -p $RPM_BUILD_ROOT%{_unitdir}/nfs.target.wants
+mkdir -p $RPM_BUILD_ROOT%{_libexecdir}/%{name}/scripts
 mkdir -p ${RPM_BUILD_ROOT}%{_mandir}/man8
-mkdir -p $RPM_BUILD_ROOT/etc/sysconfig
-mkdir -p $RPM_BUILD_ROOT/etc/request-key.d
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/request-key.d
 mkdir -p $RPM_BUILD_ROOT/lib/modprobe.d/
 make DESTDIR=$RPM_BUILD_ROOT install
-install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT/usr/sbin
-install -m 644 utils/mount/nfsmount.conf  $RPM_BUILD_ROOT/etc
-install -m 644 %{SOURCE9} $RPM_BUILD_ROOT/etc/request-key.d
-install -m 644 %{SOURCE10} $RPM_BUILD_ROOT/etc/sysconfig/nfs
+install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT%{_sbindir}
+install -m 644 utils/mount/nfsmount.conf  $RPM_BUILD_ROOT%{_sysconfdir}
+install -m 644 %{SOURCE9} $RPM_BUILD_ROOT%{_sysconfdir}/request-key.d
+install -m 644 %{SOURCE10} $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/nfs
 
 for service in %{nfs_services} ; do
-	install -m 644 $service $RPM_BUILD_ROOT/lib/systemd/system
+	install -m 644 $service $RPM_BUILD_ROOT%{_unitdir}
 done
 
 for service in %{nfs_automounts} ; do
-	install -m 644 $service $RPM_BUILD_ROOT/lib/systemd/system
+	install -m 644 $service $RPM_BUILD_ROOT%{_unitdir}
 done
 for config in %{nfs_configs} ; do
-	install -m 755 $config $RPM_BUILD_ROOT/usr/lib/%{name}/scripts
+	install -m 755 $config $RPM_BUILD_ROOT%{_libexecdir}/%{name}/scripts
 done
 
-cd $RPM_BUILD_ROOT/lib/systemd/system
+cd $RPM_BUILD_ROOT%{_unitdir}
 ln -s nfs-idmap.service rpcidmapd.service
 ln -s nfs-lock.service nfslock.service
 ln -s nfs-secure-server.service rpcsvcgssd.service
 ln -s nfs-secure.service rpcgssd.service
 ln -s nfs-server.service nfs.service
 
-mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/rpc_pipefs
+mkdir -p $RPM_BUILD_ROOT%{_sharedstatedir}/nfs/rpc_pipefs
 
-touch $RPM_BUILD_ROOT/var/lib/nfs/rmtab
-mv $RPM_BUILD_ROOT/usr/sbin/rpc.statd $RPM_BUILD_ROOT/sbin
+touch $RPM_BUILD_ROOT%{_sharedstatedir}/nfs/rmtab
+mv $RPM_BUILD_ROOT%{_sbindir}/rpc.statd $RPM_BUILD_ROOT/sbin
 
-mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/statd/sm
-mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/statd/sm.bak
-mkdir -p $RPM_BUILD_ROOT/var/lib/nfs/v4recovery
-mkdir -p $RPM_BUILD_ROOT/etc/exports.d
+mkdir -p $RPM_BUILD_ROOT%{_sharedstatedir}/nfs/statd/sm
+mkdir -p $RPM_BUILD_ROOT%{_sharedstatedir}/nfs/statd/sm.bak
+mkdir -p $RPM_BUILD_ROOT%{_sharedstatedir}/nfs/v4recovery
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/exports.d
+
+%clean
+rm -rf $RPM_BUILD_ROOT/*
 
 %pre
 
 # move files so the running service will have this applied as well
 for x in gssd svcgssd idmapd ; do
     if [ -f /var/lock/subsys/rpc.$x ]; then
-        mv /var/lock/subsys/rpc.$x /var/lock/subsys/rpc$x
+		mv /var/lock/subsys/rpc.$x /var/lock/subsys/rpc$x
     fi
 done
 
 /usr/sbin/useradd -l -c "RPC Service User" -r \
-        -s /sbin/nologin -u 29 -d /var/lib/nfs rpcuser 2>/dev/null || :
+		-s /sbin/nologin -u 29 -d /var/lib/nfs rpcuser 2>/dev/null || :
 /usr/sbin/groupadd -g 29 rpcuser 2>/dev/null || :
 
 # Using the 16-bit value of -2 for the nfsnobody uid and gid
-%define nfsnobody_uid   65534
+%define nfsnobody_uid	65534
 
 # Create nfsnobody gid as long as it does not already exist
 cat /etc/group | cut -d':' -f 1 | grep --quiet nfsnobody 2>/dev/null
@@ -196,7 +203,7 @@ fi
 cat /etc/passwd | cut -d':' -f 1 | grep --quiet nfsnobody 2>/dev/null
 if [ "$?" -eq 1 ]; then
     /usr/sbin/useradd -l -c "Anonymous NFS User" -r -g %{nfsnobody_uid} \
-        -s /sbin/nologin -u %{nfsnobody_uid} -d /var/lib/nfs nfsnobody 2>/dev/null || :
+		-s /sbin/nologin -u %{nfsnobody_uid} -d /var/lib/nfs nfsnobody 2>/dev/null || :
 else
 
    /usr/sbin/usermod -u %{nfsnobody_uid} -g %{nfsnobody_uid} nfsnobody 2>/dev/null || :
@@ -238,7 +245,7 @@ fi
 if [ $1 -ge 1 ]; then
 	# Package upgrade, not uninstall
 	for service in %(sed 's!\S*/!!g' <<< '%{nfs_start_services}') ; do
-    	/bin/systemctl try-restart $service >/dev/null 2>&1 || :
+		/bin/systemctl try-restart $service >/dev/null 2>&1 || :
 	done
 fi
 /bin/systemctl --system daemon-reload >/dev/null 2>&1 || :
@@ -256,54 +263,58 @@ if /sbin/chkconfig --level 3 rpcsvcgssd ; then
 fi
 
 %files
+%defattr(-,root,root,-)
 %config(noreplace) /etc/sysconfig/nfs
 %config(noreplace) /etc/nfsmount.conf
-%dir /etc/exports.d
-%dir /var/lib/nfs/v4recovery
-%dir /var/lib/nfs/rpc_pipefs
-%dir /var/lib/nfs
-%dir /usr/lib/%{name}/scripts
-%dir /usr/lib/%{name}
-%dir %attr(700,rpcuser,rpcuser) /var/lib/nfs/statd
-%dir %attr(700,rpcuser,rpcuser) /var/lib/nfs/statd/sm
-%dir %attr(700,rpcuser,rpcuser) /var/lib/nfs/statd/sm.bak
-%config(noreplace) %attr(644,rpcuser,rpcuser) /var/lib/nfs/state
-%config(noreplace) /var/lib/nfs/xtab
-%config(noreplace) /var/lib/nfs/etab
-%config(noreplace) /var/lib/nfs/rmtab
+%dir %{_sysconfdir}/exports.d
+%dir %{_sharedstatedir}/nfs/v4recovery
+%dir %{_sharedstatedir}/nfs/rpc_pipefs
+%dir %{_sharedstatedir}/nfs
+%dir %{_libexecdir}/%{name}/scripts
+%dir %{_libexecdir}/%{name}
+%dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd
+%dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd/sm
+%dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd/sm.bak
+%config(noreplace) %attr(644,rpcuser,rpcuser) %{_sharedstatedir}/nfs/state
+%config(noreplace) %{_sharedstatedir}/nfs/xtab
+%config(noreplace) %{_sharedstatedir}/nfs/etab
+%config(noreplace) %{_sharedstatedir}/nfs/rmtab
 %config(noreplace) %{_sysconfdir}/request-key.d/id_resolver.conf
 %doc linux-nfs/ChangeLog linux-nfs/KNOWNBUGS linux-nfs/NEW linux-nfs/README
 %doc linux-nfs/THANKS linux-nfs/TODO
 /sbin/rpc.statd
 /sbin/osd_login
-/usr/sbin/exportfs
-/usr/sbin/nfsstat
-/usr/sbin/rpcdebug
-/usr/sbin/rpc.mountd
-/usr/sbin/rpc.nfsd
-/usr/sbin/showmount
-/usr/sbin/rpc.idmapd
-/usr/sbin/rpc.gssd
-/usr/sbin/rpc.svcgssd
-/usr/sbin/gss_clnt_send_err
-/usr/sbin/gss_destroy_creds
-/usr/sbin/sm-notify
-/usr/sbin/start-statd
-/usr/sbin/mountstats
-/usr/sbin/nfsiostat
-/usr/sbin/nfsidmap
-/usr/sbin/blkmapd
-/usr/sbin/nfsdcltrack
+%{_sbindir}/exportfs
+%{_sbindir}/nfsstat
+%{_sbindir}/rpcdebug
+%{_sbindir}/rpc.mountd
+%{_sbindir}/rpc.nfsd
+%{_sbindir}/showmount
+%{_sbindir}/rpc.idmapd
+%{_sbindir}/rpc.gssd
+%{_sbindir}/rpc.svcgssd
+%{_sbindir}/gss_clnt_send_err
+%{_sbindir}/gss_destroy_creds
+%{_sbindir}/sm-notify
+%{_sbindir}/start-statd
+%{_sbindir}/mountstats
+%{_sbindir}/nfsiostat
+%{_sbindir}/nfsidmap
+%{_sbindir}/blkmapd
+%{_sbindir}/nfsdcltrack
 %{_mandir}/*/*
-/lib/systemd/system/*
-/usr/lib/%{name}/scripts/*
+%{_unitdir}/*
+%{_libexecdir}/%{name}/scripts/*
 
-%attr(4755,root,root)   /sbin/mount.nfs
-%attr(4755,root,root)   /sbin/mount.nfs4
-%attr(4755,root,root)   /sbin/umount.nfs
-%attr(4755,root,root)   /sbin/umount.nfs4
+%attr(4755,root,root)	/sbin/mount.nfs
+/sbin/mount.nfs4
+/sbin/umount.nfs
+/sbin/umount.nfs4
 
 %changelog
+* Thu Aug 22 2013 Steve Dickson <steved@redhat.com> 1.2.8-4.1
+- nfs-utils: fix a number of specfile problems
+
 * Mon Aug 19 2013 Steve Dickson <steved@redhat.com> 1.2.8-4.0
 - Updated to latest upstream RC release: nfs-utils-1-2-9-rc4
 
