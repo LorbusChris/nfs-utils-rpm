@@ -75,6 +75,7 @@ Requires: libtirpc >= 0.2.3-1 libblkid libcap libmount
 Requires(post): systemd-units
 Requires(preun): systemd-units
 Requires(postun): systemd-units
+Conflicts: gssproxy < 0.3.0-0
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
