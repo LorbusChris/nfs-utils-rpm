@@ -313,6 +313,7 @@ fi
 %changelog
 * Wed Jan 8 2014  Steve Dickson <steved@redhat.com> 1.2.9-2.0
 - Updated to latest upstream RC release: nfs-utils-1-2-10-rc2
+- Added Also=nfs.target to nfs-service file. (bz 1047972)
 
 * Wed Nov 20 2013 Steve Dickson <steved@redhat.com> 1.2.9-1.0
 - Updated to latest upstream RC release: nfs-utils-1-2-10-rc1
