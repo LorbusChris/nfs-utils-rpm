@@ -19,5 +19,5 @@ ExecReload=/usr/sbin/exportfs -r
 
 [Install]
 WantedBy=nfs.target
-ALso=nfs.target
+Also=nfs.target
 
