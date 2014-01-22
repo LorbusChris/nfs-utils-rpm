@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.2.9
-Release: 2.1%{?dist}
+Release: 3.0%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
