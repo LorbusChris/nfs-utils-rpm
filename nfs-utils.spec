@@ -36,7 +36,8 @@ Source51: nfs-server.preconfig
 Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
 
-Patch001: nfs-utils-1.2.10-rc2.patch
+Patch001: nfs-utils-1.2.10-rc3.patch
+Patch002: nfs-utils-1.2.9-gssd-home.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -95,6 +96,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %setup -q
 
 %patch001 -p1
+%patch002 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -311,6 +313,11 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Wed Jan 22 2014 Steve Dickson <steved@redhat.com> 1.2.9-3.0
+- Updated to latest upstream RC release: nfs-utils-1-2-10-rc3
+  - gssd: Improve first attempt at acquiring GSS credentials (bz 1055077)
+- gssd: set $HOME to prevent recursion (bz 1052902)
+
 * Fri Jan 10 2014 Steve Dickson <steved@redhat.com> 1.2.9-2.1
 - Fixed typo in nfs-service file. (bz 1047972)
 

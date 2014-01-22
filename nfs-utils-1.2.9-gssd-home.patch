@@ -1,0 +1,53 @@
+commit 2f682f25c642fcfe7c511d04bc9d67e732282348
+Author: Jeff Layton <jlayton@redhat.com>
+Date:   Wed Jan 22 11:17:19 2014 -0500
+
+    gssd: set $HOME to prevent recursion when home dirs are on kerberized NFS mount
+    
+    Some krb5 routines will attempt to access files in the user's home
+    directory. This is problematic for gssd when the user's homedir is
+    on a kerberized NFS mount as it will end up deadlocked.
+    
+    Fix this by setting $HOME unconditionally to "/".
+    
+    Fixes this Fedora bug:
+    
+        https://bugzilla.redhat.com/show_bug.cgi?id=1052902
+    
+    Reported-by: Enrico Scholz <rh-bugzilla@ensc.de>
+    Reported-by: nmorey <nmorey@kalray.eu>
+    Tested-by: Michael Young <m.a.young@durham.ac.uk>
+    Signed-off-by: Jeff Layton <jlayton@redhat.com>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff --git a/utils/gssd/gssd.c b/utils/gssd/gssd.c
+index fdad153..611ef1a 100644
+--- a/utils/gssd/gssd.c
++++ b/utils/gssd/gssd.c
+@@ -46,6 +46,7 @@
+ 
+ #include <unistd.h>
+ #include <err.h>
++#include <errno.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+@@ -161,6 +162,18 @@ main(int argc, char *argv[])
+ 		}
+ 	}
+ 
++	/*
++	 * Some krb5 routines try to scrape info out of files in the user's
++	 * home directory. This can easily deadlock when that homedir is on a
++	 * kerberized NFS mount. By setting $HOME unconditionally to "/", we
++	 * prevent this behavior in routines that use $HOME in preference to
++	 * the results of getpw*.
++	 */
++	if (setenv("HOME", "/", 1)) {
++		printerr(1, "Unable to set $HOME: %s\n", strerror(errno));
++		exit(1);
++	}
++
+ 	i = 0;
+ 	ccachesearch[i++] = strtok(ccachedir, ":");
+ 	do {

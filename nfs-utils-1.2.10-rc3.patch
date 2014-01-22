@@ -1,0 +1,1344 @@
+diff --git a/support/include/nfs/nfs.h b/support/include/nfs/nfs.h
+index 38db5b5..df4ad76 100644
+--- a/support/include/nfs/nfs.h
++++ b/support/include/nfs/nfs.h
+@@ -17,7 +17,6 @@
+ 
+ #define NFS4_MINMINOR 1
+ #define NFS4_MAXMINOR 2
+-#define NFS4_VERDEFAULT  0x1  /* minor verion 1 */
+ 
+ struct nfs_fh_len {
+ 	int		fh_size;
+diff --git a/support/include/nfslib.h b/support/include/nfslib.h
+index f210a06..ce4b14b 100644
+--- a/support/include/nfslib.h
++++ b/support/include/nfslib.h
+@@ -128,6 +128,10 @@ void			fputrmtabent(FILE *fp, struct rmtabent *xep, long *pos);
+ void			fendrmtabent(FILE *fp);
+ void			frewindrmtabent(FILE *fp);
+ 
++/* mydaemon */
++void mydaemon(int nochdir, int noclose, int *pipefds);
++void release_parent(int *pipefds);
++
+ /*
+  * wildmat borrowed from INN
+  */
+diff --git a/support/nfs/Makefile.am b/support/nfs/Makefile.am
+index 05c2fc4..fb9b8c1 100644
+--- a/support/nfs/Makefile.am
++++ b/support/nfs/Makefile.am
+@@ -2,7 +2,7 @@
+ 
+ noinst_LIBRARIES = libnfs.a
+ libnfs_a_SOURCES = exports.c rmtab.c xio.c rpcmisc.c rpcdispatch.c \
+-		   xlog.c xcommon.c wildmat.c nfsclient.c \
++		   xlog.c xcommon.c wildmat.c mydaemon.c nfsclient.c \
+ 		   nfsexport.c getfh.c nfsctl.c rpc_socket.c getport.c \
+ 		   svc_socket.c cacheio.c closeall.c nfs_mntent.c conffile.c \
+ 		   svc_create.c atomicio.c strlcpy.c strlcat.c
+diff --git a/support/nfs/exports.c b/support/nfs/exports.c
+index d18667f..819d6c4 100644
+--- a/support/nfs/exports.c
++++ b/support/nfs/exports.c
+@@ -366,7 +366,7 @@ mkexportent(char *hname, char *path, char *options)
+ 	ee.e_hostname = xstrdup(hname);
+ 
+ 	if (strlen(path) >= sizeof(ee.e_path)) {
+-		xlog(L_WARNING, "path name %s too long", path);
++		xlog(L_ERROR, "path name %s too long", path);
+ 		return NULL;
+ 	}
+ 	strncpy(ee.e_path, path, sizeof (ee.e_path));
+diff --git a/support/nfs/mydaemon.c b/support/nfs/mydaemon.c
+new file mode 100644
+index 0000000..e885d60
+--- /dev/null
++++ b/support/nfs/mydaemon.c
+@@ -0,0 +1,148 @@
++/*
++  mydaemon.c
++
++  Copyright (c) 2000 The Regents of the University of Michigan.
++  All rights reserved.
++
++  Copyright (c) 2000 Dug Song <dugsong@UMICH.EDU>.
++  Copyright (c) 2002 Andy Adamson <andros@UMICH.EDU>.
++  Copyright (c) 2002 Marius Aamodt Eriksen <marius@UMICH.EDU>.
++  Copyright (c) 2002 J. Bruce Fields <bfields@UMICH.EDU>.
++  Copyright (c) 2013 Jeff Layton <jlayton@redhat.com>
++
++  All rights reserved, all wrongs reversed.
++
++  Redistribution and use in source and binary forms, with or without
++  modification, are permitted provided that the following conditions
++  are met:
++
++  1. Redistributions of source code must retain the above copyright
++     notice, this list of conditions and the following disclaimer.
++  2. Redistributions in binary form must reproduce the above copyright
++     notice, this list of conditions and the following disclaimer in the
++     documentation and/or other materials provided with the distribution.
++  3. Neither the name of the University nor the names of its
++     contributors may be used to endorse or promote products derived
++     from this software without specific prior written permission.
++
++  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
++  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
++  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++  DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
++  FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
++  BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
++  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
++  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++*/
++
++#include <sys/param.h>
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <fcntl.h>
++#include <errno.h>
++#include <unistd.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <xlog.h>
++
++/**
++ * mydaemon - daemonize, but have parent wait to exit
++ * @nochdir:	skip chdir()'ing the child to / after forking if true
++ * @noclose:	skip closing stdin/stdout/stderr if true
++ * @pipefds:	pointer to 2 element array of pipefds
++ *
++ * This function is like daemon(), but with our own special sauce to delay
++ * the exit of the parent until the child is set up properly. A pipe is created
++ * between parent and child. The parent process will wait to exit until the
++ * child dies or writes a '1' on the pipe signaling that it started
++ * successfully.
++ */
++void
++mydaemon(int nochdir, int noclose, int *pipefds)
++{
++	int pid, status, tempfd;
++
++	if (pipe(pipefds) < 0) {
++		xlog_err("mydaemon: pipe() failed: errno %d (%s)\n",
++			 errno, strerror(errno));
++		exit(1);
++	}
++	if ((pid = fork ()) < 0) {
++		xlog_err("mydaemon: fork() failed: errno %d (%s)\n",
++			 errno, strerror(errno));
++		exit(1);
++	}
++
++	if (pid != 0) {
++		/*
++		 * Parent. Wait for status from child.
++		 */
++		close(pipefds[1]);
++		if (read(pipefds[0], &status, 1) != 1)
++			exit(1);
++		exit (0);
++	}
++	/* Child.	*/
++	close(pipefds[0]);
++	setsid ();
++	if (nochdir == 0) {
++		if (chdir ("/") == -1) {
++			xlog_err("mydaemon: chdir() failed: errno %d (%s)\n",
++				 errno, strerror(errno));
++			exit(1);
++		}
++	}
++
++	while (pipefds[1] <= 2) {
++		pipefds[1] = dup(pipefds[1]);
++		if (pipefds[1] < 0) {
++			xlog_err("mydaemon: dup() failed: errno %d (%s)\n",
++				 errno, strerror(errno));
++			exit(1);
++		}
++	}
++
++	if (noclose == 0) {
++		tempfd = open("/dev/null", O_RDWR);
++		if (tempfd >= 0) {
++			dup2(tempfd, 0);
++			dup2(tempfd, 1);
++			dup2(tempfd, 2);
++			close(tempfd);
++		} else {
++			xlog_err("mydaemon: can't open /dev/null: errno %d "
++				 "(%s)\n", errno, strerror(errno));
++			exit(1);
++		}
++	}
++
++	return;
++}
++
++/**
++ * release_parent - tell the parent that it can exit now
++ * @pipefds:	pipefd array that was previously passed to mydaemon()
++ *
++ * This function tells the parent process of mydaemon() that it's now clear
++ * to exit(0).
++ */
++void
++release_parent(int *pipefds)
++{
++	int status;
++
++	if (pipefds[1] > 0) {
++		if (write(pipefds[1], &status, 1) != 1) {
++			xlog_err("WARN: writing to parent pipe failed: errno "
++				 "%d (%s)\n", errno, strerror(errno));
++		}
++		close(pipefds[1]);
++		pipefds[1] = -1;
++	}
++}
++
+diff --git a/utils/exportfs/exportfs.c b/utils/exportfs/exportfs.c
+index da5fe21..8c86790 100644
+--- a/utils/exportfs/exportfs.c
++++ b/utils/exportfs/exportfs.c
+@@ -27,6 +27,10 @@
+ #include <netdb.h>
+ #include <errno.h>
+ #include <dirent.h>
++#include <limits.h>
++#include <time.h>
++
++#define INT_TO_LONG_THRESHOLD_SECS (INT_MAX - (60 * 60 * 24))
+ 
+ #include "sockaddr.h"
+ #include "misc.h"
+@@ -61,19 +65,19 @@ static int _lockfd = -1;
+  *	writes A+B		writes A+C
+  *
+  * The locking in support/export/xtab.c will prevent mountd from
+- * seeing a partially written version of etab, and will prevent 
++ * seeing a partially written version of etab, and will prevent
+  * the two writers above from writing simultaneously and
+  * corrupting etab, but to prevent problems like the above we
+  * need these additional lockfile() routines.
+  */
+-static void 
++static void
+ grab_lockfile()
+ {
+ 	_lockfd = open(lockfile, O_CREAT|O_RDWR, 0666);
+-	if (_lockfd != -1) 
++	if (_lockfd != -1)
+ 		lockf(_lockfd, F_LOCK, 0);
+ }
+-static void 
++static void
+ release_lockfile()
+ {
+ 	if (_lockfd != -1)
+@@ -267,7 +271,7 @@ exports_update(int verbose)
+ 		exports_update_one(exp, verbose);
+ 	}
+ }
+-			
++
+ /*
+  * export_all finds all entries and
+  *    marks them xtabent and mayexport so that they get exported
+@@ -282,7 +286,7 @@ export_all(int verbose)
+ 		for (exp = exportlist[i].p_head; exp; exp = exp->m_next) {
+ 			if (verbose)
+ 				printf("exporting %s:%s\n",
+-				       exp->m_client->m_hostname, 
++				       exp->m_client->m_hostname,
+ 				       exp->m_export.e_path);
+ 			exp->m_xtabent = 1;
+ 			exp->m_mayexport = 1;
+@@ -329,7 +333,7 @@ exportfs(char *arg, char *options, int verbose)
+ 		goto out;
+ 
+ 	if (verbose)
+-		printf("exporting %s:%s\n", exp->m_client->m_hostname, 
++		printf("exporting %s:%s\n", exp->m_client->m_hostname,
+ 			exp->m_export.e_path);
+ 	exp->m_xtabent = 1;
+ 	exp->m_mayexport = 1;
+@@ -387,7 +391,7 @@ unexportfs(char *arg, int verbose)
+ 			else
+ #endif
+ 				printf("unexporting %s:%s\n",
+-					exp->m_client->m_hostname, 
++					exp->m_client->m_hostname,
+ 					exp->m_export.e_path);
+ 		}
+ #if 0
+@@ -398,7 +402,7 @@ unexportfs(char *arg, int verbose)
+ 		exp->m_mayexport = 0;
+ 		success = 1;
+ 	}
+-	if (!success) 
++	if (!success)
+ 		xlog(L_ERROR, "Could not find '%s:%s' to unexport.", arg, path);
+ 
+ 	freeaddrinfo(ai);
+@@ -406,17 +410,33 @@ unexportfs(char *arg, int verbose)
+ 
+ static int can_test(void)
+ {
++	char buf[1024];
+ 	int fd;
+ 	int n;
+-	char *setup = "nfsd 0.0.0.0 2147483647 -test-client-\n";
++
+ 	fd = open("/proc/net/rpc/auth.unix.ip/channel", O_WRONLY);
+-	if ( fd < 0) return 0;
+-	n = write(fd, setup, strlen(setup));
++	if (fd < 0)
++		return 0;
++
++	/*
++	 * We introduce tolerance of 1 day to ensure that we use a
++	 * LONG_MAX for the expiry timestamp before it is actually
++	 * needed. To use LONG_MAX, the kernel code must have
++	 * commit 2f74f972  (sunrpc: prepare NFS for 2038).
++	 */
++	if (time(NULL) > INT_TO_LONG_THRESHOLD_SECS)
++		sprintf(buf, "nfsd 0.0.0.0 %ld -test-client-\n", LONG_MAX);
++	else
++		sprintf(buf, "nfsd 0.0.0.0 %d -test-client-\n", INT_MAX);
++
++	n = write(fd, buf, strlen(buf));
+ 	close(fd);
+ 	if (n < 0)
+ 		return 0;
++
+ 	fd = open("/proc/net/rpc/nfsd.export/channel", O_WRONLY);
+-	if ( fd < 0) return 0;
++	if (fd < 0)
++		return 0;
+ 	close(fd);
+ 	return 1;
+ }
+@@ -424,11 +444,17 @@ static int can_test(void)
+ static int test_export(char *path, int with_fsid)
+ {
+ 	char buf[1024];
++	char *bp = buf;
++	int len = sizeof(buf);
+ 	int fd, n;
+ 
+-	sprintf(buf, "-test-client- %s 3 %d 65534 65534 0\n",
+-		path,
+-		with_fsid ? NFSEXP_FSID : 0);
++	n = snprintf(buf, len, "-test-client- ");
++	bp += n;
++	len -= n;
++	qword_add(&bp, &len, path);
++	if (len < 1)
++		return 0;
++	snprintf(bp, len, " 3 %d 65534 65534 0\n", with_fsid ? NFSEXP_FSID : 0);
+ 	fd = open("/proc/net/rpc/nfsd.export/channel", O_WRONLY);
+ 	if (fd < 0)
+ 		return 0;
+@@ -596,7 +622,7 @@ export_d_read(const char *dname)
+ 		int fname_len;
+ 
+ 
+-		if (d->d_type != DT_UNKNOWN 
++		if (d->d_type != DT_UNKNOWN
+ 		    && d->d_type != DT_REG
+ 		    && d->d_type != DT_LNK)
+ 			continue;
+@@ -605,7 +631,7 @@ export_d_read(const char *dname)
+ 
+ #define _EXT_EXPORT_SIZ   (sizeof(_EXT_EXPORT) - 1)
+ 		namesz = strlen(d->d_name);
+-		if (!namesz 
++		if (!namesz
+ 		    || namesz < _EXT_EXPORT_SIZ + 1
+ 		    || strcmp(d->d_name + (namesz - _EXT_EXPORT_SIZ),
+ 			      _EXT_EXPORT))
+@@ -619,7 +645,7 @@ export_d_read(const char *dname)
+ 
+ 		export_read(fname);
+ 	}
+-		
++
+ 	for (i = 0; i < n; i++)
+ 		free(namelist[i]);
+ 	free(namelist);
+@@ -642,6 +668,9 @@ dumpopt(char c, char *fmt, ...)
+ static void
+ dump(int verbose, int export_format)
+ {
++	char buf[1024];
++	char *bp;
++	int len;
+ 	nfs_export	*exp;
+ 	struct exportent *ep;
+ 	int		htype;
+@@ -659,7 +688,15 @@ dump(int verbose, int export_format)
+ 			if (strlen(ep->e_path) > 14 && !export_format)
+ 				printf("%-14s\n\t\t%s", ep->e_path, hname);
+ 			else
+-				printf(((export_format)? "%s %s" : "%-14s\t%s"), ep->e_path, hname);
++				if (export_format) {
++					bp = buf;
++					len = sizeof(buf) - 1;
++					qword_add(&bp, &len, ep->e_path);
++					*bp = '\0';
++					printf("%s %s", buf, hname);
++				} else {
++					printf("%-14s\t%s", ep->e_path, hname);
++				}
+ 
+ 			if (!verbose && !export_format) {
+ 				printf("\n");
+@@ -697,8 +734,8 @@ dump(int verbose, int export_format)
+ 			if (ep->e_uuid)
+ 				c = dumpopt(c, "fsid=%s", ep->e_uuid);
+ 			if (ep->e_mountpoint)
+-				c = dumpopt(c, "mountpoint%s%s", 
+-					    ep->e_mountpoint[0]?"=":"", 
++				c = dumpopt(c, "mountpoint%s%s",
++					    ep->e_mountpoint[0]?"=":"",
+ 					    ep->e_mountpoint);
+ 			if (ep->e_anonuid != 65534)
+ 				c = dumpopt(c, "anonuid=%d", ep->e_anonuid);
+diff --git a/utils/gssd/gssd.c b/utils/gssd/gssd.c
+index 8ee478b..fdad153 100644
+--- a/utils/gssd/gssd.c
++++ b/utils/gssd/gssd.c
+@@ -54,6 +54,7 @@
+ #include "err_util.h"
+ #include "gss_util.h"
+ #include "krb5_util.h"
++#include "nfslib.h"
+ 
+ char pipefs_dir[PATH_MAX] = GSSD_PIPEFS_DIR;
+ char keytabfile[PATH_MAX] = GSSD_DEFAULT_KEYTAB_FILE;
+@@ -63,6 +64,7 @@ int  use_memcache = 0;
+ int  root_uses_machine_creds = 1;
+ unsigned int  context_timeout = 0;
+ char *preferred_realm = NULL;
++int pipefds[2] = { -1, -1 };
+ 
+ void
+ sig_die(int signal)
+@@ -187,8 +189,8 @@ main(int argc, char *argv[])
+ 	if (gssd_check_mechs() != 0)
+ 		errx(1, "Problem with gssapi library");
+ 
+-	if (!fg && daemon(0, 0) < 0)
+-		errx(1, "fork");
++	if (!fg)
++		mydaemon(0, 0, pipefds);
+ 
+ 	signal(SIGINT, sig_die);
+ 	signal(SIGTERM, sig_die);
+diff --git a/utils/gssd/gssd.h b/utils/gssd/gssd.h
+index 86472a1..56a18d6 100644
+--- a/utils/gssd/gssd.h
++++ b/utils/gssd/gssd.h
+@@ -67,12 +67,14 @@ extern int			use_memcache;
+ extern int			root_uses_machine_creds;
+ extern unsigned int 		context_timeout;
+ extern char			*preferred_realm;
++extern int			pipefds[2];
+ 
+ TAILQ_HEAD(clnt_list_head, clnt_info) clnt_list;
+ 
+ struct clnt_info {
+ 	TAILQ_ENTRY(clnt_info)	list;
+ 	char			*dirname;
++	char			*pdir;
+ 	int			dir_fd;
+ 	char			*servicename;
+ 	char			*servername;
+diff --git a/utils/gssd/gssd_main_loop.c b/utils/gssd/gssd_main_loop.c
+index ccf7fe5..9970028 100644
+--- a/utils/gssd/gssd_main_loop.c
++++ b/utils/gssd/gssd_main_loop.c
+@@ -53,6 +53,7 @@
+ 
+ #include "gssd.h"
+ #include "err_util.h"
++#include "nfslib.h"
+ 
+ extern struct pollfd *pollarray;
+ extern unsigned long pollsize;
+@@ -245,6 +246,9 @@ gssd_run()
+ 				/* Error msg is already printed */
+ 				exit(1);
+ 			}
++
++			/* release the parent after the initial dir scan */
++			release_parent(pipefds);
+ 		}
+ 		gssd_poll(pollarray, pollsize);
+ 	}
+diff --git a/utils/gssd/gssd_proc.c b/utils/gssd/gssd_proc.c
+index b48d163..33cfeb2 100644
+--- a/utils/gssd/gssd_proc.c
++++ b/utils/gssd/gssd_proc.c
+@@ -256,6 +256,7 @@ read_service_info(char *info_file_name, char **servicename, char **servername,
+ 	if ((nbytes = read(fd, buf, INFOBUFLEN)) == -1)
+ 		goto fail;
+ 	close(fd);
++	fd = -1;
+ 	buf[nbytes] = '\0';
+ 
+ 	numfields = sscanf(buf,"RPC server: %127s\n"
+@@ -322,6 +323,7 @@ destroy_client(struct clnt_info *clp)
+ 	if (clp->krb5_fd != -1) close(clp->krb5_fd);
+ 	if (clp->gssd_fd != -1) close(clp->gssd_fd);
+ 	free(clp->dirname);
++	free(clp->pdir);
+ 	free(clp->servicename);
+ 	free(clp->servername);
+ 	free(clp->protocol);
+@@ -403,11 +405,10 @@ process_clnt_dir_files(struct clnt_info * clp)
+ 		return -1;
+ 	snprintf(info_file_name, sizeof(info_file_name), "%s/info",
+ 			clp->dirname);
+-	if ((clp->servicename == NULL) &&
+-	     read_service_info(info_file_name, &clp->servicename,
+-				&clp->servername, &clp->prog, &clp->vers,
+-				&clp->protocol, (struct sockaddr *) &clp->addr))
+-		return -1;
++	if (clp->prog == 0)
++		read_service_info(info_file_name, &clp->servicename,
++				  &clp->servername, &clp->prog, &clp->vers,
++				  &clp->protocol, (struct sockaddr *) &clp->addr);
+ 	return 0;
+ }
+ 
+@@ -463,6 +464,9 @@ process_clnt_dir(char *dir, char *pdir)
+ 	if (!(clp = insert_new_clnt()))
+ 		goto fail_destroy_client;
+ 
++	if (!(clp->pdir = strdup(pdir)))
++		goto fail_destroy_client;
++
+ 	/* An extra for the '/', and an extra for the null */
+ 	if (!(clp->dirname = calloc(strlen(dir) + strlen(pdir) + 2, 1))) {
+ 		goto fail_destroy_client;
+@@ -527,7 +531,7 @@ update_old_clients(struct dirent **namelist, int size, char *pdir)
+ 		/* only compare entries in the global list that are from the
+ 		 * same pipefs parent directory as "pdir"
+ 		 */
+-		if (strcmp(clp->dirname, pdir) != 0) continue;
++		if (strcmp(clp->pdir, pdir) != 0) continue;
+ 
+ 		stillhere = 0;
+ 		for (i=0; i < size; i++) {
+@@ -1040,7 +1044,10 @@ process_krb5_upcall(struct clnt_info *clp, uid_t uid, int fd, char *tgtname,
+ 		return;
+ 	default:
+ 		/* Parent: just wait on child to exit and return */
+-		wait(&err);
++		do {
++			pid = wait(&err);
++		} while(pid == -1 && errno != -ECHILD);
++
+ 		if (WIFSIGNALED(err))
+ 			printerr(0, "WARNING: forked child was killed with signal %d\n",
+ 					WTERMSIG(err));
+@@ -1088,7 +1095,7 @@ process_krb5_upcall(struct clnt_info *clp, uid_t uid, int fd, char *tgtname,
+ 
+ 		/* Tell krb5 gss which credentials cache to use */
+ 		/* Try first to acquire credentials directly via GSSAPI */
+-		err = gssd_acquire_user_cred(uid, &gss_cred);
++		err = gssd_acquire_user_cred(&gss_cred);
+ 		if (!err)
+ 			create_resp = create_auth_rpc_client(clp, tgtname, &rpc_clnt, &auth, uid,
+ 							     AUTHTYPE_KRB5, gss_cred);
+@@ -1320,11 +1327,14 @@ handle_gssd_upcall(struct clnt_info *clp)
+ 		}
+ 	}
+ 
+-	if (strcmp(mech, "krb5") == 0)
++	if (strcmp(mech, "krb5") == 0 && clp->servername)
+ 		process_krb5_upcall(clp, uid, clp->gssd_fd, target, service);
+-	else
+-		printerr(0, "WARNING: handle_gssd_upcall: "
+-			    "received unknown gss mech '%s'\n", mech);
++	else {
++		if (clp->servername)
++			printerr(0, "WARNING: handle_gssd_upcall: "
++				 "received unknown gss mech '%s'\n", mech);
++		do_error_downcall(clp->gssd_fd, uid, -EACCES);
++	}
+ 
+ out:
+ 	free(lbuf);
+diff --git a/utils/gssd/krb5_util.c b/utils/gssd/krb5_util.c
+index 697d1d2..208c72b 100644
+--- a/utils/gssd/krb5_util.c
++++ b/utils/gssd/krb5_util.c
+@@ -1359,12 +1359,12 @@ gssd_k5_get_default_realm(char **def_realm)
+ }
+ 
+ static int
+-gssd_acquire_krb5_cred(gss_name_t name, gss_cred_id_t *gss_cred)
++gssd_acquire_krb5_cred(gss_cred_id_t *gss_cred)
+ {
+ 	OM_uint32 maj_stat, min_stat;
+ 	gss_OID_set_desc desired_mechs = { 1, &krb5oid };
+ 
+-	maj_stat = gss_acquire_cred(&min_stat, name, GSS_C_INDEFINITE,
++	maj_stat = gss_acquire_cred(&min_stat, GSS_C_NO_NAME, GSS_C_INDEFINITE,
+ 				    &desired_mechs, GSS_C_INITIATE,
+ 				    gss_cred, NULL, NULL);
+ 
+@@ -1379,31 +1379,12 @@ gssd_acquire_krb5_cred(gss_name_t name, gss_cred_id_t *gss_cred)
+ }
+ 
+ int
+-gssd_acquire_user_cred(uid_t uid, gss_cred_id_t *gss_cred)
++gssd_acquire_user_cred(gss_cred_id_t *gss_cred)
+ {
+-	OM_uint32 maj_stat, min_stat;
+-	gss_buffer_desc name_buf;
+-	gss_name_t name;
+-	char buf[11];
++	OM_uint32 min_stat;
+ 	int ret;
+ 
+-	ret = snprintf(buf, 11, "%u", uid);
+-	if (ret < 1 || ret > 10) {
+-		return -1;
+-	}
+-	name_buf.value = buf;
+-	name_buf.length = ret + 1;
+-
+-	maj_stat = gss_import_name(&min_stat, &name_buf,
+-				   GSS_C_NT_STRING_UID_NAME, &name);
+-	if (maj_stat != GSS_S_COMPLETE) {
+-		if (get_verbosity() > 0)
+-			pgsserr("gss_import_name",
+-				maj_stat, min_stat, &krb5oid);
+-		return -1;
+-	}
+-
+-	ret = gssd_acquire_krb5_cred(name, gss_cred);
++	ret = gssd_acquire_krb5_cred(gss_cred);
+ 
+ 	/* force validation of cred to check for expiry */
+ 	if (ret == 0) {
+@@ -1412,7 +1393,6 @@ gssd_acquire_user_cred(uid_t uid, gss_cred_id_t *gss_cred)
+ 			ret = -1;
+ 	}
+ 
+-	maj_stat = gss_release_name(&min_stat, &name);
+ 	return ret;
+ }
+ 
+@@ -1443,7 +1423,7 @@ limit_krb5_enctypes(struct rpc_gss_sec *sec)
+ 	int err = -1;
+ 
+ 	if (sec->cred == GSS_C_NO_CREDENTIAL) {
+-		err = gssd_acquire_krb5_cred(GSS_C_NO_NAME, &sec->cred);
++		err = gssd_acquire_krb5_cred(&sec->cred);
+ 		if (err)
+ 			return -1;
+ 	}
+diff --git a/utils/gssd/krb5_util.h b/utils/gssd/krb5_util.h
+index 3f0723e..a319588 100644
+--- a/utils/gssd/krb5_util.h
++++ b/utils/gssd/krb5_util.h
+@@ -35,7 +35,7 @@ int  gssd_refresh_krb5_machine_credential(char *hostname,
+ char *gssd_k5_err_msg(krb5_context context, krb5_error_code code);
+ void gssd_k5_get_default_realm(char **def_realm);
+ 
+-int gssd_acquire_user_cred(uid_t uid, gss_cred_id_t *gss_cred);
++int gssd_acquire_user_cred(gss_cred_id_t *gss_cred);
+ 
+ #ifdef HAVE_SET_ALLOWABLE_ENCTYPES
+ extern int limit_to_legacy_enctypes;
+diff --git a/utils/gssd/svcgssd.c b/utils/gssd/svcgssd.c
+index 8aee3b2..0385725 100644
+--- a/utils/gssd/svcgssd.c
++++ b/utils/gssd/svcgssd.c
+@@ -62,91 +62,7 @@
+ #include "gss_util.h"
+ #include "err_util.h"
+ 
+-/*
+- * mydaemon creates a pipe between the partent and child
+- * process. The parent process will wait until the
+- * child dies or writes a '1' on the pipe signaling
+- * that it started successfully.
+- */
+-int pipefds[2] = { -1, -1};
+-
+-static void
+-mydaemon(int nochdir, int noclose)
+-{
+-	int pid, status, tempfd;
+-
+-	if (pipe(pipefds) < 0) {
+-		printerr(1, "mydaemon: pipe() failed: errno %d (%s)\n",
+-			errno, strerror(errno));
+-		exit(1);
+-	}
+-	if ((pid = fork ()) < 0) {
+-		printerr(1, "mydaemon: fork() failed: errno %d (%s)\n",
+-			errno, strerror(errno));
+-		exit(1);
+-	}
+-
+-	if (pid != 0) {
+-		/*
+-		 * Parent. Wait for status from child.
+-		 */
+-		close(pipefds[1]);
+-		if (read(pipefds[0], &status, 1) != 1)
+-			exit(1);
+-		exit (0);
+-	}
+-	/* Child.	*/
+-	close(pipefds[0]);
+-	setsid ();
+-	if (nochdir == 0) {
+-		if (chdir ("/") == -1) {
+-			printerr(1, "mydaemon: chdir() failed: errno %d (%s)\n",
+-				errno, strerror(errno));
+-			exit(1);
+-		}
+-	}
+-
+-	while (pipefds[1] <= 2) {
+-		pipefds[1] = dup(pipefds[1]);
+-		if (pipefds[1] < 0) {
+-			printerr(1, "mydaemon: dup() failed: errno %d (%s)\n",
+-				errno, strerror(errno));
+-			exit(1);
+-		}
+-	}
+-
+-	if (noclose == 0) {
+-		tempfd = open("/dev/null", O_RDWR);
+-		if (tempfd >= 0) {
+-			dup2(tempfd, 0);
+-			dup2(tempfd, 1);
+-			dup2(tempfd, 2);
+-			close(tempfd);
+-		} else {
+-			printerr(1, "mydaemon: can't open /dev/null: errno %d "
+-				    "(%s)\n", errno, strerror(errno));
+-			exit(1);
+-		}
+-	}
+-
+-	return;
+-}
+-
+-static void
+-release_parent(void)
+-{
+-	int status;
+-
+-	if (pipefds[1] > 0) {
+-		if (write(pipefds[1], &status, 1) != 1) {
+-			printerr(1, 
+-				"WARN: writing to parent pipe failed: errno %d (%s)\n",
+-				errno, strerror(errno));
+-		}
+-		close(pipefds[1]);
+-		pipefds[1] = -1;
+-	}
+-}
++static int pipefds[2] = { -1, -1 };
+ 
+ void
+ sig_die(int signal)
+@@ -242,7 +158,7 @@ main(int argc, char *argv[])
+ 	}
+ 
+ 	if (!fg)
+-		mydaemon(0, 0);
++		mydaemon(0, 0, pipefds);
+ 
+ 	signal(SIGINT, sig_die);
+ 	signal(SIGTERM, sig_die);
+@@ -272,7 +188,7 @@ main(int argc, char *argv[])
+ 	}
+ 
+ 	if (!fg)
+-		release_parent();
++		release_parent(pipefds);
+ 
+ 	nfs4_init_name_mapping(NULL); /* XXX: should only do this once */
+ 	gssd_run();
+diff --git a/utils/idmapd/idmapd.c b/utils/idmapd/idmapd.c
+index b6c6231..c02849b 100644
+--- a/utils/idmapd/idmapd.c
++++ b/utils/idmapd/idmapd.c
+@@ -157,9 +157,6 @@ static int nfsdopenone(struct idmap_client *);
+ static void nfsdreopen_one(struct idmap_client *);
+ static void nfsdreopen(void);
+ 
+-void    mydaemon(int, int);
+-void    release_parent(void);
+-
+ static int verbose = 0;
+ #define DEFAULT_IDMAP_CACHE_EXPIRY 600 /* seconds */
+ static int cache_entry_expiration = 0;
+@@ -167,6 +164,7 @@ static char pipefsdir[PATH_MAX];
+ static char *nobodyuser, *nobodygroup;
+ static uid_t nobodyuid;
+ static gid_t nobodygid;
++static int pipefds[2] = { -1, -1 };
+ 
+ /* Used by conffile.c in libnfs.a */
+ char *conf_path;
+@@ -305,7 +303,7 @@ main(int argc, char **argv)
+ 		errx(1, "Unable to create name to user id mappings.");
+ 
+ 	if (!fg)
+-		mydaemon(0, 0);
++		mydaemon(0, 0, pipefds);
+ 
+ 	event_init();
+ 
+@@ -382,7 +380,7 @@ main(int argc, char **argv)
+ 	if (nfsdret != 0 && fd == 0)
+ 		xlog_err("main: Neither NFS client nor NFSd found");
+ 
+-	release_parent();
++	release_parent(pipefds);
+ 
+ 	if (event_dispatch() < 0)
+ 		xlog_err("main: event_dispatch returns errno %d (%s)",
+@@ -929,77 +927,3 @@ getfield(char **bpp, char *fld, size_t fldsz)
+ 
+ 	return (0);
+ }
+-/*
+- * mydaemon creates a pipe between the partent and child
+- * process. The parent process will wait until the
+- * child dies or writes a '1' on the pipe signaling
+- * that it started successfully.
+- */
+-int pipefds[2] = { -1, -1};
+-
+-void
+-mydaemon(int nochdir, int noclose)
+-{
+-	int pid, status, tempfd;
+-
+-	if (pipe(pipefds) < 0)
+-		err(1, "mydaemon: pipe() failed: errno %d", errno);
+-
+-	if ((pid = fork ()) < 0)
+-		err(1, "mydaemon: fork() failed: errno %d", errno);
+-
+-	if (pid != 0) {
+-		/*
+-		 * Parent. Wait for status from child.
+-		 */
+-		close(pipefds[1]);
+-		if (read(pipefds[0], &status, 1) != 1)
+-			exit(1);
+-		exit (0);
+-	}
+-	/* Child.	*/
+-	close(pipefds[0]);
+-	setsid ();
+-	if (nochdir == 0) {
+-		if (chdir ("/") == -1)
+-			err(1, "mydaemon: chdir() failed: errno %d", errno);
+-	}
+-
+-	while (pipefds[1] <= 2) {
+-		pipefds[1] = dup(pipefds[1]);
+-		if (pipefds[1] < 0)
+-			err(1, "mydaemon: dup() failed: errno %d", errno);
+-	}
+-
+-	if (noclose == 0) {
+-		tempfd = open("/dev/null", O_RDWR);
+-		if (tempfd < 0)
+-			tempfd = open("/", O_RDONLY);
+-		if (tempfd >= 0) {
+-			dup2(tempfd, 0);
+-			dup2(tempfd, 1);
+-			dup2(tempfd, 2);
+-			close(tempfd);
+-		} else {
+-			err(1, "mydaemon: can't open /dev/null: errno %d",
+-			       errno);
+-			exit(1);
+-		}
+-	}
+-
+-	return;
+-}
+-void
+-release_parent(void)
+-{
+-	int status;
+-
+-	if (pipefds[1] > 0) {
+-		if (write(pipefds[1], &status, 1) != 1) {
+-			err(1, "Writing to parent pipe failed: errno %d (%s)\n",
+-				errno, strerror(errno));
+-		}
+-		close(pipefds[1]);
+-		pipefds[1] = -1;
+-	}
+-}
+diff --git a/utils/idmapd/idmapd.man b/utils/idmapd/idmapd.man
+index 58ea9f2..185cd1b 100644
+--- a/utils/idmapd/idmapd.man
++++ b/utils/idmapd/idmapd.man
+@@ -12,10 +12,7 @@
+ .Nm rpc.idmapd
+ .Op Fl v
+ .Op Fl f
+-.Op Fl d Ar domain
+ .Op Fl p Ar path
+-.Op Fl U Ar username
+-.Op Fl G Ar groupname
+ .Op Fl c Ar path
+ .Sh DESCRIPTION
+ .Nm
+@@ -31,25 +28,10 @@ Increases the verbosity level (can be specified multiple times).
+ Runs
+ .Nm
+ in the foreground and prints all output to the terminal.
+-.It Fl d Ar domain
+-Set domain to
+-.Ar domain .
+-This is used internally by NFSv4 and is typically assigned by the
+-system administrator.  By default,
+-.Ar domain
+-is set to be the FQDN of the host, minus the hostname.
+ .It Fl p Ar path
+ Specifies the location of the RPC pipefs to be
+ .Ar path .
+ The default value is \&"/var/lib/nfs/rpc_pipefs\&".
+-.It Fl U Ar username
+-Specifies the NFSv4 nobody user to be
+-.Ar username .
+-The default value is \&"nobody\&".
+-.It Fl G Ar groupname
+-Specifies the NFSv4 nobody group to be
+-.Ar groupname .
+-The default value is \&"nobody\&".
+ .It Fl c Ar path
+ Use configuration file
+ .Ar path .
+@@ -59,11 +41,11 @@ Client-only: perform no idmapping for any NFS server, even if one is detected.
+ Server-only: perform no idmapping for any NFS client, even if one is detected.
+ .El
+ .Sh EXAMPLES
+-.Cm rpc.idmapd -d \&"citi.umich.edu\&" -f -vvv
++.Cm rpc.idmapd -f -vvv
+ .Pp
+ Runs
+ .Nm
+-with the domain \&"citi.umich.edu\&" in the foreground, printing all
++printing all
+ messages to console, and with a verbosity level of 3.
+ .\" This next request is for sections 2 and 3 function return values only.
+ .\" .Sh RETURN VALUES
+diff --git a/utils/mount/network.c b/utils/mount/network.c
+index e8e55a5..2fdd2c0 100644
+--- a/utils/mount/network.c
++++ b/utils/mount/network.c
+@@ -92,6 +92,9 @@ static const char *nfs_version_opttbl[] = {
+ 	"v4",
+ 	"vers",
+ 	"nfsvers",
++	"v4.0",
++	"v4.1",
++	"v4.2",
+ 	NULL,
+ };
+ 
+@@ -1242,6 +1245,8 @@ nfs_nfs_version(struct mount_options *options, unsigned long *version)
+ 				*version = tmp;
+ 				return 1;
+ 			}
++			nfs_error(_("%s: parsing error on 'vers=' option\n"),
++					progname);
+ 			return 0;
+ 		case PO_NOT_FOUND:
+ 			nfs_error(_("%s: parsing error on 'vers=' option\n"),
+@@ -1259,6 +1264,8 @@ nfs_nfs_version(struct mount_options *options, unsigned long *version)
+ 				*version = tmp;
+ 				return 1;
+ 			}
++			nfs_error(_("%s: parsing error on 'nfsvers=' option\n"),
++					progname);
+ 			return 0;
+ 		case PO_NOT_FOUND:
+ 			nfs_error(_("%s: parsing error on 'nfsvers=' option\n"),
+@@ -1269,6 +1276,11 @@ nfs_nfs_version(struct mount_options *options, unsigned long *version)
+ 					progname);
+ 			return 0;
+ 		}
++	case 5: /* v4.0 */
++	case 6: /* v4.1 */
++	case 7: /* v4.2 */
++		*version = 4;
++		return 1;
+ 	}
+ 
+ 	/*
+diff --git a/utils/mount/nfs.man b/utils/mount/nfs.man
+index 67031b5..ef09a31 100644
+--- a/utils/mount/nfs.man
++++ b/utils/mount/nfs.man
+@@ -288,6 +288,8 @@ attributes of a regular file before it requests
+ fresh attribute information from a server.
+ If this option is not specified, the NFS client uses
+ a 3-second minimum.
++See the DATA AND METADATA COHERENCE section
++for a full discussion of attribute caching.
+ .TP 1.5i
+ .BI acregmax= n
+ The maximum time (in seconds) that the NFS client caches
+@@ -295,6 +297,8 @@ attributes of a regular file before it requests
+ fresh attribute information from a server.
+ If this option is not specified, the NFS client uses
+ a 60-second maximum.
++See the DATA AND METADATA COHERENCE section
++for a full discussion of attribute caching.
+ .TP 1.5i
+ .BI acdirmin= n
+ The minimum time (in seconds) that the NFS client caches
+@@ -302,6 +306,8 @@ attributes of a directory before it requests
+ fresh attribute information from a server.
+ If this option is not specified, the NFS client uses
+ a 30-second minimum.
++See the DATA AND METADATA COHERENCE section
++for a full discussion of attribute caching.
+ .TP 1.5i
+ .BI acdirmax= n
+ The maximum time (in seconds) that the NFS client caches
+@@ -309,6 +315,8 @@ attributes of a directory before it requests
+ fresh attribute information from a server.
+ If this option is not specified, the NFS client uses
+ a 60-second maximum.
++See the DATA AND METADATA COHERENCE section
++for a full discussion of attribute caching.
+ .TP 1.5i
+ .BI actimeo= n
+ Using
+@@ -856,6 +864,26 @@ In the presence of multiple client network interfaces,
+ special routing policies,
+ or atypical network topologies,
+ the exact address to use for callbacks may be nontrivial to determine.
++.TP 1.5i
++.BR migration " / " nomigration
++Selects whether the client uses an identification string that is compatible
++with NFSv4 Transparent State Migration (TSM).
++If the mounted server supports NFSv4 migration with TSM, specify the
++.B migration
++option.
++.IP
++Some server features misbehave in the face of a migration-compatible
++identification string.
++The
++.B nomigration
++option retains the use of a traditional client indentification string
++which is compatible with legacy NFS servers.
++This is also the behavior if neither option is specified.
++A client's open and lock state cannot be migrated transparently
++when it identifies itself via a traditional identification string.
++.IP
++This mount option has no effect with NFSv4 minor versions newer than zero,
++which always use TSM-compatible client identification strings.
+ .SH nfs4 FILE SYSTEM TYPE
+ The
+ .BR nfs4
+@@ -1161,24 +1189,33 @@ perfect cache coherence among their clients.
+ Perfect cache coherence among disparate NFS clients
+ is expensive to achieve, especially on wide area networks.
+ As such, NFS settles for weaker cache coherence that
+-satisfies the requirements of most file sharing types. Normally,
+-file sharing is completely sequential:
+-first client A opens a file, writes something to it, then closes it;
+-then client B opens the same file, and reads the changes.
+-.DT
++satisfies the requirements of most file sharing types.
+ .SS "Close-to-open cache consistency"
+-When an application opens a file stored on an NFS server,
+-the NFS client checks that it still exists on the server
++Typically file sharing is completely sequential.
++First client A opens a file, writes something to it, then closes it.
++Then client B opens the same file, and reads the changes.
++.P
++When an application opens a file stored on an NFS version 3 server,
++the NFS client checks that the file exists on the server
+ and is permitted to the opener by sending a GETATTR or ACCESS request.
++The NFS client sends these requests
++regardless of the freshness of the file's cached attributes.
++.P
+ When the application closes the file,
+ the NFS client writes back any pending changes
+ to the file so that the next opener can view the changes.
+ This also gives the NFS client an opportunity to report
+-any server write errors to the application
+-via the return code from
++write errors to the application via the return code from
+ .BR close (2).
++.P
+ The behavior of checking at open time and flushing at close time
+-is referred to as close-to-open cache consistency.
++is referred to as
++.IR "close-to-open cache consistency" ,
++or
++.IR CTO .
++It can be disabled for an entire mount point using the
++.B nocto
++mount option.
+ .SS "Weak cache consistency"
+ There are still opportunities for a client's data cache
+ to contain stale data.
+@@ -1227,6 +1264,65 @@ If absolute cache coherence among clients is required,
+ applications should use file locking. Alternatively, applications
+ can also open their files with the O_DIRECT flag
+ to disable data caching entirely.
++.SS "File timestamp maintainence"
++NFS servers are responsible for managing file and directory timestamps
++.RB ( atime ,
++.BR ctime ", and"
++.BR mtime ).
++When a file is accessed or updated on an NFS server,
++the file's timestamps are updated just like they would be on a filesystem
++local to an application.
++.P
++NFS clients cache file attributes, including timestamps.
++A file's timestamps are updated on NFS clients when its attributes
++are retrieved from the NFS server.
++Thus there may be some delay before timestamp updates
++on an NFS server appear to applications on NFS clients.
++.P
++To comply with the POSIX filesystem standard, the Linux NFS client
++relies on NFS servers to keep a file's
++.B mtime
++and
++.B ctime
++timestamps properly up to date.
++It does this by flushing local data changes to the server
++before reporting
++.B mtime
++to applications via system calls such as
++.BR stat (2).
++.P
++The Linux client handles
++.B atime
++updates more loosely, however.
++NFS clients maintain good performance by caching data,
++but that means that application reads, which normally update
++.BR atime ,
++are not reflected to the server where a file's
++.B atime
++is actually maintained.
++.P
++Because of this caching behavior,
++the Linux NFS client does not support generic atime-related mount options.
++See
++.BR mount (8)
++for details on these options.
++.P
++In particular, the
++.BR atime / noatime ,
++.BR diratime / nodiratime ,
++.BR relatime / norelatime ,
++and
++.BR strictatime / nostrictatime
++mount options have no effect on NFS mounts.
++.P
++.I /proc/mounts
++may report that the
++.B relatime
++mount option is set on NFS mounts, but in fact the
++.B atime
++semantics are always as described here, and are not like
++.B relatime
++semantics.
+ .SS "Directory entry caching"
+ The Linux NFS client caches the result of all NFS LOOKUP requests.
+ If the requested directory entry exists on the server,
+diff --git a/utils/mount/utils.c b/utils/mount/utils.c
+index 2778ed7..ede77a8 100644
+--- a/utils/mount/utils.c
++++ b/utils/mount/utils.c
+@@ -93,7 +93,7 @@ void print_one(char *spec, char *node, char *type, char *opts)
+ 
+ void mount_usage(void)
+ {
+-	printf(_("usage: %s remotetarget dir [-rvVwfnsih] [-o nfsoptions]\n"),
++	printf(_("usage: %s remotetarget dir [-rvVwfnsh] [-o nfsoptions]\n"),
+ 		progname);
+ 	printf(_("options:\n"));
+ 	printf(_("\t-r\t\tMount file system readonly\n"));
+diff --git a/utils/mountd/cache.c b/utils/mountd/cache.c
+index e04b86e..ca35de2 100644
+--- a/utils/mountd/cache.c
++++ b/utils/mountd/cache.c
+@@ -266,6 +266,27 @@ static int get_uuid(const char *val, size_t uuidlen, char *u)
+ 	return 1;
+ }
+ 
++
++/*
++ * Don't ask libblkid for these filesystems. Note that BTRF is ignored, because
++ * we generate the identifier from statfs->f_fsid. The rest are network or
++ * pseudo filesystems. (See <linux/magic.h> for the basic IDs.)
++ */
++static const long int nonblkid_filesystems[] = {
++    0x2fc12fc1,    /* ZFS_SUPER_MAGIC */
++    0x9123683E,    /* BTRFS_SUPER_MAGIC */
++    0xFF534D42,    /* CIFS_MAGIC_NUMBER */
++    0x1373,        /* DEVFS_SUPER_MAGIC */
++    0x73757245,    /* CODA_SUPER_MAGIC */
++    0x564C,        /* NCP_SUPER_MAGIC */
++    0x6969,        /* NFS_SUPER_MAGIC */
++    0x9FA0,        /* PROC_SUPER_MAGIC */
++    0x62656572,    /* SYSFS_MAGIC */
++    0x517B,        /* SMB_SUPER_MAGIC */
++    0x01021994,    /* TMPFS_SUPER_MAGIC */
++    0        /* last */
++};
++
+ static int uuid_by_path(char *path, int type, size_t uuidlen, char *uuid)
+ {
+ 	/* get a uuid for the filesystem found at 'path'.
+@@ -297,12 +318,23 @@ static int uuid_by_path(char *path, int type, size_t uuidlen, char *uuid)
+ 	 */
+ 	struct statfs64 st;
+ 	char fsid_val[17];
+-	const char *blkid_val;
++	const char *blkid_val = NULL;
+ 	const char *val;
++	int rc;
+ 
+-	blkid_val = get_uuid_blkdev(path);
++	rc = statfs64(path, &st);
++
++	if (type == 0 && rc == 0) {
++		const long int *bad;
++		for (bad = nonblkid_filesystems; *bad; bad++) {
++			if (*bad == st.f_type)
++				break;
++		}
++		if (*bad == 0)
++			blkid_val = get_uuid_blkdev(path);
++	}
+ 
+-	if (statfs64(path, &st) == 0 &&
++	if (rc == 0 &&
+ 	    (st.f_fsid.__val[0] || st.f_fsid.__val[1]))
+ 		snprintf(fsid_val, 17, "%08x%08x",
+ 			 st.f_fsid.__val[0], st.f_fsid.__val[1]);
+diff --git a/utils/nfsd/nfsd.c b/utils/nfsd/nfsd.c
+index 6db92f0..a9d77ab 100644
+--- a/utils/nfsd/nfsd.c
++++ b/utils/nfsd/nfsd.c
+@@ -99,7 +99,7 @@ main(int argc, char **argv)
+ 	char *p, *progname, *port;
+ 	char *haddr = NULL;
+ 	int	socket_up = 0;
+-	int minorvers = NFS4_VERDEFAULT;	/* nfsv4 minor version */
++	int minorvers[NFS4_MAXMINOR + 1] = {0};
+ 	unsigned int versbits = NFSCTL_VERDEFAULT;
+ 	unsigned int protobits = NFSCTL_ALLBITS;
+ 	unsigned int proto4 = 0;
+@@ -164,7 +164,7 @@ main(int argc, char **argv)
+ 						fprintf(stderr, "%s: unsupported minor version\n", optarg);
+ 						exit(1);
+ 					}
+-					NFSCTL_VERUNSET(minorvers, i);
++					minorvers[i] = -1;
+ 					break;
+ 				}
+ 			case 3:
+@@ -185,7 +185,7 @@ main(int argc, char **argv)
+ 						fprintf(stderr, "%s: unsupported minor version\n", optarg);
+ 						exit(1);
+ 					}
+-					NFSCTL_VERSET(minorvers, i);
++					minorvers[i] = 1;
+ 					break;
+ 				}
+ 			case 3:
+diff --git a/utils/nfsd/nfssvc.c b/utils/nfsd/nfssvc.c
+index 8b85846..1b50aba 100644
+--- a/utils/nfsd/nfssvc.c
++++ b/utils/nfsd/nfssvc.c
+@@ -269,7 +269,7 @@ nfssvc_set_sockets(const int family, const unsigned int protobits,
+ }
+ 
+ void
+-nfssvc_setvers(unsigned int ctlbits, int minorvers)
++nfssvc_setvers(unsigned int ctlbits, int minorvers[])
+ {
+ 	int fd, n, off;
+ 	char *ptr;
+@@ -281,9 +281,9 @@ nfssvc_setvers(unsigned int ctlbits, int minorvers)
+ 		return;
+ 
+ 	for (n = NFS4_MINMINOR; n <= NFS4_MAXMINOR; n++) {
+-		if (NFSCTL_VERISSET(minorvers, n)) 
++		if (minorvers[n] == 1)
+ 			off += snprintf(ptr+off, sizeof(buf) - off, "+4.%d ", n);
+-		else			
++		else if (minorvers[n] == -1)
+ 			off += snprintf(ptr+off, sizeof(buf) - off, "-4.%d ", n);
+ 	}
+ 	for (n = NFSD_MINVERS; n <= NFSD_MAXVERS; n++) {
+diff --git a/utils/nfsd/nfssvc.h b/utils/nfsd/nfssvc.h
+index 08de0fe..2bbd3d3 100644
+--- a/utils/nfsd/nfssvc.h
++++ b/utils/nfsd/nfssvc.h
+@@ -24,5 +24,5 @@ void	nfssvc_mount_nfsdfs(char *progname);
+ int	nfssvc_inuse(void);
+ int	nfssvc_set_sockets(const int family, const unsigned int protobits,
+ 			   const char *host, const char *port);
+-void	nfssvc_setvers(unsigned int ctlbits, int minorvers4);
++void	nfssvc_setvers(unsigned int ctlbits, int minorvers4[]);
+ int	nfssvc_threads(unsigned short port, int nrservs);
+diff --git a/utils/statd/statd.c b/utils/statd/statd.c
+index 8c51bcc..8f31111 100644
+--- a/utils/statd/statd.c
++++ b/utils/statd/statd.c
+@@ -238,12 +238,6 @@ int main (int argc, char **argv)
+ 	/* Set hostname */
+ 	MY_NAME = NULL;
+ 
+-	/* Refuse to start if another statd is running */
+-	if (nfs_probe_statd()) {
+-		fprintf(stderr, "Statd service already running!\n");
+-		exit(1);
+-	}
+-
+ 	/* Process command line switches */
+ 	while ((arg = getopt_long(argc, argv, "h?vVFNH:dn:p:o:P:L", longopts, NULL)) != EOF) {
+ 		switch (arg) {
+@@ -306,6 +300,12 @@ int main (int argc, char **argv)
+ 		}
+ 	}
+ 
++	/* Refuse to start if another statd is running */
++	if (nfs_probe_statd()) {
++		fprintf(stderr, "Statd service already running!\n");
++		exit(1);
++	}
++
+ 	if (port == out_port && port != 0) {
+ 		fprintf(stderr, "Listening and outgoing ports cannot be the same!\n");
+ 		exit(-1);
