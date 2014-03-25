@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.0
-Release: 0.0%{?dist}
+Release: 0.1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -10,31 +10,9 @@ Epoch: 1
 
 Source0: https://www.kernel.org/pub/linux/utils/nfs-utils/%{version}/%{name}-%{version}.tar.xz
 
-Source9: id_resolver.conf
-Source10: nfs.sysconfig
-Source11: nfs-lock.service
-Source12: nfs-secure.service
-Source13: nfs-secure-server.service
-Source14: nfs-server.service
-Source15: nfs-blkmap.service
-Source16: nfs-rquotad.service
-Source17: nfs-mountd.service
-Source18: nfs-idmap.service
-Source19: nfs.target
-%define nfs_services %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} %{SOURCE16} %{SOURCE17} %{SOURCE18} %{SOURCE19}
-# 
-# Services that need to be restarted.
-#
-%define nfs_start_services %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} %{SOURCE18} %{SOURCE19}
- 
-Source20: var-lib-nfs-rpc_pipefs.mount
-Source21: proc-fs-nfsd.mount
-%define nfs_automounts %{SOURCE20} %{SOURCE21}
-
-Source50: nfs-lock.preconfig
-Source51: nfs-server.preconfig
-Source52: nfs-server.postconfig
-%define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
+Source1: id_resolver.conf
+Source2: nfs.sysconfig
+Source3: nfs-utils_env.sh
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -130,7 +108,6 @@ mkdir -p $RPM_BUILD_ROOT%/sbin
 mkdir -p $RPM_BUILD_ROOT%{_sbindir}
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}/nfs.target.wants
-mkdir -p $RPM_BUILD_ROOT%{_libexecdir}/%{name}/scripts
 mkdir -p ${RPM_BUILD_ROOT}%{_mandir}/man8
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/request-key.d
@@ -138,26 +115,32 @@ mkdir -p $RPM_BUILD_ROOT/lib/modprobe.d/
 make DESTDIR=$RPM_BUILD_ROOT install
 install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT%{_sbindir}
 install -m 644 utils/mount/nfsmount.conf  $RPM_BUILD_ROOT%{_sysconfdir}
-install -m 644 %{SOURCE9} $RPM_BUILD_ROOT%{_sysconfdir}/request-key.d
-install -m 644 %{SOURCE10} $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/nfs
+install -m 644 %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/request-key.d
+install -m 644 %{SOURCE2} $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/nfs
 
-for service in %{nfs_services} ; do
-	install -m 644 $service $RPM_BUILD_ROOT%{_unitdir}
+for file in systemd/*.service  ; do
+	install -m 644 $file $RPM_BUILD_ROOT%{_unitdir}
+done
+for file in systemd/*.target  ; do
+	install -m 644 $file $RPM_BUILD_ROOT%{_unitdir}
+done
+for file in systemd/*.mount  ; do
+	install -m 644 $file $RPM_BUILD_ROOT%{_unitdir}
 done
 
-for service in %{nfs_automounts} ; do
-	install -m 644 $service $RPM_BUILD_ROOT%{_unitdir}
-done
-for config in %{nfs_configs} ; do
-	install -m 755 $config $RPM_BUILD_ROOT%{_libexecdir}/%{name}/scripts
-done
+mkdir -p $RPM_BUILD_ROOT/run/sysconfig
+mkdir -p $RPM_BUILD_ROOT/usr/lib/systemd/scripts
+install -m 755 %{SOURCE3} $RPM_BUILD_ROOT/usr/lib/systemd/scripts/nfs-utils_env.sh
 
+#
+# For backwards compatablity 
+#
 cd $RPM_BUILD_ROOT%{_unitdir}
-ln -s nfs-idmap.service rpcidmapd.service
-ln -s nfs-lock.service nfslock.service
-ln -s nfs-secure-server.service rpcsvcgssd.service
-ln -s nfs-secure.service rpcgssd.service
 ln -s nfs-server.service nfs.service
+ln -s rpc-gssd.service nfs-secure.service
+ln -s rpc-svcgssd.service nfs-secure-server.service
+ln -s nfs-idmapd.service  nfs-idmap.service
+ln -s rpc-statd.service nfs-lock.service
 
 mkdir -p $RPM_BUILD_ROOT%{_sharedstatedir}/nfs/rpc_pipefs
 
@@ -208,17 +191,14 @@ fi
 
 %post
 if [ $1 -eq 1 ]; then
-	# Package install,
-	/bin/systemctl enable nfs.target >/dev/null 2>&1 || :
-	/bin/systemctl enable nfs-lock.service >/dev/null 2>&1 || : 
-	/bin/systemctl start nfs-lock.service >/dev/null 2>&1 || :
+	/bin/systemctl enable nfs-client.target >/dev/null 2>&1 || :
+	/bin/systemctl restart nfs-config >/dev/null 2>&1 || :
 else
 	# Package upgrade
-	if /bin/systemctl --quiet is-enabled nfs.target ; then
-		/bin/systemctl reenable nfs.target >/dev/null 2>&1 || :
-	fi
-	if /bin/systemctl --quiet is-enabled nfs-lock.service ; then
-		/bin/systemctl reenable nfs-lock.service >/dev/null 2>&1 || :
+	/bin/systemctl reenable nfs-client.target >/dev/null 2>&1 || :
+	/bin/systemctl restart nfs-config >/dev/null 2>&1 || :
+	if /bin/systemctl --quiet is-enabled nfs-server ; then
+		/bin/systemctl reenable nfs-server >/dev/null 2>&1 || :
 	fi
 fi
 # Make sure statd used the correct uid/gid.
@@ -226,10 +206,9 @@ chown -R rpcuser:rpcuser /var/lib/nfs/statd
 
 %preun
 if [ $1 -eq 0 ]; then
-	# Package removal, not upgrade
-	for service in %(sed 's!\S*/!!g' <<< '%{nfs_start_services}') ; do
-		%systemd_preun $service
-	done
+	%systemd_preun nfs-client.target
+	%systemd_preun nfs-server.server
+
     /usr/sbin/userdel rpcuser 2>/dev/null || :
     /usr/sbin/groupdel rpcuser 2>/dev/null || :
     /usr/sbin/userdel nfsnobody 2>/dev/null || :
@@ -239,11 +218,10 @@ if [ $1 -eq 0 ]; then
 fi
 
 %postun
+	%systemd_postun_with_restart  nfs-server
 if [ $1 -ge 1 ]; then
-	# Package upgrade, not uninstall
-	for service in %(sed 's!\S*/!!g' <<< '%{nfs_start_services}') ; do
-		/bin/systemctl try-restart $service >/dev/null 2>&1 || :
-	done
+	/bin/systemctl try-restart nfs-client.target >/dev/null 2>&1 || :
+	/bin/systemctl try-restart nfs-server.target >/dev/null 2>&1 || :
 fi
 /bin/systemctl --system daemon-reload >/dev/null 2>&1 || :
 
@@ -251,12 +229,6 @@ fi
 /bin/systemctl enable nfs-lock.service >/dev/null 2>&1 || :
 if /sbin/chkconfig --level 3 nfs ; then
 	/bin/systemctl enable nfs-server.service >/dev/null 2>&1 || :
-fi
-if /sbin/chkconfig --level 3 rpcgssd ; then
-	/bin/systemctl enable nfs-secure.service >/dev/null 2>&1 || :
-fi
-if /sbin/chkconfig --level 3 rpcsvcgssd ; then
-	/bin/systemctl enable nfs-secure-server.service >/dev/null 2>&1 || :
 fi
 
 %files
@@ -267,8 +239,6 @@ fi
 %dir %{_sharedstatedir}/nfs/v4recovery
 %dir %{_sharedstatedir}/nfs/rpc_pipefs
 %dir %{_sharedstatedir}/nfs
-%dir %{_libexecdir}/%{name}/scripts
-%dir %{_libexecdir}/%{name}
 %dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd
 %dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd/sm
 %dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd/sm.bak
@@ -299,7 +269,7 @@ fi
 %{_sbindir}/nfsdcltrack
 %{_mandir}/*/*
 %{_unitdir}/*
-%{_libexecdir}/%{name}/scripts/*
+%attr(755,root,root) /usr/lib/systemd/scripts/nfs-utils_env.sh
 
 %attr(4755,root,root)	/sbin/mount.nfs
 /sbin/mount.nfs4
@@ -307,6 +277,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Mon Apr 14 2014 Steve Dickson <steved@redhat.com> 1.3.0-0.1
+- Incorporated new upstream systemd units
+
 * Tue Mar 25 2014 Steve Dickson <steved@redhat.com> 1.3.0-0.0
 - Updated to latest major release: nfs-utils-1-3-0
 
