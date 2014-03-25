@@ -1,14 +1,14 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
-Version: 1.2.9
-Release: 3.0%{?dist}
+Version: 1.3.0
+Release: 0.0%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i486 i586 i686 athlon ppc sparcv9
 
-Source0: http://sourceforge.net/projects/nfs/files/nfs-utils/%{version}/%{name}-%{version}.tar.bz2
+Source0: https://www.kernel.org/pub/linux/utils/nfs-utils/%{version}/%{name}-%{version}.tar.xz
 
 Source9: id_resolver.conf
 Source10: nfs.sysconfig
@@ -35,9 +35,6 @@ Source50: nfs-lock.preconfig
 Source51: nfs-server.preconfig
 Source52: nfs-server.postconfig
 %define nfs_configs %{SOURCE50} %{SOURCE51} %{SOURCE52} 
-
-Patch001: nfs-utils-1.2.10-rc3.patch
-Patch002: nfs-utils-1.2.9-gssd-home.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -94,9 +91,6 @@ This package also contains the mount.nfs and umount.nfs program.
 
 %prep
 %setup -q
-
-%patch001 -p1
-%patch002 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -313,6 +307,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Tue Mar 25 2014 Steve Dickson <steved@redhat.com> 1.3.0-0.0
+- Updated to latest major release: nfs-utils-1-3-0
+
 * Wed Jan 22 2014 Steve Dickson <steved@redhat.com> 1.2.9-3.0
 - Updated to latest upstream RC release: nfs-utils-1-2-10-rc3
   - gssd: Improve first attempt at acquiring GSS credentials (bz 1055077)
