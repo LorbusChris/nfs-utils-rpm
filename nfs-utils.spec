@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.0
-Release: 0.1%{?dist}
+Release: 0.2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -13,6 +13,8 @@ Source0: https://www.kernel.org/pub/linux/utils/nfs-utils/%{version}/%{name}-%{v
 Source1: id_resolver.conf
 Source2: nfs.sysconfig
 Source3: nfs-utils_env.sh
+
+Patch001: nfs-utils-1.3.0-startstatd-path.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -69,6 +71,8 @@ This package also contains the mount.nfs and umount.nfs program.
 
 %prep
 %setup -q
+
+%patch001 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -277,6 +281,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Fri Apr 25 2014 Steve Dickson <steved@redhat.com> 1.3.0-0.2
+- Fix PATH problem in start-statd (bz 1088226)
+
 * Mon Apr 14 2014 Steve Dickson <steved@redhat.com> 1.3.0-0.1
 - Incorporated new upstream systemd units
 
