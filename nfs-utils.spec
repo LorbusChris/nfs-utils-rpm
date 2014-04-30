@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.0
-Release: 0.2%{?dist}
+Release: 1.0%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -14,7 +14,7 @@ Source1: id_resolver.conf
 Source2: nfs.sysconfig
 Source3: nfs-utils_env.sh
 
-Patch001: nfs-utils-1.3.0-startstatd-path.patch
+Patch001: nfs-utils-1.3.1-rc1.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -255,6 +255,7 @@ fi
 %doc linux-nfs/THANKS linux-nfs/TODO
 /sbin/rpc.statd
 /sbin/osd_login
+/sbin/nfsdcltrack
 %{_sbindir}/exportfs
 %{_sbindir}/nfsstat
 %{_sbindir}/rpcdebug
@@ -270,7 +271,6 @@ fi
 %{_sbindir}/nfsiostat
 %{_sbindir}/nfsidmap
 %{_sbindir}/blkmapd
-%{_sbindir}/nfsdcltrack
 %{_mandir}/*/*
 %{_unitdir}/*
 %attr(755,root,root) /usr/lib/systemd/scripts/nfs-utils_env.sh
@@ -281,6 +281,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Wed Apr 30 2014 Steve Dickson <steved@redhat.com> 1.3.0-1.0
+- Updated to latest upstream RC release: nfs-utils-1-3-1-rc1
+
 * Fri Apr 25 2014 Steve Dickson <steved@redhat.com> 1.3.0-0.2
 - Fix PATH problem in start-statd (bz 1088226)
 
