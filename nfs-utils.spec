@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.0
-Release: 1.2%{?dist}
+Release: 1.3%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -198,17 +198,10 @@ else
 fi
 
 %post
-if [ $1 -eq 1 ]; then
-	/bin/systemctl enable nfs-client.target >/dev/null 2>&1 || :
-	/bin/systemctl restart nfs-config >/dev/null 2>&1 || :
-else
-	# Package upgrade
-	/bin/systemctl reenable nfs-client.target >/dev/null 2>&1 || :
-	/bin/systemctl restart nfs-config >/dev/null 2>&1 || :
-	if /bin/systemctl --quiet is-enabled nfs-server ; then
-		/bin/systemctl reenable nfs-server >/dev/null 2>&1 || :
-	fi
-fi
+%systemd_post nfs-client.target
+%systemd_post nfs-config
+%systemd_post nfs-server
+
 # Make sure statd used the correct uid/gid.
 chown -R rpcuser:rpcuser /var/lib/nfs/statd
 
@@ -226,11 +219,9 @@ if [ $1 -eq 0 ]; then
 fi
 
 %postun
-	%systemd_postun_with_restart  nfs-server
-if [ $1 -ge 1 ]; then
-	/bin/systemctl try-restart nfs-client.target >/dev/null 2>&1 || :
-	/bin/systemctl try-restart nfs-server.target >/dev/null 2>&1 || :
-fi
+%systemd_postun_with_restart  nfs-client.target
+%systemd_postun_with_restart  nfs-server
+
 /bin/systemctl --system daemon-reload >/dev/null 2>&1 || :
 
 %triggerun -- nfs-utils < 1:1.2.4-2
@@ -238,6 +229,9 @@ fi
 if /sbin/chkconfig --level 3 nfs ; then
 	/bin/systemctl enable nfs-server.service >/dev/null 2>&1 || :
 fi
+
+%triggerin -- nfs-utils < 1:1.3.0-0.2
+/bin/systemctl restart nfs-config >/dev/null 2>&1 || :
 
 %files
 %defattr(-,root,root,-)
@@ -285,6 +279,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Sat May 24 2014 Steve Dickson <steved@redhat.com> 1.3.0-1.3
+- Use systemd_post macro to enable services (bz 1087950)
+
 * Thu May  1 2014 Steve Dickson <steved@redhat.com> 1.3.0-1.2
 - mountd: fix segfault in add_name with newer gcc compilers
 
