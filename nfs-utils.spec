@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.0
-Release: 1.3%{?dist}
+Release: 2.0%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -14,9 +14,7 @@ Source1: id_resolver.conf
 Source2: nfs.sysconfig
 Source3: nfs-utils_env.sh
 
-Patch001: nfs-utils-1.3.1-rc1.patch
-Patch002: nfs-utils-1.3.0-start-statd.patch
-Patch003: nfs-utils-1.3.0-mound-newgcc.patch
+Patch001: nfs-utils-1.3.1-rc2.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -75,8 +73,6 @@ This package also contains the mount.nfs and umount.nfs program.
 %setup -q
 
 %patch001 -p1
-%patch002 -p1
-%patch003 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -279,6 +275,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Sun Jun  1 2014 Steve Dickson <steved@redhat.com> 1.3.0-2.0
+- Updated to latest upstream RC release: nfs-utils-1-3-1-rc2
+
 * Sat May 24 2014 Steve Dickson <steved@redhat.com> 1.3.0-1.3
 - Use systemd_post macro to enable services (bz 1087950)
 
