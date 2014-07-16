@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.0
-Release: 3.0%{?dist}
+Release: 4.0%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -13,6 +13,7 @@ Source0: https://www.kernel.org/pub/linux/utils/nfs-utils/%{version}/%{name}-%{v
 Source1: id_resolver.conf
 Source2: nfs.sysconfig
 Source3: nfs-utils_env.sh
+Source4: lockd.conf
 
 Patch001: nfs-utils-1.3.1-rc2.patch
 
@@ -115,7 +116,7 @@ mkdir -p $RPM_BUILD_ROOT%{_unitdir}/nfs.target.wants
 mkdir -p ${RPM_BUILD_ROOT}%{_mandir}/man8
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/request-key.d
-mkdir -p $RPM_BUILD_ROOT/lib/modprobe.d/
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/modprobe.d/
 make DESTDIR=$RPM_BUILD_ROOT install
 install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT%{_sbindir}
 install -m 644 utils/mount/nfsmount.conf  $RPM_BUILD_ROOT%{_sysconfdir}
@@ -135,6 +136,7 @@ done
 mkdir -p $RPM_BUILD_ROOT/run/sysconfig
 mkdir -p $RPM_BUILD_ROOT/usr/lib/systemd/scripts
 install -m 755 %{SOURCE3} $RPM_BUILD_ROOT/usr/lib/systemd/scripts/nfs-utils_env.sh
+install -m 644 %{SOURCE4} $RPM_BUILD_ROOT%{_sysconfdir}/modprobe.d/lockd.conf
 
 #
 # For backwards compatablity 
@@ -245,6 +247,7 @@ fi
 %config(noreplace) %{_sharedstatedir}/nfs/etab
 %config(noreplace) %{_sharedstatedir}/nfs/rmtab
 %config(noreplace) %{_sysconfdir}/request-key.d/id_resolver.conf
+%config(noreplace) %{_sysconfdir}/modprobe.d/lockd.conf
 %doc linux-nfs/ChangeLog linux-nfs/KNOWNBUGS linux-nfs/NEW linux-nfs/README
 %doc linux-nfs/THANKS linux-nfs/TODO
 /sbin/rpc.statd
@@ -275,6 +278,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Tue Jul 01 2014 Jeff Layton <jlayton@primarydata.com> - 1:1.3.0-4.0
+- clean up lockd configuration
+
 * Sat Jun 07 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:1.3.0-3.0
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_21_Mass_Rebuild
 
