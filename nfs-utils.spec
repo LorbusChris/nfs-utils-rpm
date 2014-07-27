@@ -95,13 +95,15 @@ export PIE
 sh -x autogen.sh
 
 CFLAGS="`echo $RPM_OPT_FLAGS $ARCH_OPT_FLAGS $PIE -D_FILE_OFFSET_BITS=64`"
+
+%define _statdpath /var/lib/nfs/statd
 %configure \
     CFLAGS="$CFLAGS" \
     CPPFLAGS="$DEFINES" \
     LDFLAGS="-pie" \
     --enable-mountconfig \
     --enable-ipv6 \
-	--with-statdpath=/var/lib/nfs/statd \
+	--with-statdpath=%{_statdpath} \
 	--enable-libmount-mount
 
 make %{?_smp_mflags} all
@@ -242,7 +244,7 @@ fi
 %dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd
 %dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd/sm
 %dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd/sm.bak
-%config(noreplace) %attr(644,rpcuser,rpcuser) %{_sharedstatedir}/nfs/state
+%config(noreplace) %attr(644,rpcuser,rpcuser) %{_statdpath}/state
 %config(noreplace) %{_sharedstatedir}/nfs/xtab
 %config(noreplace) %{_sharedstatedir}/nfs/etab
 %config(noreplace) %{_sharedstatedir}/nfs/rmtab
@@ -278,8 +280,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
-* Fri Jul 25 2014 Steve Dickson <steved@redhat.com> 1.3.0-5.0
+* Sun Jul 27 2014 Steve Dickson <steved@redhat.com> 1.3.0-5.0
 - Updated to latest upstream RC release: nfs-utils-1-3-1-rc2
+- Use _statdpath to define where statd's state lives
 
 * Tue Jul 01 2014 Jeff Layton <jlayton@primarydata.com> - 1:1.3.0-4.0
 - clean up lockd configuration
