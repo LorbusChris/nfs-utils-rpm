@@ -660,7 +660,7 @@ fi
 - Updated to the latest pseudo root release (rel10) which
   containts the upstream pseudo root release
 
-* Mon Jan 12 2010 Steve Dickson <steved@redhat.com> 1.2.1-9
+* Tue Jan 12 2010 Steve Dickson <steved@redhat.com> 1.2.1-9
 - Updated to latest upstream RC release: nfs-utils-1-2-2-rc5
 
 * Mon Jan  4 2010 Steve Dickson <steved@redhat.com> 1.2.1-8
@@ -1051,7 +1051,7 @@ fi
 - Added -o nordirplus mount option to disable READDIRPLUS (bz 240357)
 - Disabled the FSCache patch, for now... 
 
-* Wed May 10 2007 Steve Dickson <steved@redhat.com> 1.0.12-5
+* Thu May 10 2007 Steve Dickson <steved@redhat.com> 1.0.12-5
 - Fix mount.nfs4 to display correct error message (bz 227212)
 - Updated mountd and showmount reverse lookup flags (bz 220772)
 - Eliminate timeout on nfsd shutdowns (bz 222001)
@@ -1094,7 +1094,7 @@ fi
 * Wed Dec 13 2006 Steve Dickson <steved@redhat.com> 1.0.10-5
 - Stopped v4 umounts from ping rpc.mountd (bz 215553)
 
-* Wed Nov 28 2006 Steve Dickson <steved@redhat.com> 1.0.10-4
+* Tue Nov 28 2006 Steve Dickson <steved@redhat.com> 1.0.10-4
 - Doing a connect on UDP sockets causes the linux network
   stack to reject UDP patches from multi-home server with
   nic on the same subnet. (bz 212471)
@@ -1225,7 +1225,7 @@ fi
 - Updated libevent from 1.0b to 1.1a
 - Added libgssapi-0.4 and librpcsecgss-0.6 libs from CITI
 
-* Tue Sep  8 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-16
+* Thu Sep  8 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-16
 - Reworked the nfslock init script so if lockd is running
   it will be killed which is what the HA community needs. (bz 162446)
 - Stopped rpcidmapd.init from doing extra echoing when
@@ -1256,7 +1256,7 @@ fi
 * Wed Apr 13 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-6
 - Fixed misformated output from nfslock script (bz 154648)
 
-* Mon Mar 29 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-4
+* Tue Mar 29 2005 Steve Dickson <SteveD@RedHat.com> 1.0.7-4
 - Fixed a compile error on x86_64 machines in the gss code.
 - Updated the statd-notify-hostname.patch to eliminate 
   a segmentation fault in rpc.statd when an network 
@@ -1351,7 +1351,7 @@ fi
   by default, there only needs to be away of 
   turning them off.
 
-* Thu May 10 2004 <SteveD@RedHat.com>
+* Mon May 10 2004 <SteveD@RedHat.com>
 - Rebuilt
 
 * Thu Apr 15 2004 <SteveD@RedHat.com>
@@ -1426,7 +1426,7 @@ fi
 - Upgrated to 1.0.6
 - Commented out the acl path for fedora
 
-* Thu Aug  27 2003 Steve Dickson <SteveD@RedHat.com>
+* Wed Aug  27 2003 Steve Dickson <SteveD@RedHat.com>
 - Added the setting of lockd ports via sysclt interface
 - Removed queue setting code since its no longer needed
 
@@ -1436,7 +1436,7 @@ fi
 * Wed Jul 23 2003 Steve Dickson <SteveD@RedHat.com>
 - Commented out the acl patch (for now)
 
-* Wed Jul 21 2003 Steve Dickson <SteveD@RedHat.com>
+* Mon Jul 21 2003 Steve Dickson <SteveD@RedHat.com>
 - Upgrated to 1.0.5
 
 * Wed Jun 18 2003 Steve Dickson <SteveD@RedHat.com>
@@ -1525,7 +1525,7 @@ the mountd man page.
 - don't use rquotad from here now; quota package contains a version that 
   works with 2.4 (#33738)
 
-* Tue Mar 12 2001 Bob Matthews <bmatthews@redhat.com>
+* Mon Mar 12 2001 Bob Matthews <bmatthews@redhat.com>
 - Statd logs at LOG_DAEMON rather than LOG_LOCAL5
 - s/nfs/\$0/ where appropriate in init scripts
 
@@ -1551,7 +1551,7 @@ the mountd man page.
 - Fix incorrect file specifications in statd manpage.
 - Require gawk 'cause it's used in nfslock init script.
 
-* Thu Dec 13 2000 Bob Matthews <bmatthews@redhat.com>
+* Wed Dec 13 2000 Bob Matthews <bmatthews@redhat.com>
 - Require sed because it's used in nfs init script
 
 * Tue Dec 12 2000 Bob Matthews <bmatthews@redhat.com>
