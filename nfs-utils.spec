@@ -1,8 +1,8 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
-Version: 1.3.0
-Release: 7.0%{?dist}
+Version: 1.3.1
+Release: 0.0%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -14,8 +14,6 @@ Source1: id_resolver.conf
 Source2: nfs.sysconfig
 Source3: nfs-utils_env.sh
 Source4: lockd.conf
-
-Patch001: nfs-utils-1.3.1-rc4.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -56,7 +54,7 @@ Requires: libtirpc >= 0.2.3-1 libblkid libcap libmount
 Requires(post): systemd-units
 Requires(preun): systemd-units
 Requires(postun): systemd-units
-Conflicts: gssproxy < 0.3.0-0
+Requires: gssproxy => 0.3.0-0
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
@@ -72,8 +70,6 @@ This package also contains the mount.nfs and umount.nfs program.
 
 %prep
 %setup -q
-
-%patch001 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -233,6 +229,9 @@ fi
 %triggerin -- nfs-utils < 1:1.3.0-0.2
 /bin/systemctl restart nfs-config >/dev/null 2>&1 || :
 
+%triggerin -- nfs-utils < 1:1.3.0-7.1
+/bin/systemctl stop rpc-svcgssd  >/dev/null 2>&1 || :
+
 %files
 %defattr(-,root,root,-)
 %config(noreplace) /etc/sysconfig/nfs
@@ -280,6 +279,10 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Thu Sep 25 2014 Steve Dickson <steved@redhat.com> 1.3.1-0.0
+- Update to the latest upstream release: nfs-utils-1-3-1
+- Enable gssproxy to manage the GSSAPI creds on the server.
+
 * Fri Sep 12 2014 Steve Dickson <steved@redhat.com> 1.3.0-7.0
 - Updated to latest upstream RC release: nfs-utils-1-3-1-rc4 (bz 1108615)
 
