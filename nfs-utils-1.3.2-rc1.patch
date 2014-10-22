@@ -1,0 +1,71 @@
+diff --git a/systemd/auth-rpcgss-module.service b/systemd/auth-rpcgss-module.service
+index 3fc2f4a..0355e13 100644
+--- a/systemd/auth-rpcgss-module.service
++++ b/systemd/auth-rpcgss-module.service
+@@ -6,7 +6,8 @@
+ # unit will fail.  But that's OK.)
+ [Unit]
+ Description=Kernel Module supporting RPCSEC_GSS
+-Before=gssproxy.service rpc-svcgssd.service
++Before=gssproxy.service rpc-svcgssd.service rpc-gssd.service
++Wants=gssproxy.service rpc-svcgssd.service rpc-gssd.service
+ ConditionPathExists=/etc/krb5.keytab
+ 
+ [Service]
+diff --git a/systemd/nfs-client.target b/systemd/nfs-client.target
+index 474f5e9..9b792a3 100644
+--- a/systemd/nfs-client.target
++++ b/systemd/nfs-client.target
+@@ -5,9 +5,12 @@ Wants=remote-fs-pre.target
+ 
+ # Note: we don't "Wants=rpc-statd.service" as "mount.nfs" will arrange to
+ # start that on demand if needed.
+-Wants=rpc-gssd.service rpc-svcgssd.service auth-rpcgss-module.service
+ Wants=nfs-blkmap.service rpc-statd-notify.service
+-Before=rpc-gssd.service rpc-svcgssd.service nfs-blkmap.service
++After=nfs-blkmap.service
++
++# GSS services dependencies and ordering
++Wants=auth-rpcgss-module.service
++After=rpc-gssd.service rpc-svcgssd.service gssproxy.service
+ 
+ [Install]
+ WantedBy=multi-user.target
+diff --git a/systemd/nfs-server.service b/systemd/nfs-server.service
+index 1048c5c..8010aad 100644
+--- a/systemd/nfs-server.service
++++ b/systemd/nfs-server.service
+@@ -2,15 +2,17 @@
+ Description=NFS server and services
+ Requires= network.target proc-fs-nfsd.mount rpcbind.target
+ Requires= nfs-mountd.service
+-Wants=rpc-statd.service nfs-idmapd.service auth-rpcgss-module.service
+-Wants=rpc-gssd.service gssproxy.service rpc-svcgssd.service
++Wants=rpc-statd.service nfs-idmapd.service
+ Wants=rpc-statd-notify.service
+ 
+ After= network.target proc-fs-nfsd.mount rpcbind.target nfs-mountd.service
+ After= nfs-idmapd.service rpc-statd.service
+-After= rpc-gssd.service gssproxy.service rpc-svcgssd.service
+ Before= rpc-statd-notify.service
+ 
++# GSS services dependencies and ordering
++Wants=auth-rpcgss-module.service
++After=rpc-gssd.service gssproxy.service rpc-svcgssd.service
++
+ Wants=nfs-config.service
+ After=nfs-config.service
+ 
+diff --git a/utils/nfsstat/nfsstat.c b/utils/nfsstat/nfsstat.c
+index 18e4d27..9f481db 100644
+--- a/utils/nfsstat/nfsstat.c
++++ b/utils/nfsstat/nfsstat.c
+@@ -558,7 +558,7 @@ print_server_stats(int opt_prt)
+ 			;
+ 		} else {
+ 			print_numbers(LABEL_srvrpc
+-				"calls      badcalls   badclnt    badauth    xdrcall\n",
++				"calls      badcalls   badfmt     badauth    badclnt\n",
+ 				srvrpcinfo, 5);
+ 			printf("\n");
+ 		}
