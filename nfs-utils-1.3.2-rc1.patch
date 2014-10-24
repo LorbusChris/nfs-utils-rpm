@@ -56,6 +56,52 @@ index 1048c5c..8010aad 100644
  Wants=nfs-config.service
  After=nfs-config.service
  
+diff --git a/utils/mount/mount_libmount.c b/utils/mount/mount_libmount.c
+index 6f85dc9..fa46d54 100644
+--- a/utils/mount/mount_libmount.c
++++ b/utils/mount/mount_libmount.c
+@@ -174,7 +174,7 @@ static int umount_main(struct libmnt_context *cxt, int argc, char **argv)
+ {
+ 	int rc, c;
+ 	char *spec = NULL, *opts = NULL;
+-	int ret = EX_FAIL;
++	int ret = EX_FAIL, verbose = 0;
+ 
+ 	static const struct option longopts[] = {
+ 		{ "force", 0, 0, 'f' },
+@@ -201,6 +201,8 @@ static int umount_main(struct libmnt_context *cxt, int argc, char **argv)
+ 		return EX_USAGE;
+ 	}
+ 
++	verbose = mnt_context_is_verbose(cxt);
++
+ 	if (optind < argc)
+ 		spec = argv[optind++];
+ 
+@@ -228,6 +230,10 @@ static int umount_main(struct libmnt_context *cxt, int argc, char **argv)
+ 		goto err;
+ 	}
+ 
++	if (verbose)
++		printf(_("%s: %s mount point detected\n"), spec,
++					mnt_context_get_fstype(cxt));
++
+ 	opts = retrieve_mount_options(mnt_context_get_fs(cxt));
+ 
+ 	if (!mnt_context_is_lazy(cxt)) {
+@@ -263,6 +269,12 @@ static int umount_main(struct libmnt_context *cxt, int argc, char **argv)
+ 	}
+ 	ret = EX_SUCCESS;
+ err:
++	if (verbose) {
++		if (ret == EX_SUCCESS)
++			printf(_("%s: umounted\n"), spec);
++		else
++			printf(_("%s: umount failed\n"), spec);
++	}
+ 	free(opts);
+ 	return ret;
+ }
 diff --git a/utils/nfsstat/nfsstat.c b/utils/nfsstat/nfsstat.c
 index 18e4d27..9f481db 100644
 --- a/utils/nfsstat/nfsstat.c
