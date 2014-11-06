@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.1
-Release: 2.1%{?dist}
+Release: 2.2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -48,8 +48,7 @@ BuildRequires: libnfsidmap-devel libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, glibc-headers, device-mapper-devel
 BuildRequires: krb5-devel, tcp_wrappers-devel, libmount-devel
-#BuildRequires: fedfs-utils-devel >= 0.8.0-7
-BuildRequires: sqlite-devel
+BuildRequires: fedfs-utils-devel >= 0.8.0-7, sqlite-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
 Requires: libnfsidmap libevent
@@ -284,6 +283,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Thu Nov  6 2014 Richard W.M. Jones <rjones@redhat.com> 1.3.1-2.2
+- Rebuild against new libnfsimap (bz 1160883)
+
 * Thu Nov  6 2014 Steve Dickson <steved@redhat.com> 1.3.1-2.1
 - Rebuild against new libnfsimap (bz 1160883)
 
