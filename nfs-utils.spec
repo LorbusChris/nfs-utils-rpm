@@ -48,7 +48,8 @@ BuildRequires: libnfsidmap-devel libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, glibc-headers, device-mapper-devel
 BuildRequires: krb5-devel, tcp_wrappers-devel, libmount-devel
-BuildRequires: fedfs-utils-devel >= 0.8.0-7, sqlite-devel
+#BuildRequires: fedfs-utils-devel >= 0.8.0-7
+BuildRequires: sqlite-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
 Requires: libnfsidmap libevent
