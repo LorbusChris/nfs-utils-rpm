@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.1
-Release: 2.2%{?dist}
+Release: 2.3%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -16,6 +16,7 @@ Source3: nfs-utils_env.sh
 Source4: lockd.conf
 
 Patch001: nfs-utils-1.3.2-rc2.patch
+Patch002: nfs-utils-1.3.1-mountd-dos.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -74,6 +75,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %setup -q
 
 %patch001 -p1
+%patch002 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -283,6 +285,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Thu Nov 13 2014 Steve Dickson <steved@redhat.com> 1.3.1-2.3
+- Fixed a mount DOS (bz 1163886)
+
 * Thu Nov  6 2014 Richard W.M. Jones <rjones@redhat.com> 1.3.1-2.2
 - Rebuild against new libnfsimap (bz 1160883)
 
