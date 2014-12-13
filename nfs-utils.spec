@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.1
-Release: 2.5%{?dist}
+Release: 4.0%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -172,9 +172,15 @@ for x in gssd svcgssd idmapd ; do
     fi
 done
 
-/usr/sbin/useradd -l -c "RPC Service User" -r \
-		-s /sbin/nologin -u 29 -d /var/lib/nfs rpcuser 2>/dev/null || :
-/usr/sbin/groupadd -g 29 rpcuser 2>/dev/null || :
+%define rpcuser_uid 29
+# Create rpcuser uid as long as it does not already exist.
+cat /etc/passwd | cut -d':' -f 1 | grep --quiet rpcuser 2>/dev/null
+if [ "$?" -eq 1 ]; then
+    /usr/sbin/useradd -l -c "RPC Service User" -r -g %{rpcuser_uid} \
+        -s /sbin/nologin -u %{rpcuser_uid} -d /var/lib/nfs rpcuser 2>/dev/null || :
+else
+ /usr/sbin/usermod -u %{rpcuser_uid} -g %{rpcuser_uid} rpcuser 2>/dev/null || :
+fi 
 
 # Using the 16-bit value of -2 for the nfsnobody uid and gid
 %define nfsnobody_uid	65534
@@ -283,8 +289,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
-* Sat Dec 13 2014 Steve Dickson <steved@redhat.com> 1.3.1-2.5
+* Sat Dec 13 2014 Steve Dickson <steved@redhat.com> 1.3.1-4.0
 - Updated to latest upstream RC release: nfs-utils-1-3-2-rc4 (bz 1164477)
+- Handle the rpcuser like other created users (bz 1165322)
 
 * Wed Dec  3 2014 Steve Dickson <steved@redhat.com> 1.3.1-2.4
 - Fixed typos in nfs-utils sysconfig files (bz 1170354)
