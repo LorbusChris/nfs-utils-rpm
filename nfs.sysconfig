@@ -1,7 +1,14 @@
 #
-# NOTE: the LOCKD_TCPPORT and LOCKD_UDPPORT parameters in this file are
-#       now deprecated. Those that need lockd to listen on a particular
-#       set of ports should configure /etc/modprobe.d/lockd.conf to do so.
+# Note: For new values to take effect the nfs-config service
+# has to be restarted with the following command:
+#    systemctl restart nfs-config
+#
+# Optional arguments passed to in-kernel lockd 
+#LOCKDARG=
+# TCP port rpc.lockd should listen on.
+#LOCKD_TCPPORT=32803
+# UDP port rpc.lockd should listen on.
+#LOCKD_UDPPORT=32769
 #
 # Optinal options passed to rquotad
 RPCRQUOTADOPTS=""
@@ -10,7 +17,13 @@ RPCRQUOTADOPTS=""
 RPCNFSDARGS=""
 # Number of nfs server processes to be started.
 # The default is 8. 
-RPCNFSDCOUNT=8
+# RPCNFSDCOUNT=16
+#   
+# Set V4 grace period in seconds
+#NFSD_V4_GRACE=90
+#
+# Set V4 lease period in seconds
+#NFSD_V4_LEASE=90
 #
 # Optional arguments passed to rpc.mountd. See rpc.mountd(8)
 RPCMOUNTDOPTS=""

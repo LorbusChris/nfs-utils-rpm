@@ -292,6 +292,7 @@ fi
 * Sat Dec 13 2014 Steve Dickson <steved@redhat.com> 1.3.1-4.0
 - Updated to latest upstream RC release: nfs-utils-1-3-2-rc4 (bz 1164477)
 - Handle the rpcuser like other created users (bz 1165322)
+- Restored lockd port and v4 grace/lease interface (bz 1115225)
 
 * Wed Dec  3 2014 Steve Dickson <steved@redhat.com> 1.3.1-2.4
 - Fixed typos in nfs-utils sysconfig files (bz 1170354)
