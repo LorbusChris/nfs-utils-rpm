@@ -164,7 +164,6 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/exports.d
 rm -rf $RPM_BUILD_ROOT/*
 
 %pre
-
 # move files so the running service will have this applied as well
 for x in gssd svcgssd idmapd ; do
     if [ -f /var/lock/subsys/rpc.$x ]; then
@@ -204,7 +203,11 @@ else
 fi
 
 %post
-%systemd_post nfs-client.target
+if [ $1 -eq 1 ] ; then
+	# Initial installation
+	/bin/systemctl enable nfs-client.target >/dev/null 2>&1 || :
+	/bin/systemctl start nfs-client.target  >/dev/null 2>&1 || :
+fi
 %systemd_post nfs-config
 %systemd_post nfs-server
 
@@ -241,6 +244,14 @@ fi
 
 %triggerin -- nfs-utils < 1:1.3.0-7.1
 /bin/systemctl stop rpc-svcgssd  >/dev/null 2>&1 || :
+
+%triggerin -- nfs-utils < 1:1.3.1-4.0
+# reset configuration files and running daemons
+if [ $1 -eq 2 ] ; then
+	/bin/systemctl enable nfs-client.target >/dev/null 2>&1 || :
+	/bin/systemctl restart nfs-config  >/dev/null 2>&1 || :
+	/bin/systemctl restart nfs-client.target  >/dev/null 2>&1 || :
+fi
 
 %files
 %defattr(-,root,root,-)
@@ -293,6 +304,7 @@ fi
 - Updated to latest upstream RC release: nfs-utils-1-3-2-rc4 (bz 1164477)
 - Handle the rpcuser like other created users (bz 1165322)
 - Restored lockd port and v4 grace/lease interface (bz 1115225)
+- Make sure nfs-client target is enabled (bz 1173564)
 
 * Wed Dec  3 2014 Steve Dickson <steved@redhat.com> 1.3.1-2.4
 - Fixed typos in nfs-utils sysconfig files (bz 1170354)
