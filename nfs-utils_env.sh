@@ -18,15 +18,15 @@ if [ -n "$LOCKD_TCPPORT" -o -n "$LOCKD_UDPPORT" ]; then
         /sbin/sysctl -w fs.nfs.nlm_udpport=$LOCKD_UDPPORT >/dev/null 2>&1
 fi
 
-if [ "$NFSD_V4_GRACE" -gt 0 ]; then
+if [ -n "$NFSD_V4_GRACE" ]; then
     grace="-G $NFSD_V4_GRACE"
 fi
 
-if [ "$NFSD_V4_LEASE" -gt 0 ]; then
+if [ -n "$NFSD_V4_LEASE" ]; then
     lease="-L $NFSD_V4_LEASE"
 fi
 
-if [ "$RPCNFSDCOUNT" -gt 0 ]; then
+if [ -n "$RPCNFSDCOUNT" ]; then
     nfsds=$RPCNFSDCOUNT
 else
     nfsds=8
