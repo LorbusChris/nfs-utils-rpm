@@ -30,6 +30,9 @@ RPCMOUNTDOPTS=""
 #
 # Optional arguments passed to rpc.statd. See rpc.statd(8)
 STATDARG=""
+# Optional arguments passed to sm-notify. See sm-notify(8)
+SMNOTIFYARGS=""
+#
 #
 # Optional arguments passed to rpc.idmapd. See rpc.idmapd(8)
 RPCIDMAPDARGS=""

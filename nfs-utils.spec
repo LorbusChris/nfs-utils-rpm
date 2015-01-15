@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.1
-Release: 4.1%{?dist}
+Release: 4.2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -300,6 +300,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Wed Jan 14 2015 Steve Dickson <steved@redhat.com> 1.3.1-4.2
+- Added SMNOTIFYARGS to /etc/sysconf/nfs (bz 1182227)
+
 * Fri Jan  2 2015 Steve Dickson <steved@redhat.com> 1.3.1-4.1
 - Change if statments to string comparisons in nfs-utils_env.sh (bz 1170354)
 
