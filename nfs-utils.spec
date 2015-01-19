@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.1
-Release: 5.0%{?dist}
+Release: 6.0%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -300,6 +300,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Mon Jan 19 2015 Steve Dickson <steved@redhat.com> 1.3.1-6.0
+- Set the GSS_USE_PROXY variable in nfs-utils_env.sh (bz 1176641)
+
 * Thu Jan 15 2015 Steve Dickson <steved@redhat.com> 1.3.1-5.0
 - Updated to latest upstream RC release: nfs-utils-1-3-2-rc5 (bz 1181708)
 

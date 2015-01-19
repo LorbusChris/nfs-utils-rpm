@@ -1,8 +1,10 @@
 #!/bin/sh
 
-# extract configuration from /etc/sysconfig/nfs-utils and write
-# environment to /run/sysconfig/nfs-utils to be used by systemd unit
-# files.
+#
+# Extract configuration from /etc/sysconfig/nfs and write
+# environment variables to /run/sysconfig/nfs-utils to be 
+# used by systemd nfs-config service
+#
 
 nfs_config=/etc/sysconfig/nfs
 if test -r $nfs_config; then
@@ -33,19 +35,20 @@ else
 fi
 
 if [ -n "$RPCNFSDARGS" ]; then
-    nfsdargs="$RPCNFSDARGS $grace $lease $nfsds "
+    nfsdargs="$RPCNFSDARGS $grace $lease $nfsds"
 else
-    nfsdargs="$grace $lease $nfsds "
+    nfsdargs="$grace $lease $nfsds"
 fi
 
 mkdir -p /run/sysconfig
 {
-echo RPCNFSDARGS="$nfsdargs"
-echo RPCMOUNTDARGS="$RPCMOUNTDOPTS"
-echo STATDARGS="$STATDARG"
-echo SMNOTIFYARGS="$SMNOTIFYARGS"
-echo RPCIDMAPDARGS="$RPCIDMAPDARGS"
-echo RPCGSSDARGS="$RPCGSSDARGS"
-echo RPCSVCGSSDARGS="$RPCSVCGSSDARGS"
-echo BLKMAPDARGS="$BLKMAPDARGS"
+echo RPCNFSDARGS=\"$nfsdargs\"
+echo RPCMOUNTDARGS=\"$RPCMOUNTDOPTS\"
+echo STATDARGS=\"$STATDARG\"
+echo SMNOTIFYARGS=\"$SMNOTIFYARGS\"
+echo RPCIDMAPDARGS=\"$RPCIDMAPDARGS\"
+echo RPCGSSDARGS=\"$RPCGSSDARGS\"
+echo RPCSVCGSSDARGS=\"$RPCSVCGSSDARGS\"
+echo BLKMAPDARGS=\"$BLKMAPDARGS\"
+echo GSS_USE_PROXY=\"$GSS_USE_PROXY\"
 } > /run/sysconfig/nfs-utils
