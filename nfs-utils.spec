@@ -301,7 +301,7 @@ fi
 
 %changelog
 * Mon Jan 19 2015 Steve Dickson <steved@redhat.com> 1.3.1-6.0
-- Set the GSS_USE_PROXY variable in nfs-utils_env.sh (bz 1176641)
+- Set the GSS_USE_PROXY variable in nfs-utils_env.sh (bz 1183787)
 
 * Thu Jan 15 2015 Steve Dickson <steved@redhat.com> 1.3.1-5.0
 - Updated to latest upstream RC release: nfs-utils-1-3-2-rc5 (bz 1181708)
