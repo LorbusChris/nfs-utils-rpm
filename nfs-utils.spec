@@ -293,7 +293,7 @@ fi
 /sbin/umount.nfs4
 
 %changelog
-* Sat Jan 31 015 Steve Dickson <steved@redhat.com> 1.3.2-0.0
+* Sat Jan 31 2015 Steve Dickson <steved@redhat.com> 1.3.2-0.0
 - Updated to latest upstream release: 1-3-2
 
 * Mon Jan 19 2015 Steve Dickson <steved@redhat.com> 1.3.1-6.0
