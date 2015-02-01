@@ -1,8 +1,8 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
-Version: 1.3.1
-Release: 6.0%{?dist}
+Version: 1.3.2
+Release: 0.0%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -14,8 +14,6 @@ Source1: id_resolver.conf
 Source2: nfs.sysconfig
 Source3: nfs-utils_env.sh
 Source4: lockd.conf
-
-Patch001: nfs-utils-1.3.2.rc5.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -32,7 +30,6 @@ Provides: rpc.mountd  = %{epoch}:%{version}-%{release}
 Provides: rpc.nfsd    = %{epoch}:%{version}-%{release}
 Provides: rpc.statd   = %{epoch}:%{version}-%{release}
 Provides: rpc.gssd    = %{epoch}:%{version}-%{release}
-Provides: rpc.svcgssd = %{epoch}:%{version}-%{release}
 Provides: mount.nfs   = %{epoch}:%{version}-%{release}
 Provides: mount.nfs4  = %{epoch}:%{version}-%{release}
 Provides: umount.nfs  = %{epoch}:%{version}-%{release}
@@ -72,8 +69,6 @@ This package also contains the mount.nfs and umount.nfs program.
 
 %prep
 %setup -q
-
-%patch001 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -146,7 +141,6 @@ install -m 644 %{SOURCE4} $RPM_BUILD_ROOT%{_sysconfdir}/modprobe.d/lockd.conf
 cd $RPM_BUILD_ROOT%{_unitdir}
 ln -s nfs-server.service nfs.service
 ln -s rpc-gssd.service nfs-secure.service
-ln -s rpc-svcgssd.service nfs-secure-server.service
 ln -s nfs-idmapd.service  nfs-idmap.service
 ln -s rpc-statd.service nfs-lock.service
 
@@ -165,7 +159,7 @@ rm -rf $RPM_BUILD_ROOT/*
 
 %pre
 # move files so the running service will have this applied as well
-for x in gssd svcgssd idmapd ; do
+for x in gssd idmapd ; do
     if [ -f /var/lock/subsys/rpc.$x ]; then
 		mv /var/lock/subsys/rpc.$x /var/lock/subsys/rpc$x
     fi
@@ -283,7 +277,6 @@ fi
 %{_sbindir}/showmount
 %{_sbindir}/rpc.idmapd
 %{_sbindir}/rpc.gssd
-%{_sbindir}/rpc.svcgssd
 %{_sbindir}/sm-notify
 %{_sbindir}/start-statd
 %{_sbindir}/mountstats
@@ -300,6 +293,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Sat Jan 31 015 Steve Dickson <steved@redhat.com> 1.3.2-0.0
+- Updated to latest upstream release: 1-3-2
+
 * Mon Jan 19 2015 Steve Dickson <steved@redhat.com> 1.3.1-6.0
 - Set the GSS_USE_PROXY variable in nfs-utils_env.sh (bz 1183787)
 
