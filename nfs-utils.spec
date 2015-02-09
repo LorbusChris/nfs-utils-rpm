@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.2
-Release: 0.1%{?dist}
+Release: 0.2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -15,7 +15,8 @@ Source2: nfs.sysconfig
 Source3: nfs-utils_env.sh
 Source4: lockd.conf
 
-Patch001: nfs-utils-1.2.1-statd-bg.patch
+Patch001: nfs-utils-1.3.2-statd-bg.patch
+Patch002: nfs-utils-1.3.2-statd-nowait.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -73,6 +74,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %setup -q
 
 %patch001 -p1
+%patch002 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -170,13 +172,21 @@ for x in gssd idmapd ; do
 done
 
 %define rpcuser_uid 29
+# Create rpcuser gid as long as it does not already exist
+cat /etc/group | cut -d':' -f 1 | grep --quiet rpcuser 2>/dev/null
+if [ "$?" -eq 1 ]; then
+    /usr/sbin/groupadd -g %{rpcuser_uid} rpcuser >/dev/null || :
+else
+    /usr/sbin/groupmod -g %{rpcuser_uid} rpcuser >/dev/null || :
+fi
+
 # Create rpcuser uid as long as it does not already exist.
 cat /etc/passwd | cut -d':' -f 1 | grep --quiet rpcuser 2>/dev/null
 if [ "$?" -eq 1 ]; then
     /usr/sbin/useradd -l -c "RPC Service User" -r -g %{rpcuser_uid} \
-        -s /sbin/nologin -u %{rpcuser_uid} -d /var/lib/nfs rpcuser 2>/dev/null || :
+        -s /sbin/nologin -u %{rpcuser_uid} -d /var/lib/nfs rpcuser >/dev/null || :
 else
- /usr/sbin/usermod -u %{rpcuser_uid} -g %{rpcuser_uid} rpcuser 2>/dev/null || :
+ /usr/sbin/usermod -u %{rpcuser_uid} -g %{rpcuser_uid} rpcuser >/dev/null || :
 fi 
 
 # Using the 16-bit value of -2 for the nfsnobody uid and gid
@@ -185,19 +195,19 @@ fi
 # Create nfsnobody gid as long as it does not already exist
 cat /etc/group | cut -d':' -f 1 | grep --quiet nfsnobody 2>/dev/null
 if [ "$?" -eq 1 ]; then
-    /usr/sbin/groupadd -g %{nfsnobody_uid} nfsnobody 2>/dev/null || :
+    /usr/sbin/groupadd -g %{nfsnobody_uid} nfsnobody >/dev/null || :
 else
-    /usr/sbin/groupmod -g %{nfsnobody_uid} nfsnobody 2>/dev/null || :
+    /usr/sbin/groupmod -g %{nfsnobody_uid} nfsnobody >/dev/null || :
 fi
 
 # Create nfsnobody uid as long as it does not already exist.
 cat /etc/passwd | cut -d':' -f 1 | grep --quiet nfsnobody 2>/dev/null
-if [ "$?" -eq 1 ]; then
+if [ $? -eq 1 ]; then
     /usr/sbin/useradd -l -c "Anonymous NFS User" -r -g %{nfsnobody_uid} \
-		-s /sbin/nologin -u %{nfsnobody_uid} -d /var/lib/nfs nfsnobody 2>/dev/null || :
+		-s /sbin/nologin -u %{nfsnobody_uid} -d /var/lib/nfs nfsnobody >/dev/null || :
 else
 
-   /usr/sbin/usermod -u %{nfsnobody_uid} -g %{nfsnobody_uid} nfsnobody 2>/dev/null || :
+   /usr/sbin/usermod -u %{nfsnobody_uid} -g %{nfsnobody_uid} nfsnobody >/dev/null || :
 fi
 
 %post
@@ -297,6 +307,10 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Mon Feb  9 2015 Steve Dickson <steved@redhat.com> 1.3.2-0.2
+- Change statd-notify.service to not wait for network to come up (bz 1183293)
+- Added the rpcuser group before adding the rpcuser uid (bz 1165322)
+
 * Sun Feb  1 2015 Steve Dickson <steved@redhat.com> 1.3.2-0.1
 - statd: Fix test for foreground mode (bz 1188040)
 
