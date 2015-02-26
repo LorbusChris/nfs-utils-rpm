@@ -1,0 +1,182 @@
+diff --git a/configure.ac b/configure.ac
+index 8e427e3..e61430f 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -60,7 +60,6 @@ AC_ARG_WITH(systemd,
+ 	[AC_HELP_STRING([--with-systemd@<:@=unit-dir-path@:>@],
+ 			[install systemd unit files @<:@Default: no, and path defaults to /usr/lib/systemd/system if not given@:>@])],
+ 	test "$withval" = "no" && use_systemd=0 || unitdir=$withval use_systemd=1
+-	use_systemd=0
+ 	)
+ 	AM_CONDITIONAL(INSTALL_SYSTEMD, [test "$use_systemd" = 1])
+ 	AC_SUBST(unitdir)
+diff --git a/support/nfs/exports.c b/support/nfs/exports.c
+index eb782b9..4b17d3c 100644
+--- a/support/nfs/exports.c
++++ b/support/nfs/exports.c
+@@ -154,6 +154,7 @@ getexportent(int fromkernel, int fromexports)
+ 		}
+ 	}
+ 
++	xfree(ee.e_hostname);
+ 	ee = def_ee;
+ 
+ 	/* Check for default client */
+@@ -176,7 +177,6 @@ getexportent(int fromkernel, int fromexports)
+ 		if (!has_default_opts)
+ 			xlog(L_WARNING, "No options for %s %s: suggest %s(sync) to avoid warning", ee.e_path, exp, exp);
+ 	}
+-	xfree(ee.e_hostname);
+ 	ee.e_hostname = xstrdup(hostname);
+ 
+ 	if (parseopts(opt, &ee, fromexports && !has_default_subtree_opts, NULL) < 0)
+diff --git a/systemd/rpc-statd-notify.service b/systemd/rpc-statd-notify.service
+index 941afe5..a655445 100644
+--- a/systemd/rpc-statd-notify.service
++++ b/systemd/rpc-statd-notify.service
+@@ -1,7 +1,7 @@
+ [Unit]
+ Description=Notify NFS peers of a restart
+ Requires=network-online.target
+-After=network-online.target nss-lookup.target
++After=network.target nss-lookup.target
+ 
+ # if we run an nfs server, it needs to be running before we
+ # tell clients that it has restarted.
+diff --git a/tools/mountstats/mountstats.man b/tools/mountstats/mountstats.man
+index bee3f86..a9df1e4 100644
+--- a/tools/mountstats/mountstats.man
++++ b/tools/mountstats/mountstats.man
+@@ -10,7 +10,7 @@ mountstats \- Displays various NFS client per-mount statistics
+ .RB [ \-v | \-\-version ]
+ .RB [ \-f | \-\-file
+ .IR infile ]
+-.RB [ \-s | \-\-since
++.RB [ \-S | \-\-since
+ .IR sincefile ]
+ .\" .RB [ \-n | \-\-nfs | \-r | \-\-rpc | \-R | \-\-raw ]
+ .R [
+@@ -27,7 +27,7 @@ mountstats \- Displays various NFS client per-mount statistics
+ .RB [ \-v | \-\-version ]
+ .RB [ \-f | \-\-file
+ .IR infile ]
+-.RB [ \-s | \-\-since
++.RB [ \-S | \-\-since
+ .IR sincefile ]
+ .RI [ interval ]
+ .RI [ count ]
+@@ -38,7 +38,7 @@ mountstats \- Displays various NFS client per-mount statistics
+ .RB [ \-v | \-\-version ]
+ .RB [ \-f | \-\-file
+ .IR infile ]
+-.RB [ \-s | \-\-since
++.RB [ \-S | \-\-since
+ .IR sincefile ]
+ .RB [ \-3 ]
+ .RB [ \-4 ]
+@@ -128,7 +128,7 @@ parameter is specified without the
+ parameter, the command generates reports continuously.  This may not be used with the
+ .BR \-f | \-\-file
+ or
+-.BR \-s | \-\-since 
++.BR \-S | \-\-since 
+ options.
+ .SS Options specific to the nfsstat sub-command
+ .IP "\fB\-3\fP"
+diff --git a/utils/exportfs/exports.man b/utils/exportfs/exports.man
+index 3d974d9..88d9fbe 100644
+--- a/utils/exportfs/exports.man
++++ b/utils/exportfs/exports.man
+@@ -218,16 +218,46 @@ This option can be very useful in some situations, but it should be
+ used with due care, and only after confirming that the client system
+ copes with the situation effectively.
+ 
+-The option can be explicitly disabled with
++The option can be explicitly disabled for NFSv2 and NFSv3 with
+ .IR hide .
++
++This option is not relevant when NFSv4 is use.  NFSv4 never hides
++subordinate filesystems.  Any filesystem that is exported will be
++visible where expected when using NFSv4.
+ .TP
+-.IR crossmnt
++.I crossmnt
+ This option is similar to
+ .I nohide
+-but it makes it possible for clients to move from the filesystem marked
+-with crossmnt to exported filesystems mounted on it.  Thus when a child
+-filesystem "B" is mounted on a parent "A", setting crossmnt on "A" has
+-the same effect as setting "nohide" on B.
++but it makes it possible for clients to access all filesystems mounted
++on a filesystem marked with
++.IR crossmnt .
++Thus when a child filesystem "B" is mounted on a parent "A", setting
++crossmnt on "A" has a similar effect to setting "nohide" on B.
++
++With
++.I nohide
++the child filesystem needs to be explicitly exported.  With
++.I crossmnt
++it need not.  If a child of a
++.I crossmnt
++file is not explicitly exported, then it will be implicitly exported
++with the same export options as the parent, except for
++.IR fsid= .
++This makes it impossible to
++.B not
++export a child of a
++.I crossmnt
++filesystem.  If some but not all subordinate filesystems of a parent
++are to be exported, then they must be explicitly exported and the
++parent should not have
++.I crossmnt
++set.
++
++The
++.I nocrossmnt
++option can explictly disable
++.I crossmnt
++if it was previously set.  This is rarely useful.
+ .TP
+ .IR no_subtree_check
+ This option disables subtree checking, which has mild security
+diff --git a/utils/mountd/cache.c b/utils/mountd/cache.c
+index c23d384..7d250f9 100644
+--- a/utils/mountd/cache.c
++++ b/utils/mountd/cache.c
+@@ -376,7 +376,7 @@ static char *next_mnt(void **v, char *p)
+ 		*v = f;
+ 	} else
+ 		f = *v;
+-	while ((me = getmntent(f)) != NULL &&
++	while ((me = getmntent(f)) != NULL && l > 1 &&
+ 	       (strncmp(me->mnt_dir, p, l) != 0 ||
+ 		me->mnt_dir[l] != '/'))
+ 		;
+diff --git a/utils/statd/rmtcall.c b/utils/statd/rmtcall.c
+index fd576d9..66a6eeb 100644
+--- a/utils/statd/rmtcall.c
++++ b/utils/statd/rmtcall.c
+@@ -221,6 +221,9 @@ process_reply(FD_SET_TYPE *rfds)
+ 	if (sockfd == -1 || !FD_ISSET(sockfd, rfds))
+ 		return 0;
+ 
++	/* Should not be processed again. */
++	FD_CLR (sockfd, rfds);
++
+ 	if (!(lp = recv_rply(&port)))
+ 		return 1;
+ 
+diff --git a/utils/statd/statd.c b/utils/statd/statd.c
+index 60ce6d1..2b7a167 100644
+--- a/utils/statd/statd.c
++++ b/utils/statd/statd.c
+@@ -393,7 +393,7 @@ int main (int argc, char **argv)
+ 		simulator (--argc, ++argv);	/* simulator() does exit() */
+ #endif
+ 
+-	daemon_init(!(run_mode & MODE_NODAEMON));
++	daemon_init((run_mode & MODE_NODAEMON));
+ 
+ 	if (run_mode & MODE_LOG_STDERR) {
+ 		xlog_syslog(0);
