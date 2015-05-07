@@ -1,5 +1,5 @@
 diff --git a/configure.ac b/configure.ac
-index 8e427e3..e61430f 100644
+index 8e427e3..926b044 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -60,7 +60,6 @@ AC_ARG_WITH(systemd,
@@ -10,8 +10,56 @@ index 8e427e3..e61430f 100644
  	)
  	AM_CONDITIONAL(INSTALL_SYSTEMD, [test "$use_systemd" = 1])
  	AC_SUBST(unitdir)
+@@ -164,6 +163,8 @@ if test "$enable_mount" = yes; then
+ 				[Link mount.nfs with libmount @<:@default=no@:>@])],
+ 		enable_libmount=$enableval,
+ 		enable_libmount=no)
++else
++	enable_libmount=no
+ fi
+ 
+ AC_ARG_ENABLE(tirpc,
+@@ -214,9 +215,16 @@ fi
+ AC_ARG_ENABLE(nfsdcltrack,
+ 	[AC_HELP_STRING([--disable-nfsdcltrack],
+ 			[disable NFSv4 clientid tracking programs @<:@default=no@:>@])],
+-	enable_nfsdctrack=$enableval,
++	enable_nfsdcltrack=$enableval,
+ 	enable_nfsdcltrack="yes")
+ 
++AC_ARG_ENABLE(osdlogin,
++	[AC_HELP_STRING([--enable-osdlogin],
++			[enable osd_login scripts @<:@default=no@:>@])],
++	enable_osdlogin=$enableval,
++	enable_osdlogin="no")
++	AM_CONDITIONAL(CONFIG_OSD_LOGIN, [test "$enable_osdlogin" = "yes" ])
++
+ dnl Check for TI-RPC library and headers
+ AC_LIBTIRPC
+ 
+@@ -347,7 +355,7 @@ AC_SUBST(LIBBSD)
+ AC_SUBST(LIBBLKID)
+ AC_SUBST(LIBDL)
+ 
+-if test "$enable_libmount" != no; then
++if test "$enable_libmount" = yes; then
+    AC_CHECK_LIB(mount, mnt_context_do_mount, [LIBMOUNT="-lmount"], AC_MSG_ERROR([libmount needed]))
+    AC_CHECK_HEADER(libmount/libmount.h, , AC_MSG_ERROR([Cannot find libmount header file libmount/libmount.h]))
+ fi
+diff --git a/support/include/nfs/export.h b/support/include/nfs/export.h
+index 2f59e6a..1194255 100644
+--- a/support/include/nfs/export.h
++++ b/support/include/nfs/export.h
+@@ -26,6 +26,7 @@
+ #define	NFSEXP_CROSSMOUNT	0x4000
+ #define NFSEXP_NOACL		0x8000 /* reserved for possible ACL related use */
+ #define NFSEXP_V4ROOT		0x10000
++#define NFSEXP_PNFS            0x20000
+ /*
+  * All flags supported by the kernel before addition of the
+  * export_features interface:
 diff --git a/support/nfs/exports.c b/support/nfs/exports.c
-index eb782b9..4b17d3c 100644
+index eb782b9..0aea6f1 100644
 --- a/support/nfs/exports.c
 +++ b/support/nfs/exports.c
 @@ -154,6 +154,7 @@ getexportent(int fromkernel, int fromexports)
@@ -30,6 +78,34 @@ index eb782b9..4b17d3c 100644
  	ee.e_hostname = xstrdup(hostname);
  
  	if (parseopts(opt, &ee, fromexports && !has_default_subtree_opts, NULL) < 0)
+@@ -275,6 +275,7 @@ putexportent(struct exportent *ep)
+ 		"no_" : "");
+ 	if (ep->e_flags & NFSEXP_NOREADDIRPLUS)
+ 		fprintf(fp, "nordirplus,");
++	fprintf(fp, "%spnfs,", (ep->e_flags & NFSEXP_PNFS)? "" : "no_");
+ 	if (ep->e_flags & NFSEXP_FSID) {
+ 		fprintf(fp, "fsid=%d,", ep->e_fsid);
+ 	}
+@@ -407,7 +408,7 @@ int secinfo_addflavor(struct flav_info *flav, struct exportent *ep)
+ 	struct sec_entry *p;
+ 
+ 	for (p=ep->e_secinfo; p->flav; p++) {
+-		if (p->flav == flav)
++		if (p->flav == flav || p->flav->fnum == flav->fnum)
+ 			return p - ep->e_secinfo;
+ 	}
+ 	if (p - ep->e_secinfo >= SECFLAVOR_COUNT) {
+@@ -581,6 +582,10 @@ parseopts(char *cp, struct exportent *ep, int warn, int *had_subtree_opt_ptr)
+ 			clearflags(NFSEXP_NOACL, active, ep);
+ 		else if (strcmp(opt, "no_acl") == 0)
+ 			setflags(NFSEXP_NOACL, active, ep);
++		else if (!strcmp(opt, "pnfs"))
++			setflags(NFSEXP_PNFS, active, ep);
++		else if (!strcmp(opt, "no_pnfs"))
++			clearflags(NFSEXP_PNFS, active, ep);
+ 		else if (strncmp(opt, "anonuid=", 8) == 0) {
+ 			char *oe;
+ 			ep->e_anonuid = strtol(opt+8, &oe, 10);
 diff --git a/systemd/Makefile.am b/systemd/Makefile.am
 index 16cf5e6..fbcabb1 100644
 --- a/systemd/Makefile.am
@@ -343,8 +419,56 @@ index fd73feb..38943eb 100644
      sys.exit(1)
  except IOError:
      pass
+diff --git a/utils/blkmapd/device-inq.c b/utils/blkmapd/device-inq.c
+index eabc70c..c5bf71f 100644
+--- a/utils/blkmapd/device-inq.c
++++ b/utils/blkmapd/device-inq.c
+@@ -179,6 +179,7 @@ struct bl_serial *bldev_read_serial(int fd, const char *filename)
+ 	char *buffer;
+ 	struct bl_dev_id *dev_root, *dev_id;
+ 	unsigned int pos, len, current_id = 0;
++	size_t devid_len = sizeof(struct bl_dev_id) - sizeof(unsigned char);
+ 
+ 	status = bldev_inquire_pages(fd, 0x83, &buffer);
+ 	if (status)
+@@ -189,7 +190,11 @@ struct bl_serial *bldev_read_serial(int fd, const char *filename)
+ 	pos = 0;
+ 	current_id = 0;
+ 	len = dev_root->len;
+-	while (pos < (len - sizeof(struct bl_dev_id) + sizeof(unsigned char))) {
++
++	if (len < devid_len)
++		goto out;
++
++	while (pos < (len - devid_len)) {
+ 		dev_id = (struct bl_dev_id *)&(dev_root->data[pos]);
+ 		if ((dev_id->ids & 0xf) < current_id)
+ 			continue;
+@@ -221,8 +226,7 @@ struct bl_serial *bldev_read_serial(int fd, const char *filename)
+ 		}
+ 		if (current_id == 3)
+ 			break;
+-		pos += (dev_id->len + sizeof(struct bl_dev_id) -
+-			sizeof(unsigned char));
++		pos += (dev_id->len + devid_len);
+ 	}
+  out:
+ 	if (!serial_out)
+diff --git a/utils/exportfs/exportfs.c b/utils/exportfs/exportfs.c
+index 48eac00..8758231 100644
+--- a/utils/exportfs/exportfs.c
++++ b/utils/exportfs/exportfs.c
+@@ -821,6 +821,8 @@ dump(int verbose, int export_format)
+ 				c = dumpopt(c, "nordirplus");
+ 			if (ep->e_flags & NFSEXP_NOACL)
+ 				c = dumpopt(c, "no_acl");
++			if (ep->e_flags & NFSEXP_PNFS)
++				c = dumpopt(c, "pnfs");
+ 			if (ep->e_flags & NFSEXP_FSID)
+ 				c = dumpopt(c, "fsid=%d", ep->e_fsid);
+ 			if (ep->e_uuid)
 diff --git a/utils/exportfs/exports.man b/utils/exportfs/exports.man
-index 3d974d9..88d9fbe 100644
+index 3d974d9..9309246 100644
 --- a/utils/exportfs/exports.man
 +++ b/utils/exportfs/exports.man
 @@ -218,16 +218,46 @@ This option can be very useful in some situations, but it should be
@@ -400,6 +524,131 @@ index 3d974d9..88d9fbe 100644
  .TP
  .IR no_subtree_check
  This option disables subtree checking, which has mild security
+@@ -378,6 +408,15 @@ If the client asks for alternative locations for the export point, it
+ will be given this list of alternatives. (Note that actual replication
+ of the filesystem must be handled elsewhere.)
+ 
++.TP
++.IR pnfs
++This option allows enables the use of pNFS extension if protocol level
++is NFSv4.1 or higher, and the filesystem supports pNFS exports.  With
++pNFS clients can bypass the server and perform I/O directly to storage
++devices. The default can be explicitly requested with the
++.I no_pnfs
++option.
++
+ .SS User ID Mapping
+ .PP
+ .B nfsd
+diff --git a/utils/exportfs/nfsd.man b/utils/exportfs/nfsd.man
+index 47b73be..0c516fa 100644
+--- a/utils/exportfs/nfsd.man
++++ b/utils/exportfs/nfsd.man
+@@ -196,6 +196,7 @@ classes of tracing to be enabled.  Consult the kernel header files to
+ find out what number correspond to what tracing.
+ 
+ .SH SEE ALSO
++.BR nfsd (8),
+ .BR rpc.nfsd (8),
+ .BR exports (5),
+ .BR nfsstat (8),
+diff --git a/utils/mount/error.c b/utils/mount/error.c
+index e06f598..c9797fc 100644
+--- a/utils/mount/error.c
++++ b/utils/mount/error.c
+@@ -247,6 +247,9 @@ void mount_error(const char *spec, const char *mount_point, int error)
+ 		nfs_error(_("%s: please report the error to" PACKAGE_BUGREPORT),
+ 				progname);
+ 		break;
++	case EALREADY:
++		/* Error message has already been provided */
++		break;
+ 	default:
+ 		nfs_error(_("%s: %s"),
+ 			progname, strerror(error));
+diff --git a/utils/mount/mount.nfs.man b/utils/mount/mount.nfs.man
+index 1a4561b..15a82d5 100644
+--- a/utils/mount/mount.nfs.man
++++ b/utils/mount/mount.nfs.man
+@@ -15,16 +15,20 @@ is meant to be used by the
+ .BR mount (8)
+ command for mounting NFS shares. This subcommand, however, can also be used as a standalone command with limited functionality.
+ 
+-.BR mount.nfs4 
+-is used for mounting NFSv4 file system, while 
+-.BR mount.nfs 
+-is used to mount NFS file systems versions 3 or 2.
+ .I remotetarget 
+ is a server share usually in the form of 
+ .BR servername:/path/to/share.
+ .I dir 
+ is the directory on which the file system is to be mounted.
+ 
++Under Linux 2.6.32 and later kernel versions,
++.BR mount.nfs
++can mount all NFS file system versions.  Under earlier Linux kernel versions,
++.BR mount.nfs4
++must be used for mounting NFSv4 file systems while
++.BR mount.nfs
++must be used for NFSv3 and v2.
++
+ .SH OPTIONS
+ .TP
+ .BI "\-r"
+diff --git a/utils/mount/stropts.c b/utils/mount/stropts.c
+index 76ecb32..c8f5a6d 100644
+--- a/utils/mount/stropts.c
++++ b/utils/mount/stropts.c
+@@ -108,12 +108,6 @@ static void nfs_default_version(struct nfsmount_info *mi)
+ 		return;
+ 	}
+ 
+-	if (mi->version.v_mode == V_GENERAL &&
+-		config_default_vers.v_mode == V_DEFAULT) {
+-		mi->version.v_mode = V_SPECIFIC;
+-		return;
+-	}
+-
+ 	if (mi->version.v_mode == V_DEFAULT &&
+ 		config_default_vers.v_mode != V_DEFAULT) {
+ 		mi->version.major = config_default_vers.major;
+@@ -121,9 +115,9 @@ static void nfs_default_version(struct nfsmount_info *mi)
+ 		return;
+ 	}
+ 
+-	if (mi->version.v_mode == V_GENERAL &&
+-		config_default_vers.v_mode != V_DEFAULT) {
+-		if (mi->version.major == config_default_vers.major)
++	if (mi->version.v_mode == V_GENERAL) {
++		if (config_default_vers.v_mode != V_DEFAULT &&
++		    mi->version.major == config_default_vers.major)
+ 			mi->version.minor = config_default_vers.minor;
+ 		return;
+ 	}
+@@ -298,6 +292,7 @@ static int nfs_verify_lock_option(struct mount_options *options)
+ 			    "required for remote locking."), progname);
+ 		nfs_error(_("%s: Either use '-o nolock' to keep "
+ 			    "locks local, or start statd."), progname);
++		errno = EALREADY; /* Don't print further error message */
+ 		return 0;
+ 	}
+ 
+@@ -742,8 +737,13 @@ static int nfs_do_mount_v4(struct nfsmount_info *mi,
+ 	}
+ 
+ 	if (mi->version.v_mode != V_SPECIFIC) {
+-		snprintf(version_opt, sizeof(version_opt) - 1,
+-			"vers=%lu.%lu", mi->version.major, mi->version.minor);
++		if (mi->version.v_mode == V_GENERAL)
++			snprintf(version_opt, sizeof(version_opt) - 1,
++				"vers=%lu", mi->version.major);
++		else
++			snprintf(version_opt, sizeof(version_opt) - 1,
++				"vers=%lu.%lu", mi->version.major,
++				mi->version.minor);
+ 
+ 		if (po_append(options, version_opt) == PO_FAILED) {
+ 			errno = EINVAL;
 diff --git a/utils/mountd/cache.c b/utils/mountd/cache.c
 index c23d384..7d250f9 100644
 --- a/utils/mountd/cache.c
@@ -413,6 +662,97 @@ index c23d384..7d250f9 100644
  	       (strncmp(me->mnt_dir, p, l) != 0 ||
  		me->mnt_dir[l] != '/'))
  		;
+diff --git a/utils/mountd/v4root.c b/utils/mountd/v4root.c
+index 34d098a..d521725 100644
+--- a/utils/mountd/v4root.c
++++ b/utils/mountd/v4root.c
+@@ -26,6 +26,7 @@
+ #include "nfslib.h"
+ #include "misc.h"
+ #include "v4root.h"
++#include "pseudoflavors.h"
+ 
+ int v4root_needed;
+ 
+@@ -56,22 +57,25 @@ static nfs_export pseudo_root = {
+ };
+ 
+ static void
+-set_pseudofs_security(struct exportent *pseudo, struct exportent *source)
++set_pseudofs_security(struct exportent *pseudo, int flags)
+ {
+-	struct sec_entry *se;
++	struct flav_info *flav;
+ 	int i;
+ 
+-	if (source->e_flags & NFSEXP_INSECURE_PORT)
++	if (flags & NFSEXP_INSECURE_PORT)
+ 		pseudo->e_flags |= NFSEXP_INSECURE_PORT;
+-	if ((source->e_flags & NFSEXP_ROOTSQUASH) == 0)
++	if ((flags & NFSEXP_ROOTSQUASH) == 0)
+ 		pseudo->e_flags &= ~NFSEXP_ROOTSQUASH;
+-	for (se = source->e_secinfo; se->flav; se++) {
++	for (flav = flav_map; flav < flav_map + flav_map_size; flav++) {
+ 		struct sec_entry *new;
+ 
+-		i = secinfo_addflavor(se->flav, pseudo);
++		if (!flav->fnum)
++			continue;
++
++		i = secinfo_addflavor(flav, pseudo);
+ 		new = &pseudo->e_secinfo[i];
+ 
+-		if (se->flags & NFSEXP_INSECURE_PORT)
++		if (flags & NFSEXP_INSECURE_PORT)
+ 			new->flags |= NFSEXP_INSECURE_PORT;
+ 	}
+ }
+@@ -91,7 +95,7 @@ v4root_create(char *path, nfs_export *export)
+ 	strncpy(eep.e_path, path, sizeof(eep.e_path));
+ 	if (strcmp(path, "/") != 0)
+ 		eep.e_flags &= ~NFSEXP_FSID;
+-	set_pseudofs_security(&eep, curexp);
++	set_pseudofs_security(&eep, curexp->e_flags);
+ 	exp = export_create(&eep, 0);
+ 	if (exp == NULL)
+ 		return NULL;
+@@ -139,7 +143,7 @@ pseudofs_update(char *hostname, char *path, nfs_export *source)
+ 		return 0;
+ 	}
+ 	/* Update an existing V4ROOT export: */
+-	set_pseudofs_security(&exp->m_export, &source->m_export);
++	set_pseudofs_security(&exp->m_export, source->m_export.e_flags);
+ 	return 0;
+ }
+ 
+diff --git a/utils/nfsd/nfsd.man b/utils/nfsd/nfsd.man
+index be21ed4..3ba847e 100644
+--- a/utils/nfsd/nfsd.man
++++ b/utils/nfsd/nfsd.man
+@@ -121,6 +121,7 @@ address family combinations that are marked visible in the
+ database.
+ 
+ .SH SEE ALSO
++.BR nfsd (7),
+ .BR rpc.mountd (8),
+ .BR exports (5),
+ .BR exportfs (8),
+diff --git a/utils/nfsidmap/nfsidmap.c b/utils/nfsidmap/nfsidmap.c
+index 5d62078..1f5ba67 100644
+--- a/utils/nfsidmap/nfsidmap.c
++++ b/utils/nfsidmap/nfsidmap.c
+@@ -323,7 +323,10 @@ int main(int argc, char **argv)
+ 	}
+ 	type = strtok(arg, ":");
+ 	value = strtok(NULL, ":");
+-
++    if (value == NULL) {
++		xlog_err("Error: Null uid/gid value.");
++		return 1;
++	}
+ 	if (verbose) {
+ 		xlog_warn("key: 0x%lx type: %s value: %s timeout %ld",
+ 			key, type, value, timeout);
 diff --git a/utils/statd/rmtcall.c b/utils/statd/rmtcall.c
 index fd576d9..66a6eeb 100644
 --- a/utils/statd/rmtcall.c
