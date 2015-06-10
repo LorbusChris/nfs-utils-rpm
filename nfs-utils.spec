@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.2
-Release: 7%{?dist}
+Release: 8%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -22,6 +22,7 @@ Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
 Patch102: nfs-utils-1.2.3-sm-notify-res_init.patch
 Patch103: nfs-utils-1.2.5-idmap-errmsg.patch
 Patch104: systemd-Set-var-lib-nfs-rpc_pipefs.mount-After-tmpfi.patch
+Patch105: nfs-utils-1.3.2-systemd-gssargs.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -80,6 +81,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch102 -p1
 %patch103 -p1
 %patch104 -p1
+%patch105 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -307,6 +309,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Wed Jun 10 2015 Steve Dickson <steved@redhat.com> 1.3.2-8
+- Make systemd args backwards compatible (bz 1210751)
+
 * Tue May 12 2015 Colin Walters <walters@redhat.com> - 1:1.3.2-7
 - Add patch to fix initial start on OSTree managed systems (bz 1219871)
 
