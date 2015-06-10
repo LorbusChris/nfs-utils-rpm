@@ -177,18 +177,18 @@ done
 # Create rpcuser gid as long as it does not already exist
 cat /etc/group | cut -d':' -f 1 | grep --quiet rpcuser 2>/dev/null
 if [ "$?" -eq 1 ]; then
-    /usr/sbin/groupadd -g %{rpcuser_uid} rpcuser >/dev/null || :
+    /usr/sbin/groupadd -g %{rpcuser_uid} rpcuser >/dev/null 2>&1 || :
 else
-    /usr/sbin/groupmod -g %{rpcuser_uid} rpcuser >/dev/null || :
+    /usr/sbin/groupmod -g %{rpcuser_uid} rpcuser >/dev/null 2>&1 || :
 fi
 
 # Create rpcuser uid as long as it does not already exist.
 cat /etc/passwd | cut -d':' -f 1 | grep --quiet rpcuser 2>/dev/null
 if [ "$?" -eq 1 ]; then
     /usr/sbin/useradd -l -c "RPC Service User" -r -g %{rpcuser_uid} \
-        -s /sbin/nologin -u %{rpcuser_uid} -d /var/lib/nfs rpcuser >/dev/null || :
+        -s /sbin/nologin -u %{rpcuser_uid} -d /var/lib/nfs rpcuser >/dev/null 2>&1 || :
 else
- /usr/sbin/usermod -u %{rpcuser_uid} -g %{rpcuser_uid} rpcuser >/dev/null || :
+ /usr/sbin/usermod -u %{rpcuser_uid} -g %{rpcuser_uid} rpcuser >/dev/null 2>&1 || :
 fi 
 
 # Using the 16-bit value of -2 for the nfsnobody uid and gid
@@ -197,19 +197,19 @@ fi
 # Create nfsnobody gid as long as it does not already exist
 cat /etc/group | cut -d':' -f 1 | grep --quiet nfsnobody 2>/dev/null
 if [ "$?" -eq 1 ]; then
-    /usr/sbin/groupadd -g %{nfsnobody_uid} nfsnobody >/dev/null || :
+    /usr/sbin/groupadd -g %{nfsnobody_uid} nfsnobody >/dev/null 2>&1 || :
 else
-    /usr/sbin/groupmod -g %{nfsnobody_uid} nfsnobody >/dev/null || :
+    /usr/sbin/groupmod -g %{nfsnobody_uid} nfsnobody >/dev/null 2>&1 || :
 fi
 
 # Create nfsnobody uid as long as it does not already exist.
 cat /etc/passwd | cut -d':' -f 1 | grep --quiet nfsnobody 2>/dev/null
 if [ $? -eq 1 ]; then
     /usr/sbin/useradd -l -c "Anonymous NFS User" -r -g %{nfsnobody_uid} \
-		-s /sbin/nologin -u %{nfsnobody_uid} -d /var/lib/nfs nfsnobody >/dev/null || :
+		-s /sbin/nologin -u %{nfsnobody_uid} -d /var/lib/nfs nfsnobody >/dev/null 2>&1 || :
 else
 
-   /usr/sbin/usermod -u %{nfsnobody_uid} -g %{nfsnobody_uid} nfsnobody >/dev/null || :
+   /usr/sbin/usermod -u %{nfsnobody_uid} -g %{nfsnobody_uid} nfsnobody >/dev/null 2>&1 || :
 fi
 
 %post
@@ -311,6 +311,7 @@ fi
 %changelog
 * Wed Jun 10 2015 Steve Dickson <steved@redhat.com> 1.3.2-8
 - Make systemd args backwards compatible (bz 1210751)
+- Stop scribbling on stderr (bz 1211008)
 
 * Tue May 12 2015 Colin Walters <walters@redhat.com> - 1:1.3.2-7
 - Add patch to fix initial start on OSTree managed systems (bz 1219871)
