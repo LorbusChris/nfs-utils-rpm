@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.2
-Release: 8%{?dist}
+Release: 9%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -309,6 +309,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Wed Jun 17 2015 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:1.3.2-9
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_23_Mass_Rebuild
+
 * Wed Jun 10 2015 Steve Dickson <steved@redhat.com> 1.3.2-8
 - Make systemd args backwards compatible (bz 1210751)
 - Stop scribbling on stderr (bz 1211008)
