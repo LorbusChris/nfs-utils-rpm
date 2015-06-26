@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.2
-Release: 9%{?dist}
+Release: 10%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -15,14 +15,13 @@ Source2: nfs.sysconfig
 Source3: nfs-utils_env.sh
 Source4: lockd.conf
 
-Patch001: nfs-utils-1.3.3-rc4.patch
+Patch001: nfs-utils-1.3.3-rc5.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
 Patch102: nfs-utils-1.2.3-sm-notify-res_init.patch
 Patch103: nfs-utils-1.2.5-idmap-errmsg.patch
-Patch104: nfs-utils-1.3.2-systemd-tmpfiles.patch
-Patch105: nfs-utils-1.3.2-systemd-gssargs.patch
+Patch104: nfs-utils-1.3.2-systemd-gssargs.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -81,7 +80,6 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch102 -p1
 %patch103 -p1
 %patch104 -p1
-%patch105 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -309,6 +307,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Fri Jun 26 2015 Steve Dickson <steved@redhat.com> 1.3.2-10
+- Update to latest RC release: nfs-utils-1-3-3-rc5 (bz 1233005)
+
 * Wed Jun 17 2015 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:1.3.2-9
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_23_Mass_Rebuild
 
