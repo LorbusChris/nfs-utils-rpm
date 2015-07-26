@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.2
-Release: 10%{?dist}
+Release: 11%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -49,6 +49,7 @@ BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, glibc-headers, device-mapper-devel
 BuildRequires: krb5-devel, tcp_wrappers-devel, libmount-devel
 BuildRequires: fedfs-utils-devel >= 0.8.0-7, sqlite-devel
+BuildRequires: python3-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
 Requires: libnfsidmap libevent
@@ -83,6 +84,9 @@ This package also contains the mount.nfs and umount.nfs program.
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
+
+# Change shebangs
+find -name \*.py -exec sed -r -i '1s|^#!\s*/usr/bin.*python.*|#!%{__python3}|' {} \;
 
 %build
 
@@ -307,6 +311,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Mon Jul 13 2015 Miro Hrončok <mhroncok@redhat.com> - 1:1.3.2-11
+- Replace Python scripts shebangs with %%{__python3} and require python3-devel to have that
+
 * Fri Jun 26 2015 Steve Dickson <steved@redhat.com> 1.3.2-10
 - Update to latest RC release: nfs-utils-1-3-3-rc5 (bz 1233005)
 
