@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.2
-Release: 11%{?dist}
+Release: 12%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -16,6 +16,7 @@ Source3: nfs-utils_env.sh
 Source4: lockd.conf
 
 Patch001: nfs-utils-1.3.3-rc5.patch
+Patch002: nfs-utils-1.3.2-gssd-noclear-retval.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -75,6 +76,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %setup -q
 
 %patch001 -p1
+%patch002 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -311,7 +313,10 @@ fi
 /sbin/umount.nfs4
 
 %changelog
-* Mon Jul 13 2015 Miro Hrončok <mhroncok@redhat.com> - 1:1.3.2-11
+* Fri Jul 31 2015 Steve Dickson <steved@redhat.com> 1.3.2-12
+- Fixed return value being overrun in gssd (bz 1249046)
+
+* Mon Jul 13 2015 Miro Hronok <mhroncok@redhat.com> - 1:1.3.2-11
 - Replace Python scripts shebangs with %%{__python3} and require python3-devel to have that
 
 * Fri Jun 26 2015 Steve Dickson <steved@redhat.com> 1.3.2-10
