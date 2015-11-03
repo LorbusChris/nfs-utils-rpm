@@ -1,7 +1,3 @@
-# Avoid circular nfs-utils -> fedfs-utils -> nfs-utils dependencies when
-# bootstrapping
-%global bootstrap 1
-
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
@@ -53,11 +49,8 @@ BuildRequires: libnfsidmap-devel libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, glibc-headers, device-mapper-devel
 BuildRequires: krb5-devel, tcp_wrappers-devel, libmount-devel
-%if ! 0%{?bootstrap}
-BuildRequires: fedfs-utils-devel >= 0.8.0-7
-%endif
+BuildRequires: fedfs-utils-devel >= 0.8.0-7, sqlite-devel
 BuildRequires: python3-devel
-BuildRequires: sqlite-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): /sbin/chkconfig /sbin/nologin
 Requires: libnfsidmap libevent
@@ -316,7 +309,6 @@ fi
 %changelog
 * Sun Nov 01 2015 Kalev Lember <klember@redhat.com> - 1:1.3.2-13
 - Rebuilt for libtirpc soname bump
-- Enable bootstrap
 
 * Fri Jul 31 2015 Steve Dickson <steved@redhat.com> 1.3.2-12
 - Fixed return value being overrun in gssd (bz 1249046)
