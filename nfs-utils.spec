@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.2
-Release: 13%{?dist}
+Release: 12%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -313,9 +313,6 @@ fi
 /sbin/umount.nfs4
 
 %changelog
-* Sun Nov 01 2015 Kalev Lember <klember@redhat.com> - 1:1.3.2-13
-- Rebuilt for libtirpc soname bump
-
 * Fri Jul 31 2015 Steve Dickson <steved@redhat.com> 1.3.2-12
 - Fixed return value being overrun in gssd (bz 1249046)
 
