@@ -254,7 +254,7 @@ if /sbin/chkconfig --level 3 nfs ; then
 	/bin/systemctl enable nfs-server.service >/dev/null 2>&1 || :
 fi
 
-%triggerun -- nfs-utils < 1:1.3.1-4.0
+%triggerin -- nfs-utils < 1:1.3.1-4.0
 # reset configuration files and running daemons
 if [ $1 -eq 2 ] ; then
 	/bin/systemctl enable nfs-client.target >/dev/null 2>&1 || :
