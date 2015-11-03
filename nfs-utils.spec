@@ -1,12 +1,12 @@
 # Avoid circular nfs-utils -> fedfs-utils -> nfs-utils dependencies when
 # bootstrapping
-%global bootstrap 0
+%global bootstrap 1
 
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.2
-Release: 14%{?dist}
+Release: 13%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -314,9 +314,6 @@ fi
 /sbin/umount.nfs4
 
 %changelog
-* Sun Nov 01 2015 Kalev Lember <klember@redhat.com> - 1:1.3.2-14
-- Disable bootstrap
-
 * Sun Nov 01 2015 Kalev Lember <klember@redhat.com> - 1:1.3.2-13
 - Rebuilt for libtirpc soname bump
 - Enable bootstrap
