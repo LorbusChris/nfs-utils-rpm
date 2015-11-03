@@ -253,6 +253,12 @@ if /sbin/chkconfig --level 3 nfs ; then
 	/bin/systemctl enable nfs-server.service >/dev/null 2>&1 || :
 fi
 
+%triggerin -- nfs-utils < 1:1.3.0-0.2
+/bin/systemctl restart nfs-config >/dev/null 2>&1 || :
+
+%triggerin -- nfs-utils < 1:1.3.0-7.1
+/bin/systemctl stop rpc-svcgssd  >/dev/null 2>&1 || :
+
 %triggerin -- nfs-utils < 1:1.3.1-4.0
 # reset configuration files and running daemons
 if [ $1 -eq 2 ] ; then
