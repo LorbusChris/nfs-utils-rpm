@@ -1,0 +1,420 @@
+diff --git a/aclocal/libtirpc.m4 b/aclocal/libtirpc.m4
+index b7de636..27368ff 100644
+--- a/aclocal/libtirpc.m4
++++ b/aclocal/libtirpc.m4
+@@ -20,6 +20,12 @@ AC_DEFUN([AC_LIBTIRPC], [
+                                     [Define to 1 if your rpcsec library provides authgss_free_private_data])],,
+                          [${LIBS}])])
+ 
++     AS_IF([test -n "${LIBTIRPC}"],
++           [AC_CHECK_LIB([tirpc], [libtirpc_set_debug],
++                         [AC_DEFINE([HAVE_LIBTIRPC_SET_DEBUG], [1],
++                                    [Define to 1 if your tirpc library provides libtirpc_set_debug])],,
++                         [${LIBS}])])
++
+   AC_SUBST([AM_CPPFLAGS])
+   AC_SUBST(LIBTIRPC)
+ 
+diff --git a/support/export/client.c b/support/export/client.c
+index 95156f0..af9e6bb 100644
+--- a/support/export/client.c
++++ b/support/export/client.c
+@@ -686,6 +686,21 @@ check_netgroup(const nfs_client *clp, const struct addrinfo *ai)
+ 		}
+ 	}
+ 
++	/* check whether the IP itself is in the netgroup */
++	for (tmp = (struct addrinfo *)ai ; tmp != NULL ; tmp = tmp->ai_next) {
++		free(hname);
++		hname = calloc(INET6_ADDRSTRLEN, 1);
++
++		if (inet_ntop(tmp->ai_family, &(((struct sockaddr_in *)tmp->ai_addr)->sin_addr), hname, INET6_ADDRSTRLEN) != hname) {
++			xlog(D_GENERAL, "  %s: unable to inet_ntop addrinfo %p: %m", __func__, tmp, errno);
++			goto out;
++		}
++		if (innetgr(netgroup, hname, NULL, NULL)) {
++			match = 1;
++			goto out;
++		}
++	}
++
+ 	/* Okay, strip off the domain (if we have one) */
+ 	dot = strchr(hname, '.');
+ 	if (dot == NULL)
+diff --git a/support/export/hostname.c b/support/export/hostname.c
+index 169baa5..7a44d42 100644
+--- a/support/export/hostname.c
++++ b/support/export/hostname.c
+@@ -134,6 +134,8 @@ host_pton(const char *paddr)
+ 			break;
+ 		}
+ 		return ai;
++	case EAI_NONAME:
++		break;
+ 	case EAI_SYSTEM:
+ 		xlog(D_GENERAL, "%s: failed to convert %s: (%d) %m",
+ 				__func__, paddr, errno);
+diff --git a/support/include/nfslib.h b/support/include/nfslib.h
+index c9a13cb..ddd71ac 100644
+--- a/support/include/nfslib.h
++++ b/support/include/nfslib.h
+@@ -176,6 +176,9 @@ size_t  strlcpy(char *, const char *, size_t);
+ ssize_t atomicio(ssize_t (*f) (int, void*, size_t),
+ 		 int, void *, size_t);
+ 
++#ifdef HAVE_LIBTIRPC_SET_DEBUG
++void  libtirpc_set_debug(char *name, int level, int use_stderr);
++#endif
+ 
+ #define UNUSED(x) UNUSED_ ## x __attribute__((unused))
+ 
+diff --git a/support/nfs/mydaemon.c b/support/nfs/mydaemon.c
+index 3391eff..343e80b 100644
+--- a/support/nfs/mydaemon.c
++++ b/support/nfs/mydaemon.c
+@@ -49,6 +49,7 @@
+ #include <stdbool.h>
+ #include <stdlib.h>
+ #include <string.h>
++#include <syslog.h>
+ #include <xlog.h>
+ 
+ #include "nfslib.h"
+@@ -122,6 +123,7 @@ daemon_init(bool fg)
+ 	dup2(tempfd, 0);
+ 	dup2(tempfd, 1);
+ 	dup2(tempfd, 2);
++	closelog();
+ 	dup2(pipefds[1], 3);
+ 	pipefds[1] = 3;
+ 	closeall(4);
+diff --git a/systemd/Makefile.am b/systemd/Makefile.am
+index 0331926..03f96e9 100644
+--- a/systemd/Makefile.am
++++ b/systemd/Makefile.am
+@@ -28,9 +28,13 @@ endif
+ if CONFIG_GSS
+ unit_files += \
+     auth-rpcgss-module.service \
+-    rpc-gssd.service \
++    rpc-gssd.service
++
++if CONFIG_SVCGSS
++unit_files += \
+     rpc-svcgssd.service
+ endif
++endif
+ 
+ EXTRA_DIST = $(unit_files)
+ 
+diff --git a/utils/exportfs/exportfs.c b/utils/exportfs/exportfs.c
+index 8758231..c7a79a6 100644
+--- a/utils/exportfs/exportfs.c
++++ b/utils/exportfs/exportfs.c
+@@ -499,9 +499,10 @@ unexportfs(char *arg, int verbose)
+ 
+ static int can_test(void)
+ {
+-	char buf[1024];
++	char buf[1024] = { 0 };
+ 	int fd;
+ 	int n;
++	size_t bufsiz = sizeof(buf);
+ 
+ 	fd = open("/proc/net/rpc/auth.unix.ip/channel", O_WRONLY);
+ 	if (fd < 0)
+@@ -514,9 +515,9 @@ static int can_test(void)
+ 	 * commit 2f74f972  (sunrpc: prepare NFS for 2038).
+ 	 */
+ 	if (time(NULL) > INT_TO_LONG_THRESHOLD_SECS)
+-		sprintf(buf, "nfsd 0.0.0.0 %ld -test-client-\n", LONG_MAX);
++		snprintf(buf, bufsiz-1, "nfsd 0.0.0.0 %ld -test-client-\n", LONG_MAX);
+ 	else
+-		sprintf(buf, "nfsd 0.0.0.0 %d -test-client-\n", INT_MAX);
++		snprintf(buf, bufsiz-1, "nfsd 0.0.0.0 %d -test-client-\n", INT_MAX);
+ 
+ 	n = write(fd, buf, strlen(buf));
+ 	close(fd);
+@@ -532,7 +533,8 @@ static int can_test(void)
+ 
+ static int test_export(char *path, int with_fsid)
+ {
+-	char buf[1024];
++	/* beside max path, buf size should take protocol str into account */
++	char buf[NFS_MAXPATHLEN+1+64] = { 0 };
+ 	char *bp = buf;
+ 	int len = sizeof(buf);
+ 	int fd, n;
+@@ -758,7 +760,8 @@ dumpopt(char c, char *fmt, ...)
+ static void
+ dump(int verbose, int export_format)
+ {
+-	char buf[1024];
++	/* buf[] size should >= sizeof(struct exportent->e_path) */
++	char buf[NFS_MAXPATHLEN+1] = { 0 };
+ 	char *bp;
+ 	int len;
+ 	nfs_export	*exp;
+diff --git a/utils/gssd/gssd.c b/utils/gssd/gssd.c
+index e480349..078e558 100644
+--- a/utils/gssd/gssd.c
++++ b/utils/gssd/gssd.c
+@@ -869,6 +869,13 @@ main(int argc, char *argv[])
+ 	if (verbosity && rpc_verbosity == 0)
+ 		rpc_verbosity = verbosity;
+ 	authgss_set_debug_level(rpc_verbosity);
++#elif HAVE_LIBTIRPC_SET_DEBUG
++	/*
++	 * Only set the libtirpc debug level if explicitly requested via -r...
++	 * gssd is chatty enough as it is.
++	 */
++	if (rpc_verbosity > 0)
++		libtirpc_set_debug(progname, rpc_verbosity, fg);
+ #else
+         if (rpc_verbosity > 0)
+ 		printerr(0, "Warning: rpcsec_gss library does not "
+diff --git a/utils/gssd/gssd_proc.c b/utils/gssd/gssd_proc.c
+index 11168b2..cee8991 100644
+--- a/utils/gssd/gssd_proc.c
++++ b/utils/gssd/gssd_proc.c
+@@ -348,16 +348,9 @@ create_auth_rpc_client(struct clnt_info *clp,
+ 	printerr(2, "creating %s client for server %s\n", clp->protocol,
+ 			clp->servername);
+ 
+-	if ((strcmp(clp->protocol, "tcp")) == 0) {
+-		protocol = IPPROTO_TCP;
+-	} else if ((strcmp(clp->protocol, "udp")) == 0) {
++	protocol = IPPROTO_TCP;
++	if ((strcmp(clp->protocol, "udp")) == 0)
+ 		protocol = IPPROTO_UDP;
+-	} else {
+-		printerr(0, "WARNING: unrecognized protocol, '%s', requested "
+-			 "for connection to server %s for user with uid %d\n",
+-			 clp->protocol, clp->servername, uid);
+-		goto out_fail;
+-	}
+ 
+ 	switch (addr->sa_family) {
+ 	case AF_INET:
+diff --git a/utils/gssd/krb5_util.c b/utils/gssd/krb5_util.c
+index ecf17a2..f48de2c 100644
+--- a/utils/gssd/krb5_util.c
++++ b/utils/gssd/krb5_util.c
+@@ -801,7 +801,7 @@ find_keytab_entry(krb5_context context, krb5_keytab kt, const char *tgtname,
+ 	char *default_realm = NULL;
+ 	char *realm;
+ 	char *k5err = NULL;
+-	int tried_all = 0, tried_default = 0;
++	int tried_all = 0, tried_default = 0, tried_upper = 0;
+ 	krb5_principal princ;
+ 	const char *notsetstr = "not set";
+ 	char *adhostoverride;
+@@ -835,7 +835,6 @@ find_keytab_entry(krb5_context context, krb5_keytab kt, const char *tgtname,
+ 	        strcpy(myhostad, myhostname);
+ 	        for (i = 0; myhostad[i] != 0; ++i) {
+ 	          if (myhostad[i] == '.') break;
+-	          myhostad[i] = toupper(myhostad[i]);
+ 	        }
+ 	        myhostad[i] = '$';
+ 	        myhostad[i+1] = 0;
+@@ -936,6 +935,19 @@ find_keytab_entry(krb5_context context, krb5_keytab kt, const char *tgtname,
+ 				k5err = gssd_k5_err_msg(context, code);
+ 				printerr(3, "%s while getting keytab entry for '%s'\n",
+ 					 k5err, spn);
++				/*
++				 * We tried the active directory machine account
++				 * with the hostname part as-is and failed...
++				 * convert it to uppercase and try again before
++				 * moving on to the svcname
++				 */
++				if (strcmp(svcnames[j],"$") == 0 && !tried_upper) {
++					for (i = 0; myhostad[i] != '$'; ++i) {
++						myhostad[i] = toupper(myhostad[i]);
++					}
++					j--;
++					tried_upper = 1;
++				}
+ 			} else {
+ 				printerr(3, "Success getting keytab entry for '%s'\n",spn);
+ 				retval = 0;
+diff --git a/utils/gssd/svcgssd.c b/utils/gssd/svcgssd.c
+index f1b4347..0fe7c6d 100644
+--- a/utils/gssd/svcgssd.c
++++ b/utils/gssd/svcgssd.c
+@@ -135,6 +135,13 @@ main(int argc, char *argv[])
+ 	if (verbosity && rpc_verbosity == 0)
+ 		rpc_verbosity = verbosity;
+ 	authgss_set_debug_level(rpc_verbosity);
++#elif HAVE_LIBTIRPC_SET_DEBUG
++        /*
++	 * Only set the libtirpc debug level if explicitly requested via -r...
++	 * svcgssd is chatty enough as it is.
++	 */
++        if (rpc_verbosity > 0)
++                libtirpc_set_debug(progname, rpc_verbosity, fg);
+ #else
+ 	if (rpc_verbosity > 0)
+ 		printerr(0, "Warning: rpcsec_gss library does not "
+diff --git a/utils/mountd/auth.c b/utils/mountd/auth.c
+index 330cab5..894a7a5 100644
+--- a/utils/mountd/auth.c
++++ b/utils/mountd/auth.c
+@@ -85,7 +85,7 @@ auth_reload()
+ {
+ 	struct stat		stb;
+ 	static ino_t		last_inode;
+-	static int		last_fd;
++	static int		last_fd = -1;
+ 	static unsigned int	counter;
+ 	int			fd;
+ 
+@@ -93,11 +93,22 @@ auth_reload()
+ 		xlog(L_FATAL, "couldn't open %s", _PATH_ETAB);
+ 	} else if (fstat(fd, &stb) < 0) {
+ 		xlog(L_FATAL, "couldn't stat %s", _PATH_ETAB);
+-	} else if (stb.st_ino == last_inode) {
++		close(fd);
++	} else if (last_fd != -1 && stb.st_ino == last_inode) {
++		/* We opened the etab file before, and its inode
++		 * number hasn't changed since then.
++		 */
+ 		close(fd);
+ 		return counter;
+ 	} else {
+-		close(last_fd);
++		/* Need to process entries from the etab file.  Close
++		 * the file descriptor from the previous open (last_fd),
++		 * and keep the current file descriptor open to prevent
++		 * the file system reusing the current inode number
++		 * (last_inode).
++		 */
++		if (last_fd != -1)
++			close(last_fd);
+ 		last_fd = fd;
+ 		last_inode = stb.st_ino;
+ 	}
+diff --git a/utils/nfsd/nfssvc.c b/utils/nfsd/nfssvc.c
+index a2b11d8..e8efd06 100644
+--- a/utils/nfsd/nfssvc.c
++++ b/utils/nfsd/nfssvc.c
+@@ -168,22 +168,22 @@ nfssvc_setfds(const struct addrinfo *hints, const char *node, const char *port)
+ 			continue;
+ 		}
+ 
+-		xlog(D_GENERAL, "Creating %s %s socket.", family, proto);
+-
+ 		/* open socket and prepare to hand it off to kernel */
+ 		sockfd = socket(addr->ai_family, addr->ai_socktype,
+ 				addr->ai_protocol);
+ 		if (sockfd < 0) {
+-			if (errno == EAFNOSUPPORT)
+-				xlog(L_NOTICE, "address family %s not "
+-						"supported by protocol %s",
+-						family, proto);
+-			else
++			if (errno != EAFNOSUPPORT) {
+ 				xlog(L_ERROR, "unable to create %s %s socket: "
+ 				     "errno %d (%m)", family, proto, errno);
+-			rc = errno;
+-			goto error;
++				rc = errno;
++				goto error;
++			}
++			addr = addr->ai_next;
++			continue;
+ 		}
++
++		xlog(D_GENERAL, "Created %s %s socket.", family, proto);
++
+ #ifdef IPV6_SUPPORTED
+ 		if (addr->ai_family == AF_INET6 &&
+ 		    setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(on))) {
+diff --git a/utils/statd/rmtcall.c b/utils/statd/rmtcall.c
+index 45c84f9..c4f6364 100644
+--- a/utils/statd/rmtcall.c
++++ b/utils/statd/rmtcall.c
+@@ -113,7 +113,6 @@ statd_get_socket(void)
+ 	if (sockfd < 0)
+ 		return -1;
+ 
+-	FD_SET(sockfd, &SVC_FDSET);
+ 	return sockfd;
+ }
+ 
+diff --git a/utils/statd/statd.c b/utils/statd/statd.c
+index 2b7a167..e5b4c98 100644
+--- a/utils/statd/statd.c
++++ b/utils/statd/statd.c
+@@ -247,6 +247,7 @@ int main (int argc, char **argv)
+ 	int port = 0, out_port = 0;
+ 	int nlm_udp = 0, nlm_tcp = 0;
+ 	struct rlimit rlim;
++	int notify_sockfd;
+ 
+ 	/* Default: daemon mode, no other options */
+ 	run_mode = 0;
+@@ -437,7 +438,7 @@ int main (int argc, char **argv)
+ 		}
+ 
+ 	/* Make sure we have a privilege port for calling into the kernel */
+-	if (statd_get_socket() < 0)
++	if ((notify_sockfd = statd_get_socket()) < 0)
+ 		exit(1);
+ 
+ 	/* If sm-notify didn't take all the state files, load
+@@ -484,7 +485,7 @@ int main (int argc, char **argv)
+ 		 * Handle incoming requests:  SM_NOTIFY socket requests, as
+ 		 * well as callbacks from lockd.
+ 		 */
+-		my_svc_run();	/* I rolled my own, Olaf made it better... */
++		my_svc_run(notify_sockfd);	/* I rolled my own, Olaf made it better... */
+ 
+ 		/* Only get here when simulating a crash so we should probably
+ 		 * start sm-notify running again.  As we have already dropped
+diff --git a/utils/statd/statd.h b/utils/statd/statd.h
+index a1d8035..231ac7e 100644
+--- a/utils/statd/statd.h
++++ b/utils/statd/statd.h
+@@ -28,7 +28,7 @@ extern _Bool	statd_present_address(const struct sockaddr *sap, char *buf,
+ __attribute__((__malloc__))
+ extern char *	statd_canonical_name(const char *hostname);
+ 
+-extern void	my_svc_run(void);
++extern void	my_svc_run(int);
+ extern void	notify_hosts(void);
+ extern void	shuffle_dirs(void);
+ extern int	statd_get_socket(void);
+diff --git a/utils/statd/svc_run.c b/utils/statd/svc_run.c
+index d98ecee..28c1ad6 100644
+--- a/utils/statd/svc_run.c
++++ b/utils/statd/svc_run.c
+@@ -78,7 +78,7 @@ my_svc_exit(void)
+  * The heart of the server.  A crib from libc for the most part...
+  */
+ void
+-my_svc_run(void)
++my_svc_run(int sockfd)
+ {
+ 	FD_SET_TYPE	readfds;
+ 	int             selret;
+@@ -96,6 +96,8 @@ my_svc_run(void)
+ 		}
+ 
+ 		readfds = SVC_FDSET;
++		/* Set notify sockfd for waiting for reply */
++		FD_SET(sockfd, &readfds);
+ 		if (notify) {
+ 			struct timeval	tv;
+ 
+@@ -125,8 +127,10 @@ my_svc_run(void)
+ 
+ 		default:
+ 			selret -= process_reply(&readfds);
+-			if (selret)
++			if (selret) {
++				FD_CLR(sockfd, &readfds);
+ 				svc_getreqset(&readfds);
++			}
+ 		}
+ 	}
+ }
