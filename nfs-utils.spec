@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.3
-Release: 2.rc1%{?dist}
+Release: 3.rc1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -17,6 +17,7 @@ Source4: lockd.conf
 
 Patch001: nfs-utils-1.3.4-rc1.patch
 Patch002: nfs-utils-1.3.3-systemd-decouple.patch
+Patch003: nfs-utils-1.3.3-gssd-debug.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -77,6 +78,7 @@ This package also contains the mount.nfs and umount.nfs program.
 
 %patch001 -p1
 %patch002 -p1
+%patch003 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -293,6 +295,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Mon Nov 16 2015 Steve Dickson <steved@redhat.com> 1.3.3-3.rc1
+-  Improving rpc.gssd's debugging (bz 1282600) 
+
 * Mon Nov 16 2015 Steve Dickson <steved@redhat.com> 1.3.3-2.rc1
 - Decouple the starting of nfs-service and rpcbind (bz 1279526)
 
