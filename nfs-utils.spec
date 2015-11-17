@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.3
-Release: 3.rc1%{?dist}
+Release: 4.rc1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -260,7 +260,7 @@ fi
 %dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd
 %dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd/sm
 %dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd/sm.bak
-%config(noreplace) %attr(644,rpcuser,rpcuser) %{_statdpath}/state
+%ghost %attr(644,rpcuser,rpcuser) %{_statdpath}/state
 %config(noreplace) %{_sharedstatedir}/nfs/xtab
 %config(noreplace) %{_sharedstatedir}/nfs/etab
 %config(noreplace) %{_sharedstatedir}/nfs/rmtab
@@ -295,6 +295,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Tue Nov 17 2015 Steve Dickson <steved@redhat.com> 1.3.3-4.rc1
+- ghost-ed rpc.statd state file (bz 1158466)
+
 * Mon Nov 16 2015 Steve Dickson <steved@redhat.com> 1.3.3-3.rc1
 -  Improving rpc.gssd's debugging (bz 1282600) 
 
