@@ -1,0 +1,1272 @@
+diff --git a/aclocal/libtirpc.m4 b/aclocal/libtirpc.m4
+index b7de636..27368ff 100644
+--- a/aclocal/libtirpc.m4
++++ b/aclocal/libtirpc.m4
+@@ -20,6 +20,12 @@ AC_DEFUN([AC_LIBTIRPC], [
+                                     [Define to 1 if your rpcsec library provides authgss_free_private_data])],,
+                          [${LIBS}])])
+ 
++     AS_IF([test -n "${LIBTIRPC}"],
++           [AC_CHECK_LIB([tirpc], [libtirpc_set_debug],
++                         [AC_DEFINE([HAVE_LIBTIRPC_SET_DEBUG], [1],
++                                    [Define to 1 if your tirpc library provides libtirpc_set_debug])],,
++                         [${LIBS}])])
++
+   AC_SUBST([AM_CPPFLAGS])
+   AC_SUBST(LIBTIRPC)
+ 
+diff --git a/support/export/client.c b/support/export/client.c
+index 95156f0..af9e6bb 100644
+--- a/support/export/client.c
++++ b/support/export/client.c
+@@ -686,6 +686,21 @@ check_netgroup(const nfs_client *clp, const struct addrinfo *ai)
+ 		}
+ 	}
+ 
++	/* check whether the IP itself is in the netgroup */
++	for (tmp = (struct addrinfo *)ai ; tmp != NULL ; tmp = tmp->ai_next) {
++		free(hname);
++		hname = calloc(INET6_ADDRSTRLEN, 1);
++
++		if (inet_ntop(tmp->ai_family, &(((struct sockaddr_in *)tmp->ai_addr)->sin_addr), hname, INET6_ADDRSTRLEN) != hname) {
++			xlog(D_GENERAL, "  %s: unable to inet_ntop addrinfo %p: %m", __func__, tmp, errno);
++			goto out;
++		}
++		if (innetgr(netgroup, hname, NULL, NULL)) {
++			match = 1;
++			goto out;
++		}
++	}
++
+ 	/* Okay, strip off the domain (if we have one) */
+ 	dot = strchr(hname, '.');
+ 	if (dot == NULL)
+diff --git a/support/export/hostname.c b/support/export/hostname.c
+index 169baa5..7a44d42 100644
+--- a/support/export/hostname.c
++++ b/support/export/hostname.c
+@@ -134,6 +134,8 @@ host_pton(const char *paddr)
+ 			break;
+ 		}
+ 		return ai;
++	case EAI_NONAME:
++		break;
+ 	case EAI_SYSTEM:
+ 		xlog(D_GENERAL, "%s: failed to convert %s: (%d) %m",
+ 				__func__, paddr, errno);
+diff --git a/support/include/nfslib.h b/support/include/nfslib.h
+index c9a13cb..ddd71ac 100644
+--- a/support/include/nfslib.h
++++ b/support/include/nfslib.h
+@@ -176,6 +176,9 @@ size_t  strlcpy(char *, const char *, size_t);
+ ssize_t atomicio(ssize_t (*f) (int, void*, size_t),
+ 		 int, void *, size_t);
+ 
++#ifdef HAVE_LIBTIRPC_SET_DEBUG
++void  libtirpc_set_debug(char *name, int level, int use_stderr);
++#endif
+ 
+ #define UNUSED(x) UNUSED_ ## x __attribute__((unused))
+ 
+diff --git a/support/nfs/closeall.c b/support/nfs/closeall.c
+index 38fb162..a69bf35 100644
+--- a/support/nfs/closeall.c
++++ b/support/nfs/closeall.c
+@@ -31,6 +31,7 @@ closeall(int min)
+ 	} else {
+ 		int fd = sysconf(_SC_OPEN_MAX);
+ 		while (--fd >= min)
+-			(void) close(fd);
++			if(fd >= 0)
++				(void) close(fd);
+ 	}
+ }
+diff --git a/support/nfs/mydaemon.c b/support/nfs/mydaemon.c
+index 3391eff..343e80b 100644
+--- a/support/nfs/mydaemon.c
++++ b/support/nfs/mydaemon.c
+@@ -49,6 +49,7 @@
+ #include <stdbool.h>
+ #include <stdlib.h>
+ #include <string.h>
++#include <syslog.h>
+ #include <xlog.h>
+ 
+ #include "nfslib.h"
+@@ -122,6 +123,7 @@ daemon_init(bool fg)
+ 	dup2(tempfd, 0);
+ 	dup2(tempfd, 1);
+ 	dup2(tempfd, 2);
++	closelog();
+ 	dup2(pipefds[1], 3);
+ 	pipefds[1] = 3;
+ 	closeall(4);
+diff --git a/support/nfs/svc_create.c b/support/nfs/svc_create.c
+index 5cb5ff6..ef7ff05 100644
+--- a/support/nfs/svc_create.c
++++ b/support/nfs/svc_create.c
+@@ -133,7 +133,7 @@ svc_create_bindaddr(struct netconfig *nconf, const uint16_t port)
+ 		hint.ai_family = AF_INET6;
+ #endif	/* IPV6_SUPPORTED */
+ 	else {
+-		xlog(D_GENERAL, "Unrecognized bind address family: %s",
++		xlog(L_ERROR, "Unrecognized bind address family: %s",
+ 			nconf->nc_protofmly);
+ 		return NULL;
+ 	}
+@@ -143,7 +143,7 @@ svc_create_bindaddr(struct netconfig *nconf, const uint16_t port)
+ 	else if (strcmp(nconf->nc_proto, NC_TCP) == 0)
+ 		hint.ai_protocol = (int)IPPROTO_TCP;
+ 	else {
+-		xlog(D_GENERAL, "Unrecognized bind address protocol: %s",
++		xlog(L_ERROR, "Unrecognized bind address protocol: %s",
+ 			nconf->nc_proto);
+ 		return NULL;
+ 	}
+@@ -275,7 +275,7 @@ svc_create_nconf_rand_port(const char *name, const rpcprog_t program,
+ 	xprt = svc_tli_create(RPC_ANYFD, nconf, &bindaddr, 0, 0);
+ 	freeaddrinfo(ai);
+ 	if (xprt == NULL) {
+-		xlog(D_GENERAL, "Failed to create listener xprt "
++		xlog(L_ERROR, "Failed to create listener xprt "
+ 			"(%s, %u, %s)", name, version, nconf->nc_netid);
+ 		return 0;
+ 	}
+@@ -286,10 +286,12 @@ svc_create_nconf_rand_port(const char *name, const rpcprog_t program,
+ 		return 0;
+ 	}
+ 
++	rpc_createerr.cf_stat = rpc_createerr.cf_error.re_errno = 0;
+ 	if (!svc_reg(xprt, program, version, dispatch, nconf)) {
+ 		/* svc_reg(3) destroys @xprt in this case */
+-		xlog(D_GENERAL, "Failed to register (%s, %u, %s)",
+-				name, version, nconf->nc_netid);
++		xlog(L_ERROR, "Failed to register (%s, %u, %s): %s",
++				name, version, nconf->nc_netid, 
++				clnt_spcreateerror("svc_reg() err"));
+ 		return 0;
+ 	}
+ 
+diff --git a/support/nfs/svc_socket.c b/support/nfs/svc_socket.c
+index 99321e7..1fa0d15 100644
+--- a/support/nfs/svc_socket.c
++++ b/support/nfs/svc_socket.c
+@@ -24,6 +24,7 @@
+ #include <sys/socket.h>
+ #include <sys/fcntl.h>
+ #include <errno.h>
++#include "xlog.h"
+ 
+ #include "config.h"
+ 
+@@ -99,9 +100,9 @@ svcsock_nonblock(int sock)
+ 	 * connection.
+ 	 */
+ 	if ((flags = fcntl(sock, F_GETFL)) < 0)
+-		perror(_("svc_socket: can't get socket flags"));
++		xlog(L_ERROR, "svc_socket: can't get socket flags: %m");
+ 	else if (fcntl(sock, F_SETFL, flags|O_NONBLOCK) < 0)
+-		perror(_("svc_socket: can't set socket flags"));
++		xlog(L_ERROR, "svc_socket: can't set socket flags: %m");
+ 	else
+ 		return sock;
+ 
+@@ -119,7 +120,7 @@ svc_socket (u_long number, int type, int protocol, int reuse)
+ 
+   if ((sock = __socket (AF_INET, type, protocol)) < 0)
+     {
+-      perror (_("svc_socket: socket creation problem"));
++      xlog(L_ERROR, "svc_socket: socket creation problem: %m");
+       return sock;
+     }
+ 
+@@ -130,7 +131,7 @@ svc_socket (u_long number, int type, int protocol, int reuse)
+ 			sizeof (ret));
+       if (ret < 0)
+ 	{
+-	  perror (_("svc_socket: socket reuse problem"));
++	  xlog(L_ERROR, "svc_socket: socket reuse problem: %m");
+ 	  return ret;
+ 	}
+     }
+@@ -141,7 +142,7 @@ svc_socket (u_long number, int type, int protocol, int reuse)
+ 
+   if (bind(sock, (struct sockaddr *) &addr, len) < 0)
+     {
+-      perror (_("svc_socket: bind problem"));
++      xlog(L_ERROR, "svc_socket: bind problem: %m");
+       (void) __close(sock);
+       sock = -1;
+     }
+diff --git a/support/nsm/file.c b/support/nsm/file.c
+index 4711c2c..7a8b504 100644
+--- a/support/nsm/file.c
++++ b/support/nsm/file.c
+@@ -536,7 +536,8 @@ nsm_get_state(_Bool update)
+ 		state++;
+ 
+ update:
+-	(void)close(fd);
++	if(fd >= 0)
++		(void)close(fd);
+ 
+ 	if (update) {
+ 		state += 2;
+diff --git a/systemd/Makefile.am b/systemd/Makefile.am
+index 0331926..03f96e9 100644
+--- a/systemd/Makefile.am
++++ b/systemd/Makefile.am
+@@ -28,9 +28,13 @@ endif
+ if CONFIG_GSS
+ unit_files += \
+     auth-rpcgss-module.service \
+-    rpc-gssd.service \
++    rpc-gssd.service
++
++if CONFIG_SVCGSS
++unit_files += \
+     rpc-svcgssd.service
+ endif
++endif
+ 
+ EXTRA_DIST = $(unit_files)
+ 
+diff --git a/systemd/nfs-server.service b/systemd/nfs-server.service
+index 12b02f2..317e5d6 100644
+--- a/systemd/nfs-server.service
++++ b/systemd/nfs-server.service
+@@ -1,7 +1,7 @@
+ [Unit]
+ Description=NFS server and services
+ DefaultDependencies=no
+-Requires= network.target proc-fs-nfsd.mount rpcbind.service
++Requires= network.target proc-fs-nfsd.mount rpcbind.target
+ Requires= nfs-mountd.service
+ Wants=rpc-statd.service nfs-idmapd.service
+ Wants=rpc-statd-notify.service
+diff --git a/systemd/rpc-statd.service b/systemd/rpc-statd.service
+index 14604d7..f16ea42 100644
+--- a/systemd/rpc-statd.service
++++ b/systemd/rpc-statd.service
+@@ -3,7 +3,7 @@ Description=NFS status monitor for NFSv2/3 locking.
+ DefaultDependencies=no
+ Conflicts=umount.target
+ Requires=nss-lookup.target rpcbind.target
+-After=network.target nss-lookup.target rpcbind.target
++After=network.target nss-lookup.target rpcbind.service
+ 
+ PartOf=nfs-utils.service
+ 
+diff --git a/tools/mountstats/mountstats.py b/tools/mountstats/mountstats.py
+index 011bb42..4ca4bc4 100644
+--- a/tools/mountstats/mountstats.py
++++ b/tools/mountstats/mountstats.py
+@@ -150,6 +150,8 @@ Nfsv3ops = [
+     'COMMIT'
+ ]
+ 
++# This list should be kept in-sync with the NFSPROC4_CLNT_* enum in
++# include/linux/nfs4.h in the kernel.
+ Nfsv4ops = [
+     'NULL',
+     'READ',
+@@ -204,7 +206,12 @@ Nfsv4ops = [
+     'FREE_STATEID',
+     'GETDEVICELIST',
+     'BIND_CONN_TO_SESSION',
+-    'DESTROY_CLIENTID'
++    'DESTROY_CLIENTID',
++    'SEEK',
++    'ALLOCATE',
++    'DEALLOCATE',
++    'LAYOUTSTATS',
++    'CLONE'
+ ]
+ 
+ class DeviceData:
+@@ -563,7 +570,10 @@ class DeviceData:
+         for the nfsstat command.
+         """
+         for op in new_stats.__rpc_data['ops']:
+-            self.__rpc_data[op] = list(map(add, self.__rpc_data[op], new_stats.__rpc_data[op]))
++            try:
++                self.__rpc_data[op] = list(map(add, self.__rpc_data[op], new_stats.__rpc_data[op]))
++            except KeyError:
++                continue
+ 
+     def __print_rpc_op_stats(self, op, sample_time):
+         """Print generic stats for one RPC op
+diff --git a/utils/exportfs/exportfs.c b/utils/exportfs/exportfs.c
+index 8758231..a9151ff 100644
+--- a/utils/exportfs/exportfs.c
++++ b/utils/exportfs/exportfs.c
+@@ -405,8 +405,17 @@ unexportfs_parsed(char *hname, char *path, int verbose)
+ 			hname = ai->ai_canonname;
+ 	}
+ 
++	/*
++	 * It's possible the specified path ends with a '/'. But
++	 * the entry from exportlist won't has the trailing '/',
++	 * so need to deal with it.
++	*/
++	size_t nlen = strlen(path);
++	while (path[nlen - 1] == '/')
++		nlen--;
++
+ 	for (exp = exportlist[htype].p_head; exp; exp = exp->m_next) {
+-		if (path && strcmp(path, exp->m_export.e_path))
++		if (path && strncmp(path, exp->m_export.e_path, nlen))
+ 			continue;
+ 		if (htype != exp->m_client->m_type)
+ 			continue;
+@@ -499,9 +508,10 @@ unexportfs(char *arg, int verbose)
+ 
+ static int can_test(void)
+ {
+-	char buf[1024];
++	char buf[1024] = { 0 };
+ 	int fd;
+ 	int n;
++	size_t bufsiz = sizeof(buf);
+ 
+ 	fd = open("/proc/net/rpc/auth.unix.ip/channel", O_WRONLY);
+ 	if (fd < 0)
+@@ -514,9 +524,9 @@ static int can_test(void)
+ 	 * commit 2f74f972  (sunrpc: prepare NFS for 2038).
+ 	 */
+ 	if (time(NULL) > INT_TO_LONG_THRESHOLD_SECS)
+-		sprintf(buf, "nfsd 0.0.0.0 %ld -test-client-\n", LONG_MAX);
++		snprintf(buf, bufsiz-1, "nfsd 0.0.0.0 %ld -test-client-\n", LONG_MAX);
+ 	else
+-		sprintf(buf, "nfsd 0.0.0.0 %d -test-client-\n", INT_MAX);
++		snprintf(buf, bufsiz-1, "nfsd 0.0.0.0 %d -test-client-\n", INT_MAX);
+ 
+ 	n = write(fd, buf, strlen(buf));
+ 	close(fd);
+@@ -532,7 +542,8 @@ static int can_test(void)
+ 
+ static int test_export(char *path, int with_fsid)
+ {
+-	char buf[1024];
++	/* beside max path, buf size should take protocol str into account */
++	char buf[NFS_MAXPATHLEN+1+64] = { 0 };
+ 	char *bp = buf;
+ 	int len = sizeof(buf);
+ 	int fd, n;
+@@ -758,7 +769,8 @@ dumpopt(char c, char *fmt, ...)
+ static void
+ dump(int verbose, int export_format)
+ {
+-	char buf[1024];
++	/* buf[] size should >= sizeof(struct exportent->e_path) */
++	char buf[NFS_MAXPATHLEN+1] = { 0 };
+ 	char *bp;
+ 	int len;
+ 	nfs_export	*exp;
+diff --git a/utils/gssd/context_heimdal.c b/utils/gssd/context_heimdal.c
+index 1e8738a..d07103b 100644
+--- a/utils/gssd/context_heimdal.c
++++ b/utils/gssd/context_heimdal.c
+@@ -260,7 +260,7 @@ serialize_krb5_ctx(gss_ctx_id_t *_ctx, gss_buffer_desc *buf, int32_t *endtime)
+ 	if (write_heimdal_seq_key(&p, end, ctx)) goto out_err;
+ 
+ 	buf->length = p - (char *)buf->value;
+-	printerr(2, "serialize_krb5_ctx: returning buffer "
++	printerr(4, "serialize_krb5_ctx: returning buffer "
+ 		    "with %d bytes\n", buf->length);
+ 
+ 	return 0;
+diff --git a/utils/gssd/context_lucid.c b/utils/gssd/context_lucid.c
+index badbe88..5d77c21 100644
+--- a/utils/gssd/context_lucid.c
++++ b/utils/gssd/context_lucid.c
+@@ -206,7 +206,7 @@ prepare_krb5_rfc4121_buffer(gss_krb5_lucid_context_v1_t *lctx,
+ 	if (WRITE_BYTES(&p, end, lctx->send_seq)) goto out_err;
+ 
+ 	/* Protocol 0 here implies DES3 or RC4 */
+-	printerr(2, "%s: protocol %d\n", __FUNCTION__, lctx->protocol);
++	printerr(4, "%s: protocol %d\n", __FUNCTION__, lctx->protocol);
+ 	if (lctx->protocol == 0) {
+ 		enctype = lctx->rfc1964_kd.ctx_key.type;
+ 		keysize = lctx->rfc1964_kd.ctx_key.length;
+@@ -219,7 +219,7 @@ prepare_krb5_rfc4121_buffer(gss_krb5_lucid_context_v1_t *lctx,
+ 			keysize = lctx->cfx_kd.ctx_key.length;
+ 		}
+ 	}
+-	printerr(2, "%s: serializing key with enctype %d and size %d\n",
++	printerr(4, "%s: serializing key with enctype %d and size %d\n",
+ 		 __FUNCTION__, enctype, keysize);
+ 
+ 	if (WRITE_BYTES(&p, end, enctype)) goto out_err;
+@@ -265,7 +265,7 @@ serialize_krb5_ctx(gss_ctx_id_t *ctx, gss_buffer_desc *buf, int32_t *endtime)
+ 	gss_krb5_lucid_context_v1_t *lctx = 0;
+ 	int retcode = 0;
+ 
+-	printerr(2, "DEBUG: %s: lucid version!\n", __FUNCTION__);
++	printerr(4, "DEBUG: %s: lucid version!\n", __FUNCTION__);
+ 	maj_stat = gss_export_lucid_sec_context(&min_stat, ctx,
+ 						1, &return_ctx);
+ 	if (maj_stat != GSS_S_COMPLETE) {
+diff --git a/utils/gssd/gssd.c b/utils/gssd/gssd.c
+index e480349..e7cb07f 100644
+--- a/utils/gssd/gssd.c
++++ b/utils/gssd/gssd.c
+@@ -556,7 +556,7 @@ gssd_scan_topdir(const char *name)
+ 		if (clp->scanned)
+ 			continue;
+ 
+-		printerr(2, "destroying client %s\n", clp->relpath);
++		printerr(3, "destroying client %s\n", clp->relpath);
+ 		saveprev = clp->list.tqe_prev;
+ 		TAILQ_REMOVE(&tdi->clnt_list, clp, list);
+ 		gssd_destroy_client(clp);
+@@ -716,7 +716,7 @@ gssd_inotify_cb(int ifd, short UNUSED(which), void *UNUSED(data))
+ 
+ found:
+ 			if (!tdi) {
+-				printerr(1, "inotify event for unknown wd!!! - "
++				printerr(5, "inotify event for unknown wd!!! - "
+ 					 "ev->wd (%d) ev->name (%s) ev->mask (0x%08x)\n",
+ 					 ev->wd, ev->len > 0 ? ev->name : "<?>", ev->mask);
+ 				rescan = true;
+@@ -820,7 +820,7 @@ main(int argc, char *argv[])
+ 	 * the results of getpw*.
+ 	 */
+ 	if (setenv("HOME", "/", 1)) {
+-		printerr(1, "Unable to set $HOME: %s\n", strerror(errno));
++		printerr(0, "gssd: Unable to set $HOME: %s\n", strerror(errno));
+ 		exit(1);
+ 	}
+ 
+@@ -869,6 +869,13 @@ main(int argc, char *argv[])
+ 	if (verbosity && rpc_verbosity == 0)
+ 		rpc_verbosity = verbosity;
+ 	authgss_set_debug_level(rpc_verbosity);
++#elif HAVE_LIBTIRPC_SET_DEBUG
++	/*
++	 * Only set the libtirpc debug level if explicitly requested via -r...
++	 * gssd is chatty enough as it is.
++	 */
++	if (rpc_verbosity > 0)
++		libtirpc_set_debug(progname, rpc_verbosity, fg);
+ #else
+         if (rpc_verbosity > 0)
+ 		printerr(0, "Warning: rpcsec_gss library does not "
+@@ -884,19 +891,19 @@ main(int argc, char *argv[])
+ 
+ 	pipefs_dir = opendir(pipefs_path);
+ 	if (!pipefs_dir) {
+-		printerr(1, "ERROR: opendir(%s) failed: %s\n", pipefs_path, strerror(errno));
++		printerr(0, "ERROR: opendir(%s) failed: %s\n", pipefs_path, strerror(errno));
+ 		exit(EXIT_FAILURE);
+ 	}
+ 
+ 	pipefs_fd = dirfd(pipefs_dir);
+ 	if (fchdir(pipefs_fd)) {
+-		printerr(1, "ERROR: fchdir(%s) failed: %s\n", pipefs_path, strerror(errno));
++		printerr(0, "ERROR: fchdir(%s) failed: %s\n", pipefs_path, strerror(errno));
+ 		exit(EXIT_FAILURE);
+ 	}
+ 
+ 	inotify_fd = inotify_init1(IN_NONBLOCK);
+ 	if (inotify_fd == -1) {
+-		printerr(1, "ERROR: inotify_init1 failed: %s\n", strerror(errno));
++		printerr(0, "ERROR: inotify_init1 failed: %s\n", strerror(errno));
+ 		exit(EXIT_FAILURE);
+ 	}
+ 
+@@ -913,7 +920,7 @@ main(int argc, char *argv[])
+ 
+ 	event_dispatch();
+ 
+-	printerr(1, "ERROR: event_dispatch() returned!\n");
++	printerr(0, "ERROR: event_dispatch() returned!\n");
+ 	return EXIT_FAILURE;
+ }
+ 
+diff --git a/utils/gssd/gssd_proc.c b/utils/gssd/gssd_proc.c
+index 11168b2..1ef68d8 100644
+--- a/utils/gssd/gssd_proc.c
++++ b/utils/gssd/gssd_proc.c
+@@ -150,7 +150,7 @@ do_downcall(int k5_fd, uid_t uid, struct authgss_private_data *pd,
+ 	unsigned int timeout = context_timeout;
+ 	unsigned int buf_size = 0;
+ 
+-	printerr(1, "doing downcall: lifetime_rec=%u acceptor=%.*s\n",
++	printerr(2, "doing downcall: lifetime_rec=%u acceptor=%.*s\n",
+ 		lifetime_rec, acceptor->length, acceptor->value);
+ 	buf_size = sizeof(uid) + sizeof(timeout) + sizeof(pd->pd_seq_win) +
+ 		sizeof(pd->pd_ctx_hndl.length) + pd->pd_ctx_hndl.length +
+@@ -189,7 +189,7 @@ do_error_downcall(int k5_fd, uid_t uid, int err)
+ 	unsigned int timeout = 0;
+ 	int	zero = 0;
+ 
+-	printerr(1, "doing error downcall\n");
++	printerr(2, "doing error downcall\n");
+ 
+ 	if (WRITE_BYTES(&p, end, uid)) goto out_err;
+ 	if (WRITE_BYTES(&p, end, timeout)) goto out_err;
+@@ -231,7 +231,7 @@ populate_port(struct sockaddr *sa, const socklen_t salen,
+ 	switch (sa->sa_family) {
+ 	case AF_INET:
+ 		if (s4->sin_port != 0) {
+-			printerr(2, "DEBUG: port already set to %d\n",
++			printerr(4, "DEBUG: port already set to %d\n",
+ 				 ntohs(s4->sin_port));
+ 			return 1;
+ 		}
+@@ -239,7 +239,7 @@ populate_port(struct sockaddr *sa, const socklen_t salen,
+ #ifdef IPV6_SUPPORTED
+ 	case AF_INET6:
+ 		if (s6->sin6_port != 0) {
+-			printerr(2, "DEBUG: port already set to %d\n",
++			printerr(4, "DEBUG: port already set to %d\n",
+ 				 ntohs(s6->sin6_port));
+ 			return 1;
+ 		}
+@@ -348,16 +348,9 @@ create_auth_rpc_client(struct clnt_info *clp,
+ 	printerr(2, "creating %s client for server %s\n", clp->protocol,
+ 			clp->servername);
+ 
+-	if ((strcmp(clp->protocol, "tcp")) == 0) {
+-		protocol = IPPROTO_TCP;
+-	} else if ((strcmp(clp->protocol, "udp")) == 0) {
++	protocol = IPPROTO_TCP;
++	if ((strcmp(clp->protocol, "udp")) == 0)
+ 		protocol = IPPROTO_UDP;
+-	} else {
+-		printerr(0, "WARNING: unrecognized protocol, '%s', requested "
+-			 "for connection to server %s for user with uid %d\n",
+-			 clp->protocol, clp->servername, uid);
+-		goto out_fail;
+-	}
+ 
+ 	switch (addr->sa_family) {
+ 	case AF_INET:
+@@ -400,7 +393,7 @@ create_auth_rpc_client(struct clnt_info *clp,
+ 	auth = authgss_create_default(rpc_clnt, tgtname, &sec);
+ 	if (!auth) {
+ 		/* Our caller should print appropriate message */
+-		printerr(2, "WARNING: Failed to create krb5 context for "
++		printerr(1, "WARNING: Failed to create krb5 context for "
+ 			    "user with uid %d for server %s\n",
+ 			 uid, tgtname);
+ 		goto out_fail;
+@@ -491,7 +484,7 @@ krb5_not_machine_creds(struct clnt_info *clp, uid_t uid, char *tgtname,
+ 	char		**dname;
+ 	int		err, resp = -1;
+ 
+-	printerr(1, "krb5_not_machine_creds: uid %d tgtname %s\n", 
++	printerr(2, "krb5_not_machine_creds: uid %d tgtname %s\n", 
+ 		uid, tgtname);
+ 
+ 	*chg_err = change_identity(uid);
+@@ -538,7 +531,7 @@ krb5_use_machine_creds(struct clnt_info *clp, uid_t uid, char *tgtname,
+ 	int	nocache = 0;
+ 	int	success = 0;
+ 
+-	printerr(1, "krb5_use_machine_creds: uid %d tgtname %s\n", 
++	printerr(2, "krb5_use_machine_creds: uid %d tgtname %s\n", 
+ 		uid, tgtname);
+ 
+ 	do {
+@@ -608,8 +601,6 @@ process_krb5_upcall(struct clnt_info *clp, uid_t uid, int fd, char *tgtname,
+ 	gss_OID			mech;
+ 	gss_buffer_desc		acceptor  = {0};
+ 
+-	printerr(1, "handling krb5 upcall (%s)\n", clp->relpath);
+-
+ 	token.length = 0;
+ 	token.value = NULL;
+ 	memset(&pd, 0, sizeof(struct authgss_private_data));
+@@ -635,8 +626,6 @@ process_krb5_upcall(struct clnt_info *clp, uid_t uid, int fd, char *tgtname,
+ 	 * used for this case is not important.
+ 	 *
+ 	 */
+-	printerr(2, "%s: service is '%s'\n", __func__,
+-		 service ? service : "<null>");
+ 	if (uid != 0 || (uid == 0 && root_uses_machine_creds == 0 &&
+ 				service == NULL)) {
+ 
+@@ -650,7 +639,7 @@ process_krb5_upcall(struct clnt_info *clp, uid_t uid, int fd, char *tgtname,
+ 			/* Child: fall through to rest of function */
+ 			childpid = getpid();
+ 			unsetenv("KRB5CCNAME");
+-			printerr(1, "CHILD forked pid %d \n", childpid);
++			printerr(2, "CHILD forked pid %d \n", childpid);
+ 			break;
+ 		case -1:
+ 			/* fork() failed! */
+@@ -683,9 +672,7 @@ no_fork:
+ 			if (auth == NULL)
+ 				goto out_return_error;
+ 		} else {
+-			printerr(1, "WARNING: Failed to create krb5 context "
+-				 "for user with uid %d for server %s\n",
+-				 uid, clp->servername);
++			/* krb5_not_machine_creds logs the error */
+ 			goto out_return_error;
+ 		}
+ 	}
+@@ -716,7 +703,7 @@ no_fork:
+ 	 * try to use it after this point.
+ 	 */
+ 	if (serialize_context_for_kernel(&pd.pd_ctx, &token, &krb5oid, NULL)) {
+-		printerr(0, "WARNING: Failed to serialize krb5 context for "
++		printerr(1, "WARNING: Failed to serialize krb5 context for "
+ 			    "user with uid %d for server %s\n",
+ 			 uid, clp->servername);
+ 		goto out_return_error;
+@@ -759,6 +746,8 @@ handle_krb5_upcall(struct clnt_info *clp)
+ 		return;
+ 	}
+ 
++	printerr(2, "\n%s: uid %d (%s)\n", __func__, uid, clp->relpath);
++
+ 	process_krb5_upcall(clp, uid, clp->krb5_fd, NULL, NULL);
+ }
+ 
+@@ -775,8 +764,6 @@ handle_gssd_upcall(struct clnt_info *clp)
+ 	char			*service = NULL;
+ 	char			*enctypes = NULL;
+ 
+-	printerr(1, "handling gssd upcall (%s)\n", clp->relpath);
+-
+ 	lbuflen = read(clp->gssd_fd, lbuf, sizeof(lbuf));
+ 	if (lbuflen <= 0 || lbuf[lbuflen-1] != '\n') {
+ 		printerr(0, "WARNING: handle_gssd_upcall: "
+@@ -785,7 +772,7 @@ handle_gssd_upcall(struct clnt_info *clp)
+ 	}
+ 	lbuf[lbuflen-1] = 0;
+ 
+-	printerr(2, "%s: '%s'\n", __func__, lbuf);
++	printerr(2, "\n%s: '%s' (%s)\n", __func__, lbuf, clp->relpath);
+ 
+ 	for (p = strtok(lbuf, " "); p; p = strtok(NULL, " ")) {
+ 		if (!strncmp(p, "mech=", strlen("mech=")))
+diff --git a/utils/gssd/krb5_util.c b/utils/gssd/krb5_util.c
+index ecf17a2..8ef8184 100644
+--- a/utils/gssd/krb5_util.c
++++ b/utils/gssd/krb5_util.c
+@@ -356,7 +356,7 @@ gssd_get_single_krb5_cred(krb5_context context,
+ 	 */
+ 	now += 300;
+ 	if (ple->ccname && ple->endtime > now && !nocache) {
+-		printerr(2, "INFO: Credentials in CC '%s' are good until %d\n",
++		printerr(3, "INFO: Credentials in CC '%s' are good until %d\n",
+ 			 ple->ccname, ple->endtime);
+ 		code = 0;
+ 		goto out;
+@@ -383,7 +383,7 @@ gssd_get_single_krb5_cred(krb5_context context,
+ 			 "tickets.  May have problems behind a NAT.\n");
+ #ifdef TEST_SHORT_LIFETIME
+ 	/* set a short lifetime (for debugging only!) */
+-	printerr(0, "WARNING: Using (debug) short machine cred lifetime!\n");
++	printerr(1, "WARNING: Using (debug) short machine cred lifetime!\n");
+ 	krb5_get_init_creds_opt_set_tkt_life(init_opts, 5*60);
+ #endif
+ 	opts = init_opts;
+@@ -451,8 +451,7 @@ gssd_get_single_krb5_cred(krb5_context context,
+ 	}
+ 
+ 	code = 0;
+-	printerr(2, "Successfully obtained machine credentials for "
+-		 "principal '%s' stored in ccache '%s'\n", pname, cc_name);
++	printerr(2, "%s: principal '%s' ccache:'%s'\n", __func__, pname, cc_name);
+   out:
+ #if HAVE_KRB5_GET_INIT_CREDS_OPT_SET_ADDRESSLESS
+ 	if (init_opts)
+@@ -477,7 +476,7 @@ gssd_set_krb5_ccache_name(char *ccname)
+ #ifdef USE_GSS_KRB5_CCACHE_NAME
+ 	u_int	maj_stat, min_stat;
+ 
+-	printerr(2, "using gss_krb5_ccache_name to select krb5 ccache %s\n",
++	printerr(3, "using gss_krb5_ccache_name to select krb5 ccache %s\n",
+ 		 ccname);
+ 	maj_stat = gss_krb5_ccache_name(&min_stat, ccname, NULL);
+ 	if (maj_stat != GSS_S_COMPLETE) {
+@@ -492,7 +491,7 @@ gssd_set_krb5_ccache_name(char *ccname)
+ 	 * function above for which there is no generic gssapi
+ 	 * equivalent.)
+ 	 */
+-	printerr(2, "using environment variable to select krb5 ccache %s\n",
++	printerr(3, "using environment variable to select krb5 ccache %s\n",
+ 		 ccname);
+ 	setenv("KRB5CCNAME", ccname, 1);
+ #endif
+@@ -801,7 +800,7 @@ find_keytab_entry(krb5_context context, krb5_keytab kt, const char *tgtname,
+ 	char *default_realm = NULL;
+ 	char *realm;
+ 	char *k5err = NULL;
+-	int tried_all = 0, tried_default = 0;
++	int tried_all = 0, tried_default = 0, tried_upper = 0;
+ 	krb5_principal princ;
+ 	const char *notsetstr = "not set";
+ 	char *adhostoverride;
+@@ -835,7 +834,6 @@ find_keytab_entry(krb5_context context, krb5_keytab kt, const char *tgtname,
+ 	        strcpy(myhostad, myhostname);
+ 	        for (i = 0; myhostad[i] != 0; ++i) {
+ 	          if (myhostad[i] == '.') break;
+-	          myhostad[i] = toupper(myhostad[i]);
+ 	        }
+ 	        myhostad[i] = '$';
+ 	        myhostad[i+1] = 0;
+@@ -936,6 +934,19 @@ find_keytab_entry(krb5_context context, krb5_keytab kt, const char *tgtname,
+ 				k5err = gssd_k5_err_msg(context, code);
+ 				printerr(3, "%s while getting keytab entry for '%s'\n",
+ 					 k5err, spn);
++				/*
++				 * We tried the active directory machine account
++				 * with the hostname part as-is and failed...
++				 * convert it to uppercase and try again before
++				 * moving on to the svcname
++				 */
++				if (strcmp(svcnames[j],"$") == 0 && !tried_upper) {
++					for (i = 0; myhostad[i] != '$'; ++i) {
++						myhostad[i] = toupper(myhostad[i]);
++					}
++					j--;
++					tried_upper = 1;
++				}
+ 			} else {
+ 				printerr(3, "Success getting keytab entry for '%s'\n",spn);
+ 				retval = 0;
+@@ -1081,8 +1092,8 @@ gssd_setup_krb5_user_gss_ccache(uid_t uid, char *servername, char *dirpattern)
+ 	struct dirent		*d;
+ 	int			err, i, j;
+ 
+-	printerr(2, "getting credentials for client with uid %u for "
+-		    "server %s\n", uid, servername);
++	printerr(3, "looking for client creds with uid %u for "
++		    "server %s in %s\n", uid, servername, dirpattern);
+ 
+ 	for (i = 0, j = 0; dirpattern[i] != '\0'; i++) {
+ 		switch (dirpattern[i]) {
+@@ -1398,16 +1409,21 @@ gssd_acquire_krb5_cred(gss_cred_id_t *gss_cred)
+ int
+ gssd_acquire_user_cred(gss_cred_id_t *gss_cred)
+ {
+-	OM_uint32 min_stat;
++	OM_uint32 maj_stat, min_stat;
+ 	int ret;
+ 
+ 	ret = gssd_acquire_krb5_cred(gss_cred);
+ 
+ 	/* force validation of cred to check for expiry */
+ 	if (ret == 0) {
+-		if (gss_inquire_cred(&min_stat, *gss_cred, NULL, NULL,
+-				     NULL, NULL) != GSS_S_COMPLETE)
+-			ret = -1;
++		maj_stat = gss_inquire_cred(&min_stat, *gss_cred, 
++			NULL, NULL, NULL, NULL);
++		if (maj_stat != GSS_S_COMPLETE) {
++			if (get_verbosity() > 0)
++				pgsserr("gss_inquire_cred",
++					maj_stat, min_stat, &krb5oid);
++				ret = -1;
++			}
+ 	}
+ 
+ 	return ret;
+diff --git a/utils/gssd/svcgssd.c b/utils/gssd/svcgssd.c
+index f1b4347..0fe7c6d 100644
+--- a/utils/gssd/svcgssd.c
++++ b/utils/gssd/svcgssd.c
+@@ -135,6 +135,13 @@ main(int argc, char *argv[])
+ 	if (verbosity && rpc_verbosity == 0)
+ 		rpc_verbosity = verbosity;
+ 	authgss_set_debug_level(rpc_verbosity);
++#elif HAVE_LIBTIRPC_SET_DEBUG
++        /*
++	 * Only set the libtirpc debug level if explicitly requested via -r...
++	 * svcgssd is chatty enough as it is.
++	 */
++        if (rpc_verbosity > 0)
++                libtirpc_set_debug(progname, rpc_verbosity, fg);
+ #else
+ 	if (rpc_verbosity > 0)
+ 		printerr(0, "Warning: rpcsec_gss library does not "
+diff --git a/utils/idmapd/idmapd.c b/utils/idmapd/idmapd.c
+index 689608a..910b02e 100644
+--- a/utils/idmapd/idmapd.c
++++ b/utils/idmapd/idmapd.c
+@@ -199,6 +199,12 @@ flush_nfsd_idmap_cache(void)
+ 	return ret;
+ }
+ 
++void usage(char *progname)
++{
++	fprintf(stderr, "Usage: %s [-fvCS] [-p path] [-c path]\n",
++		basename(progname));
++}
++
+ int
+ main(int argc, char **argv)
+ {
+@@ -232,9 +238,11 @@ main(int argc, char **argv)
+ 			conf_path = optarg;
+ 		if (opt == '?') {
+ 			if (strchr(GETOPTSTR, optopt))
+-				errx(1, "'-%c' option requires an argument.", optopt);
++				warnx("'-%c' option requires an argument.", optopt);
+ 			else
+-				errx(1, "'-%c' is an invalid argument.", optopt);
++				warnx("'-%c' is an invalid argument.", optopt);
++			usage(progname);
++			exit(1);
+ 		}
+ 	}
+ 	optind = 1;
+diff --git a/utils/idmapd/idmapd.man b/utils/idmapd/idmapd.man
+index c809f78..d45658e 100644
+--- a/utils/idmapd/idmapd.man
++++ b/utils/idmapd/idmapd.man
+@@ -10,8 +10,10 @@
+ .Sh SYNOPSIS
+ .\" For a program:  program [-abc] file ...
+ .Nm rpc.idmapd
+-.Op Fl v
+ .Op Fl f
++.Op Fl v
++.Op Fl C
++.Op Fl S
+ .Op Fl p Ar path
+ .Op Fl c Ar path
+ .Sh DESCRIPTION
+diff --git a/utils/mount/network.c b/utils/mount/network.c
+index b5ed850..ebc39d3 100644
+--- a/utils/mount/network.c
++++ b/utils/mount/network.c
+@@ -92,6 +92,7 @@ static const char *nfs_version_opttbl[] = {
+ 	"v4",
+ 	"vers",
+ 	"nfsvers",
++	"minorversion",
+ 	NULL,
+ };
+ 
+@@ -1272,7 +1273,11 @@ nfs_nfs_version(struct mount_options *options, struct nfs_version *version)
+ 	if (!(version->major = strtol(version_val, &cptr, 10)))
+ 		goto ret_error;
+ 
+-	if (version->major < 4)
++	if (strcmp(nfs_version_opttbl[i], "minorversion") == 0) {
++		version->v_mode = V_SPECIFIC;
++		version->minor = version->major;
++		version->major = 4;
++	} else if (version->major < 4)
+ 		version->v_mode = V_SPECIFIC;
+ 
+ 	if (*cptr == '.') {
+diff --git a/utils/mount/parse_dev.c b/utils/mount/parse_dev.c
+index d64b83d..0d3bcb9 100644
+--- a/utils/mount/parse_dev.c
++++ b/utils/mount/parse_dev.c
+@@ -118,7 +118,8 @@ static int nfs_parse_simple_hostname(const char *dev,
+ 	if (pathname) {
+ 		*pathname = strndup(colon, path_len);
+ 		if (*pathname == NULL) {
+-			free(*hostname);
++			if (hostname)
++				free(*hostname);
+ 			return nfs_pdn_nomem_err();
+ 		}
+ 	}
+diff --git a/utils/mountd/auth.c b/utils/mountd/auth.c
+index 330cab5..894a7a5 100644
+--- a/utils/mountd/auth.c
++++ b/utils/mountd/auth.c
+@@ -85,7 +85,7 @@ auth_reload()
+ {
+ 	struct stat		stb;
+ 	static ino_t		last_inode;
+-	static int		last_fd;
++	static int		last_fd = -1;
+ 	static unsigned int	counter;
+ 	int			fd;
+ 
+@@ -93,11 +93,22 @@ auth_reload()
+ 		xlog(L_FATAL, "couldn't open %s", _PATH_ETAB);
+ 	} else if (fstat(fd, &stb) < 0) {
+ 		xlog(L_FATAL, "couldn't stat %s", _PATH_ETAB);
+-	} else if (stb.st_ino == last_inode) {
++		close(fd);
++	} else if (last_fd != -1 && stb.st_ino == last_inode) {
++		/* We opened the etab file before, and its inode
++		 * number hasn't changed since then.
++		 */
+ 		close(fd);
+ 		return counter;
+ 	} else {
+-		close(last_fd);
++		/* Need to process entries from the etab file.  Close
++		 * the file descriptor from the previous open (last_fd),
++		 * and keep the current file descriptor open to prevent
++		 * the file system reusing the current inode number
++		 * (last_inode).
++		 */
++		if (last_fd != -1)
++			close(last_fd);
+ 		last_fd = fd;
+ 		last_inode = stb.st_ino;
+ 	}
+diff --git a/utils/nfsd/nfssvc.c b/utils/nfsd/nfssvc.c
+index a2b11d8..e8efd06 100644
+--- a/utils/nfsd/nfssvc.c
++++ b/utils/nfsd/nfssvc.c
+@@ -168,22 +168,22 @@ nfssvc_setfds(const struct addrinfo *hints, const char *node, const char *port)
+ 			continue;
+ 		}
+ 
+-		xlog(D_GENERAL, "Creating %s %s socket.", family, proto);
+-
+ 		/* open socket and prepare to hand it off to kernel */
+ 		sockfd = socket(addr->ai_family, addr->ai_socktype,
+ 				addr->ai_protocol);
+ 		if (sockfd < 0) {
+-			if (errno == EAFNOSUPPORT)
+-				xlog(L_NOTICE, "address family %s not "
+-						"supported by protocol %s",
+-						family, proto);
+-			else
++			if (errno != EAFNOSUPPORT) {
+ 				xlog(L_ERROR, "unable to create %s %s socket: "
+ 				     "errno %d (%m)", family, proto, errno);
+-			rc = errno;
+-			goto error;
++				rc = errno;
++				goto error;
++			}
++			addr = addr->ai_next;
++			continue;
+ 		}
++
++		xlog(D_GENERAL, "Created %s %s socket.", family, proto);
++
+ #ifdef IPV6_SUPPORTED
+ 		if (addr->ai_family == AF_INET6 &&
+ 		    setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(on))) {
+diff --git a/utils/nfsidmap/nfsidmap.c b/utils/nfsidmap/nfsidmap.c
+index 507193b..15b4a51 100644
+--- a/utils/nfsidmap/nfsidmap.c
++++ b/utils/nfsidmap/nfsidmap.c
+@@ -80,8 +80,9 @@ static int keyring_clear(const char *keyring)
+ 
+ 	key = find_key_by_type_and_desc("keyring", keyring, 0);
+ 	if (key == -1) {
+-		xlog_err("'%s' keyring was not found.", keyring);
+-		return EXIT_FAILURE;
++		if (verbose)
++			xlog_warn("'%s' keyring was not found.", keyring);
++		return EXIT_SUCCESS;
+ 	}
+ 
+ 	if (keyctl_clear(key) < 0) {
+@@ -89,10 +90,9 @@ static int keyring_clear(const char *keyring)
+ 				(unsigned int)key);
+ 		return EXIT_FAILURE;
+ 	}
+-	
++
+ 	if (verbose)
+ 		xlog_warn("'%s' cleared", keyring);
+-
+ 	return EXIT_SUCCESS;
+ }
+ 
+@@ -404,6 +404,11 @@ int main(int argc, char **argv)
+ 		}
+ 	}
+ 
++	if (geteuid() != 0) {
++		xlog_err("Must be run as root.");
++		return EXIT_FAILURE;
++	}
++
+ 	if ((rc = nfs4_init_name_mapping(PATH_IDMAPDCONF)))  {
+ 		xlog_errno(rc, "Unable to create name to user id mappings.");
+ 		return EXIT_FAILURE;
+diff --git a/utils/nfsstat/nfsstat.c b/utils/nfsstat/nfsstat.c
+index 9f481db..b67f0aa 100644
+--- a/utils/nfsstat/nfsstat.c
++++ b/utils/nfsstat/nfsstat.c
+@@ -31,8 +31,8 @@ enum {
+ 	SRVPROC3_SZ = 22,
+ 	CLTPROC3_SZ = 22,
+ 	SRVPROC4_SZ = 2,
+-	CLTPROC4_SZ = 49,
+-	SRVPROC4OPS_SZ = 59,
++	CLTPROC4_SZ = 60,
++	SRVPROC4OPS_SZ = 71,
+ };
+ 
+ static unsigned int	srvproc2info[SRVPROC2_SZ+2],
+@@ -127,19 +127,31 @@ static const char *	nfscltproc4name[CLTPROC4_SZ] = {
+ 	"remove",    "rename",    "link",    "symlink",     "create",      "pathconf",
+ 	"statfs",    "readlink",  "readdir", "server_caps", "delegreturn", "getacl",
+ 	"setacl",    "fs_locations",
+-	"rel_lkowner", "secinfo",
++	"rel_lkowner", "secinfo", "fsid_present",
+ 	/* nfsv4.1 client ops */
+ 	"exchange_id",
+-	"create_ses",
+-	"destroy_ses",
++	"create_session",
++	"destroy_session",
+ 	"sequence",
+-	"get_lease_t",
++	"get_lease_time",
+ 	"reclaim_comp",
+-	"layoutget",
+ 	"getdevinfo",
++	"layoutget",
+ 	"layoutcommit",
+ 	"layoutreturn",
+ 	"getdevlist",
++	"secinfo_no",
++	"test_stateid",
++	"free_stateid",
++	"getdevicelist",
++	"bind_conn_to_ses",
++	"destroy_clientid",
++	/* nfsv4.2 client ops */
++	"seek",
++	"allocate",
++	"deallocate",
++	"layoutstats",
++	"clone",
+ };
+ 
+ static const char *     nfssrvproc4opname[SRVPROC4OPS_SZ] = {
+@@ -170,6 +182,19 @@ static const char *     nfssrvproc4opname[SRVPROC4OPS_SZ] = {
+ 	"want_deleg",
+ 	"destroy_clid",
+ 	"reclaim_comp",
++	/* nfsv4.2 server ops */
++	"allocate",
++	"copy",
++	"copy_notify",
++	"deallocate",
++	"ioadvise",
++	"layouterror",
++	"layoutstats",
++	"offloadcancel",
++	"offloadstatus",
++	"readplus",
++	"seek",
++	"write_same",
+ };
+ 
+ #define LABEL_srvnet		"Server packet stats:\n"
+@@ -823,13 +848,13 @@ print_callstats(const char *hdr, const char **names,
+ 		total += info[i];
+ 	if (!total)
+ 		total = 1;
+-	for (i = 0; i < nr; i += 6) {
+-		for (j = 0; j < 6 && i + j < nr; j++)
+-			printf("%-13s", names[i+j]);
++	for (i = 0; i < nr; i += 5) {
++		for (j = 0; j < 5 && i + j < nr; j++)
++			printf("%-17s", names[i+j]);
+ 		printf("\n");
+-		for (j = 0; j < 6 && i + j < nr; j++) {
++		for (j = 0; j < 5 && i + j < nr; j++) {
+ 			pct = ((unsigned long long) info[i+j]*100)/total;
+-			printf("%-8u%3llu%% ", info[i+j], pct);
++			printf("%-8u%3llu%%     ", info[i+j], pct);
+ 		}
+ 		printf("\n");
+ 	}
+diff --git a/utils/statd/hostname.c b/utils/statd/hostname.c
+index c61087c..8cccdb8 100644
+--- a/utils/statd/hostname.c
++++ b/utils/statd/hostname.c
+@@ -180,9 +180,6 @@ get_nameinfo(const struct sockaddr *sap,
+  * Incoming hostnames are looked up to determine the canonical hostname,
+  * and incoming presentation addresses are converted to canonical
+  * hostnames.
+- *
+- * We won't monitor peers that don't have a reverse map.  The canonical
+- * name gives us a key for our monitor list.
+  */
+ __attribute__((__malloc__))
+ char *
+@@ -207,7 +204,7 @@ statd_canonical_name(const char *hostname)
+ 		result = get_nameinfo(ai->ai_addr, ai->ai_addrlen,
+ 					buf, (socklen_t)sizeof(buf));
+ 		freeaddrinfo(ai);
+-		if (!result)
++		if (!result || buf[0] == '\0')
+ 			/* OK to use presentation address,
+ 			 * if no reverse map exists */
+ 			return strdup(hostname);
+diff --git a/utils/statd/monitor.c b/utils/statd/monitor.c
+index 286a5e2..368bd80 100644
+--- a/utils/statd/monitor.c
++++ b/utils/statd/monitor.c
+@@ -72,6 +72,7 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
+ 		.sin_addr.s_addr	= htonl(INADDR_LOOPBACK),
+ 	};
+ 	char *dnsname = NULL;
++	int existing = 0;
+ 
+ 	xlog(D_CALL, "Received SM_MON for %s from %s", mon_name, my_name);
+ 
+@@ -148,17 +149,26 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
+ 		if (statd_matchhostname(NL_MY_NAME(clnt), my_name) &&
+ 		    NL_MY_PROC(clnt) == id->my_proc &&
+ 		    NL_MY_PROG(clnt) == id->my_prog &&
+-		    NL_MY_VERS(clnt) == id->my_vers &&
+-		    memcmp(NL_PRIV(clnt), argp->priv, SM_PRIV_SIZE) == 0) {
+-			/* Hey!  We already know you guys! */
+-			xlog(D_GENERAL,
+-				"Duplicate SM_MON request for %s "
+-				"from procedure on %s",
+-				mon_name, my_name);
++		    NL_MY_VERS(clnt) == id->my_vers) {
++			if (memcmp(NL_PRIV(clnt), argp->priv, SM_PRIV_SIZE)) {
++				xlog(D_GENERAL,
++					"Received SM_MON request with new "
++					"cookie for %s from procedure on %s",
++					mon_name, my_name);
++
++				existing = 1; 
++				break;
++			} else {
++				/* Hey!  We already know you guys! */
++				xlog(D_GENERAL,
++					"Duplicate SM_MON request for %s "
++					"from procedure on %s",
++					mon_name, my_name);
+ 
+-			/* But we'll let you pass anyway. */
+-			free(dnsname);
+-			goto success;
++				/* But we'll let you pass anyway. */
++				free(dnsname);
++				goto success;
++			}
+ 		}
+ 		clnt = NL_NEXT(clnt);
+ 	}
+@@ -167,7 +177,7 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
+ 	 * We're committed...ignoring errors.  Let's hope that a malloc()
+ 	 * doesn't fail.  (I should probably fix this assumption.)
+ 	 */
+-	if (!(clnt = nlist_new(my_name, mon_name, 0))) {
++	if (!existing && !(clnt = nlist_new(my_name, mon_name, 0))) {
+ 		free(dnsname);
+ 		xlog_warn("out of memory");
+ 		goto failure;
+@@ -180,8 +190,11 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
+ 	clnt->dns_name = dnsname;
+ 
+ 	/*
+-	 * Now, Create file on stable storage for host.
++	 * Now, Create file on stable storage for host, first deleting any
++	 * existing records on file.
+ 	 */
++	nsm_delete_monitored_host(dnsname, mon_name, my_name);
++
+ 	if (!nsm_insert_monitored_host(dnsname,
+ 				(struct sockaddr *)(char *)&my_addr, argp)) {
+ 		nlist_free(NULL, clnt);
+@@ -190,7 +203,8 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
+ 
+ 	/* PRC: do the HA callout: */
+ 	ha_callout("add-client", mon_name, my_name, -1);
+-	nlist_insert(&rtnl, clnt);
++	if (!existing)
++		nlist_insert(&rtnl, clnt);
+ 	xlog(D_GENERAL, "MONITORING %s for %s", mon_name, my_name);
+  success:
+ 	result.res_stat = STAT_SUCC;
+diff --git a/utils/statd/rmtcall.c b/utils/statd/rmtcall.c
+index 45c84f9..c4f6364 100644
+--- a/utils/statd/rmtcall.c
++++ b/utils/statd/rmtcall.c
+@@ -113,7 +113,6 @@ statd_get_socket(void)
+ 	if (sockfd < 0)
+ 		return -1;
+ 
+-	FD_SET(sockfd, &SVC_FDSET);
+ 	return sockfd;
+ }
+ 
+diff --git a/utils/statd/statd.c b/utils/statd/statd.c
+index 2b7a167..e5b4c98 100644
+--- a/utils/statd/statd.c
++++ b/utils/statd/statd.c
+@@ -247,6 +247,7 @@ int main (int argc, char **argv)
+ 	int port = 0, out_port = 0;
+ 	int nlm_udp = 0, nlm_tcp = 0;
+ 	struct rlimit rlim;
++	int notify_sockfd;
+ 
+ 	/* Default: daemon mode, no other options */
+ 	run_mode = 0;
+@@ -437,7 +438,7 @@ int main (int argc, char **argv)
+ 		}
+ 
+ 	/* Make sure we have a privilege port for calling into the kernel */
+-	if (statd_get_socket() < 0)
++	if ((notify_sockfd = statd_get_socket()) < 0)
+ 		exit(1);
+ 
+ 	/* If sm-notify didn't take all the state files, load
+@@ -484,7 +485,7 @@ int main (int argc, char **argv)
+ 		 * Handle incoming requests:  SM_NOTIFY socket requests, as
+ 		 * well as callbacks from lockd.
+ 		 */
+-		my_svc_run();	/* I rolled my own, Olaf made it better... */
++		my_svc_run(notify_sockfd);	/* I rolled my own, Olaf made it better... */
+ 
+ 		/* Only get here when simulating a crash so we should probably
+ 		 * start sm-notify running again.  As we have already dropped
+diff --git a/utils/statd/statd.h b/utils/statd/statd.h
+index a1d8035..231ac7e 100644
+--- a/utils/statd/statd.h
++++ b/utils/statd/statd.h
+@@ -28,7 +28,7 @@ extern _Bool	statd_present_address(const struct sockaddr *sap, char *buf,
+ __attribute__((__malloc__))
+ extern char *	statd_canonical_name(const char *hostname);
+ 
+-extern void	my_svc_run(void);
++extern void	my_svc_run(int);
+ extern void	notify_hosts(void);
+ extern void	shuffle_dirs(void);
+ extern int	statd_get_socket(void);
+diff --git a/utils/statd/svc_run.c b/utils/statd/svc_run.c
+index d98ecee..28c1ad6 100644
+--- a/utils/statd/svc_run.c
++++ b/utils/statd/svc_run.c
+@@ -78,7 +78,7 @@ my_svc_exit(void)
+  * The heart of the server.  A crib from libc for the most part...
+  */
+ void
+-my_svc_run(void)
++my_svc_run(int sockfd)
+ {
+ 	FD_SET_TYPE	readfds;
+ 	int             selret;
+@@ -96,6 +96,8 @@ my_svc_run(void)
+ 		}
+ 
+ 		readfds = SVC_FDSET;
++		/* Set notify sockfd for waiting for reply */
++		FD_SET(sockfd, &readfds);
+ 		if (notify) {
+ 			struct timeval	tv;
+ 
+@@ -125,8 +127,10 @@ my_svc_run(void)
+ 
+ 		default:
+ 			selret -= process_reply(&readfds);
+-			if (selret)
++			if (selret) {
++				FD_CLR(sockfd, &readfds);
+ 				svc_getreqset(&readfds);
++			}
+ 		}
+ 	}
+ }
