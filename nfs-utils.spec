@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.3
-Release: 6.rc2%{?dist}
+Release: 6.rc3%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -15,8 +15,7 @@ Source2: nfs.sysconfig
 Source3: nfs-utils_env.sh
 Source4: lockd.conf
 
-Patch001: nfs-utils-1.3.4-rc2.patch
-Patch002: nfs-utils-1.3.3-netgroup-fix.patch
+Patch001: nfs-utils-1.3.4-rc3.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -76,7 +75,6 @@ This package also contains the mount.nfs and umount.nfs program.
 %setup -q
 
 %patch001 -p1
-%patch002 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -293,6 +291,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Sat Jan 16 2016 Steve Dickson <steved@redhat.com> 1.3.3-6.rc3
+- Updated to the latest RC release: nfs-utils-1-3-4-rc3
+
 * Wed Dec 16 2015 Steve Dickson <steved@redhat.com> 1.3.3-6.rc2
 - mountd: fix netgroup lookup for short hostnames (bz 1284079)
 
