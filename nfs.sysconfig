@@ -1,8 +1,4 @@
 #
-# Note: For new values to take effect the nfs-config service
-# has to be restarted with the following command:
-#    systemctl restart nfs-config
-#
 # Optional arguments passed to in-kernel lockd 
 #LOCKDARG=
 # TCP port rpc.lockd should listen on.
