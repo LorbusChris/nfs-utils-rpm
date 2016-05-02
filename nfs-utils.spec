@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.3
-Release: 7.rc4%{?dist}
+Release: 8.rc5%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -15,7 +15,7 @@ Source2: nfs.sysconfig
 Source3: nfs-utils_env.sh
 Source4: lockd.conf
 
-Patch001: nfs-utils-1.3.4-rc4.patch
+Patch001: nfs-utils-1.3.4-rc5.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -118,6 +118,7 @@ rm -rf $RPM_BUILD_ROOT/*
 
 mkdir -p $RPM_BUILD_ROOT%/sbin
 mkdir -p $RPM_BUILD_ROOT%{_sbindir}
+mkdir -p $RPM_BUILD_ROOT%{_libexecdir}/nfs-utils/
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}/nfs.target.wants
 mkdir -p ${RPM_BUILD_ROOT}%{_mandir}/man8
@@ -142,7 +143,7 @@ done
 
 mkdir -p $RPM_BUILD_ROOT/run/sysconfig
 mkdir -p $RPM_BUILD_ROOT/usr/lib/systemd/scripts
-install -m 755 %{SOURCE3} $RPM_BUILD_ROOT/usr/lib/systemd/scripts/nfs-utils_env.sh
+install -m 755 %{SOURCE3} $RPM_BUILD_ROOT/usr/libexec/nfs-utils/nfs-utils_env.sh
 install -m 644 %{SOURCE4} $RPM_BUILD_ROOT%{_sysconfdir}/modprobe.d/lockd.conf
 
 #
@@ -283,7 +284,7 @@ fi
 %{_sbindir}/blkmapd
 %{_mandir}/*/*
 %{_unitdir}/*
-%attr(755,root,root) /usr/lib/systemd/scripts/nfs-utils_env.sh
+%attr(755,root,root) /usr/libexec/nfs-utils/nfs-utils_env.sh
 
 %attr(4755,root,root)	/sbin/mount.nfs
 /sbin/mount.nfs4
@@ -291,6 +292,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Mon May  2 2016 Steve Dickson <steved@redhat.com> 1.3.3-8.rc5
+- updated to the latest RC release: nfs-utils-1-3-4-rc5
+
 * Wed Mar 16 2016 Steve Dickson <steved@redhat.com> 1.3.3-7.rc4
 - Updated to the latest RC release: nfs-utils-1-3-4-rc4 (bz 1316701)
 - Changed BuildRequires: glibc-headers ==> BuildRequires: gcc (bz 1230477)
