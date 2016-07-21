@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.3
-Release: 8.rc6%{?dist}
+Release: 9.rc6%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -140,6 +140,9 @@ done
 for file in systemd/*.mount  ; do
 	install -m 644 $file $RPM_BUILD_ROOT%{_unitdir}
 done
+
+# rpc.svcgssd is no longer supported.
+rm -rf $RPM_BUILD_ROOT%{_unitdir}/rpc-svcgssd.service
 
 mkdir -p $RPM_BUILD_ROOT/run/sysconfig
 mkdir -p $RPM_BUILD_ROOT/usr/lib/systemd/scripts
@@ -292,6 +295,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Thu Jul 21 2016 Steve Dickson <steved@redhat.com> 1.3.3-9.rc6
+- Removed the rpc-svcgssd.service systemd file (bz 1334741)
+
 * Tue Jul 19 2016 Steve Dickson <steved@redhat.com> 1.3.3-8.rc6
 - Updated to the latest RC release: nfs-utils-1-3-4-rc6
 
