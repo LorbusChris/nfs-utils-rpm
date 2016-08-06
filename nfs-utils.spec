@@ -1,8 +1,8 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
-Version: 1.3.3
-Release: 9.rc6%{?dist}
+Version: 1.3.4
+Release: 0%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -14,8 +14,6 @@ Source1: id_resolver.conf
 Source2: nfs.sysconfig
 Source3: nfs-utils_env.sh
 Source4: lockd.conf
-
-Patch001: nfs-utils-1.3.4-rc6.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -73,8 +71,6 @@ This package also contains the mount.nfs and umount.nfs program.
 
 %prep
 %setup -q
-
-%patch001 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -295,6 +291,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Sat Aug  6 2016 Steve Dickson <steved@redhat.com> 1.3.4-0
+- Updated to latest upstream version 1.3.4
+
 * Thu Jul 21 2016 Steve Dickson <steved@redhat.com> 1.3.3-9.rc6
 - Removed the rpc-svcgssd.service systemd file (bz 1334741)
 
