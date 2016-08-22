@@ -51,7 +51,7 @@ BuildRequires: krb5-devel, tcp_wrappers-devel, libmount-devel
 BuildRequires: fedfs-utils-devel >= 0.8.0-7, sqlite-devel
 BuildRequires: python3-devel
 Requires(pre): shadow-utils >= 4.0.3-25
-Requires(pre): /sbin/chkconfig /sbin/nologin
+Requires(pre): util-linux
 Requires: libnfsidmap libevent
 Requires: libtirpc >= 0.2.3-1 libblkid libcap libmount
 Requires(post): systemd-units
@@ -290,6 +290,7 @@ fi
 %changelog
 * Sat Aug 20 2016 Steve Dickson <steved@redhat.com> 1.3.4-0.rc1
 - Updated to the latest RC release: nfs-utils-1-3-5-rc1
+- Updated the Requires(pre) (bz 1319196)
 
 * Sat Aug  6 2016 Steve Dickson <steved@redhat.com> 1.3.4-0
 - Updated to latest upstream version 1.3.4
