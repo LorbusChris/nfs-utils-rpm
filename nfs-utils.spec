@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.4
-Release: 0%{?dist}
+Release: 0.rc1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -14,6 +14,8 @@ Source1: id_resolver.conf
 Source2: nfs.sysconfig
 Source3: nfs-utils_env.sh
 Source4: lockd.conf
+
+Patch001: nfs-utils-1.3.5-rc1.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -72,6 +74,8 @@ This package also contains the mount.nfs and umount.nfs program.
 %prep
 %setup -q
 
+%patch001 -p1
+
 %patch100 -p1
 %patch101 -p1
 %patch102 -p1
@@ -105,18 +109,21 @@ CFLAGS="`echo $RPM_OPT_FLAGS $ARCH_OPT_FLAGS $PIE -D_FILE_OFFSET_BITS=64`"
     --enable-mountconfig \
     --enable-ipv6 \
 	--with-statdpath=%{_statdpath} \
-	--enable-libmount-mount
+	--enable-libmount-mount \
+	--with-systemd
 
 make %{?_smp_mflags} all
 
 %install
+%define _pkgdir %{_prefix}/lib/systemd
+
 rm -rf $RPM_BUILD_ROOT/*
 
 mkdir -p $RPM_BUILD_ROOT%/sbin
 mkdir -p $RPM_BUILD_ROOT%{_sbindir}
 mkdir -p $RPM_BUILD_ROOT%{_libexecdir}/nfs-utils/
-mkdir -p $RPM_BUILD_ROOT%{_unitdir}
-mkdir -p $RPM_BUILD_ROOT%{_unitdir}/nfs.target.wants
+mkdir -p $RPM_BUILD_ROOT%{_pkgdir}/system
+mkdir -p $RPM_BUILD_ROOT%{_pkgdir}/system-generators
 mkdir -p ${RPM_BUILD_ROOT}%{_mandir}/man8
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/request-key.d
@@ -126,16 +133,6 @@ install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT%{_sbindir}
 install -m 644 utils/mount/nfsmount.conf  $RPM_BUILD_ROOT%{_sysconfdir}
 install -m 644 %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/request-key.d
 install -m 644 %{SOURCE2} $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/nfs
-
-for file in systemd/*.service  ; do
-	install -m 644 $file $RPM_BUILD_ROOT%{_unitdir}
-done
-for file in systemd/*.target  ; do
-	install -m 644 $file $RPM_BUILD_ROOT%{_unitdir}
-done
-for file in systemd/*.mount  ; do
-	install -m 644 $file $RPM_BUILD_ROOT%{_unitdir}
-done
 
 # rpc.svcgssd is no longer supported.
 rm -rf $RPM_BUILD_ROOT%{_unitdir}/rpc-svcgssd.service
@@ -282,7 +279,7 @@ fi
 %{_sbindir}/nfsidmap
 %{_sbindir}/blkmapd
 %{_mandir}/*/*
-%{_unitdir}/*
+%{_pkgdir}/*/*
 %attr(755,root,root) /usr/libexec/nfs-utils/nfs-utils_env.sh
 
 %attr(4755,root,root)	/sbin/mount.nfs
@@ -291,6 +288,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Sat Aug 20 2016 Steve Dickson <steved@redhat.com> 1.3.4-0.rc1
+- Updated to the latest RC release: nfs-utils-1-3-5-rc1
+
 * Sat Aug  6 2016 Steve Dickson <steved@redhat.com> 1.3.4-0
 - Updated to latest upstream version 1.3.4
 
