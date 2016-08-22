@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.4
-Release: 0.rc1%{?dist}
+Release: 1.rc1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -228,10 +228,6 @@ if [ $1 -eq 0 ]; then
 	%systemd_preun nfs-client.target
 	%systemd_preun nfs-server.server
 
-    /usr/sbin/userdel rpcuser 2>/dev/null || :
-    /usr/sbin/groupdel rpcuser 2>/dev/null || :
-    /usr/sbin/userdel nfsnobody 2>/dev/null || :
-    /usr/sbin/groupdel nfsnobody 2>/dev/null || :
     rm -rf /var/lib/nfs/statd
     rm -rf /var/lib/nfs/v4recovery
 fi
@@ -288,6 +284,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Mon Aug 22 2016 Steve Dickson <steved@redhat.com> 1.3.4-1.rc1
+- Stop removing users and groups (bz 1364836)
+
 * Sat Aug 20 2016 Steve Dickson <steved@redhat.com> 1.3.4-0.rc1
 - Updated to the latest RC release: nfs-utils-1-3-5-rc1
 - Updated the Requires(pre) (bz 1319196)
