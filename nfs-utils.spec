@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.4
-Release: 1.rc2%{?dist}
+Release: 1.rc3%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -15,7 +15,7 @@ Source2: nfs.sysconfig
 Source3: nfs-utils_env.sh
 Source4: lockd.conf
 
-Patch001: nfs-utils-1.3.5-rc2.patch
+Patch001: nfs-utils-1.3.5-rc3.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -250,7 +250,6 @@ fi
 %dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd/sm
 %dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd/sm.bak
 %ghost %attr(644,rpcuser,rpcuser) %{_statdpath}/state
-%config(noreplace) %{_sharedstatedir}/nfs/xtab
 %config(noreplace) %{_sharedstatedir}/nfs/etab
 %config(noreplace) %{_sharedstatedir}/nfs/rmtab
 %config(noreplace) %{_sysconfdir}/request-key.d/id_resolver.conf
@@ -284,6 +283,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Wed Nov 25 2016 Steve Dickson <steved@redhat.com> 1.3.4-1.rc3
+- Updated to the latest RC release: nfs-utils-1-3-5-rc3
+
 * Thu Aug 25 2016 Steve Dickson <steved@redhat.com> 1.3.4-1.rc2
 - Updated to the latest RC release: nfs-utils-1-3-5-rc2 (bz 1369714)
 
