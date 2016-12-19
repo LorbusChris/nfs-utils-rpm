@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 1.3.4
-Release: 1.rc3%{?dist}
+Release: 1.rc3%{?dist}.1
 Epoch: 1
 
 # group all 32bit related archs
@@ -283,6 +283,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Mon Dec 19 2016 Miro Hrončok <mhroncok@redhat.com> - 1:1.3.4-1.rc3.1
+- Rebuild for Python 3.6
+
 * Wed Nov 25 2016 Steve Dickson <steved@redhat.com> 1.3.4-1.rc3
 - Updated to the latest RC release: nfs-utils-1-3-5-rc3
 
