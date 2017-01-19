@@ -1,27 +1,23 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
-Version: 1.3.4
-Release: 1.rc3%{?dist}.1
+Version: 2.1.1
+Release: 0%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
 %define all_32bit_archs i386 i486 i586 i686 athlon ppc sparcv9
 
 Source0: https://www.kernel.org/pub/linux/utils/nfs-utils/%{version}/%{name}-%{version}.tar.xz
-
 Source1: id_resolver.conf
 Source2: nfs.sysconfig
 Source3: nfs-utils_env.sh
 Source4: lockd.conf
 
-Patch001: nfs-utils-1.3.5-rc3.patch
-
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
 Patch102: nfs-utils-1.2.3-sm-notify-res_init.patch
 Patch103: nfs-utils-1.2.5-idmap-errmsg.patch
-Patch104: nfs-utils-1.3.2-systemd-gssargs.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -74,13 +70,10 @@ This package also contains the mount.nfs and umount.nfs program.
 %prep
 %setup -q
 
-%patch001 -p1
-
 %patch100 -p1
 %patch101 -p1
 %patch102 -p1
 %patch103 -p1
-%patch104 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -131,6 +124,7 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/modprobe.d/
 make DESTDIR=$RPM_BUILD_ROOT install
 install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT%{_sbindir}
 install -m 644 utils/mount/nfsmount.conf  $RPM_BUILD_ROOT%{_sysconfdir}
+install -m 644 nfs.conf  $RPM_BUILD_ROOT%{_sysconfdir}
 install -m 644 %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/request-key.d
 install -m 644 %{SOURCE2} $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/nfs
 
@@ -254,6 +248,7 @@ fi
 %config(noreplace) %{_sharedstatedir}/nfs/rmtab
 %config(noreplace) %{_sysconfdir}/request-key.d/id_resolver.conf
 %config(noreplace) %{_sysconfdir}/modprobe.d/lockd.conf
+%config(noreplace) %{_sysconfdir}/nfs.conf
 %doc linux-nfs/ChangeLog linux-nfs/KNOWNBUGS linux-nfs/NEW linux-nfs/README
 %doc linux-nfs/THANKS linux-nfs/TODO
 /sbin/rpc.statd
@@ -283,6 +278,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Thu Jan 19 2017 Steve Dickson <steved@redhat.com> 2.1.1-0
+- Updated to latest upstream release: nfs-utils-2-1-1
+
 * Mon Dec 19 2016 Miro Hrončok <mhroncok@redhat.com> - 1:1.3.4-1.rc3.1
 - Rebuild for Python 3.6
 
