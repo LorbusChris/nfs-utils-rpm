@@ -35,8 +35,5 @@ RPCGSSDARGS=""
 # Enable usage of gssproxy. See gssproxy-mech(8).
 GSS_USE_PROXY="yes"
 #
-# Optional arguments passed to rpc.svcgssd. See rpc.svcgssd(8)
-RPCSVCGSSDARGS=""
-#
 # Optional arguments passed to blkmapd. See blkmapd(8)
 BLKMAPDARGS=""

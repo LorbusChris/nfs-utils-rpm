@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 2.1.1
-Release: 0%{?dist}
+Release: 1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -18,6 +18,7 @@ Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
 Patch102: nfs-utils-1.2.3-sm-notify-res_init.patch
 Patch103: nfs-utils-1.2.5-idmap-errmsg.patch
+Patch104: nfs-utils-2.1.1-nfs-config.patch
 
 Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
@@ -74,6 +75,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %patch101 -p1
 %patch102 -p1
 %patch103 -p1
+%patch104 -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -127,9 +129,6 @@ install -m 644 utils/mount/nfsmount.conf  $RPM_BUILD_ROOT%{_sysconfdir}
 install -m 644 nfs.conf  $RPM_BUILD_ROOT%{_sysconfdir}
 install -m 644 %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/request-key.d
 install -m 644 %{SOURCE2} $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/nfs
-
-# rpc.svcgssd is no longer supported.
-rm -rf $RPM_BUILD_ROOT%{_unitdir}/rpc-svcgssd.service
 
 mkdir -p $RPM_BUILD_ROOT/run/sysconfig
 mkdir -p $RPM_BUILD_ROOT/usr/lib/systemd/scripts
@@ -278,8 +277,11 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Thu Jan 19 2017 Steve Dickson <steved@redhat.com> 2.1.1-1
+- Added back the nfs-config service for backwards compatibility
+
 * Thu Jan 19 2017 Steve Dickson <steved@redhat.com> 2.1.1-0
-- Updated to latest upstream release: nfs-utils-2-1-1
+- Updated to latest upstream release: nfs-utils-2-1-1 (bz 1413232)
 
 * Mon Dec 19 2016 Miro Hrončok <mhroncok@redhat.com> - 1:1.3.4-1.rc3.1
 - Rebuild for Python 3.6
