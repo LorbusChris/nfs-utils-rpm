@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 2.1.1
-Release: 2%{?dist}
+Release: 2.rc1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -13,6 +13,8 @@ Source1: id_resolver.conf
 Source2: nfs.sysconfig
 Source3: nfs-utils_env.sh
 Source4: lockd.conf
+
+Patch001: nfs-utils-2.1.2-rc1.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -70,6 +72,8 @@ This package also contains the mount.nfs and umount.nfs program.
 
 %prep
 %setup -q
+
+%patch001 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -277,6 +281,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Wed Feb 15 2017 Steve Dickson <steved@redhat.com> 2.1.1-2.rc1
+- Updated to the latest RC release: nfs-utils-2-1-2-rc1
+
 * Fri Feb 10 2017 Fedora Release Engineering <releng@fedoraproject.org> - 1:2.1.1-2
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_26_Mass_Rebuild
 
@@ -286,10 +293,10 @@ fi
 * Thu Jan 19 2017 Steve Dickson <steved@redhat.com> 2.1.1-0
 - Updated to latest upstream release: nfs-utils-2-1-1 (bz 1413232)
 
-* Mon Dec 19 2016 Miro Hrončok <mhroncok@redhat.com> - 1:1.3.4-1.rc3.1
+* Mon Dec 19 2016 Miro Hronok <mhroncok@redhat.com> - 1:1.3.4-1.rc3.1
 - Rebuild for Python 3.6
 
-* Wed Nov 25 2016 Steve Dickson <steved@redhat.com> 1.3.4-1.rc3
+* Fri Nov 25 2016 Steve Dickson <steved@redhat.com> 1.3.4-1.rc3
 - Updated to the latest RC release: nfs-utils-1-3-5-rc3
 
 * Thu Aug 25 2016 Steve Dickson <steved@redhat.com> 1.3.4-1.rc2

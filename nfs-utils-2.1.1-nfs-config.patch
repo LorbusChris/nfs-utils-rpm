@@ -1,6 +1,6 @@
 diff -up nfs-utils-2.1.1/configure.ac.orig nfs-utils-2.1.1/configure.ac
 --- nfs-utils-2.1.1/configure.ac.orig	2017-01-12 10:21:39.000000000 -0500
-+++ nfs-utils-2.1.1/configure.ac	2017-01-16 14:24:01.691124185 -0500
++++ nfs-utils-2.1.1/configure.ac	2017-02-15 10:53:12.623674876 -0500
 @@ -518,6 +518,11 @@ AC_SUBST([AM_CFLAGS], ["$my_am_cflags"])
  # Make sure that $ACLOCAL_FLAGS are used during a rebuild
  AC_SUBST([ACLOCAL_AMFLAGS], ["-I $ac_macro_dir \$(ACLOCAL_FLAGS)"])
@@ -23,7 +23,7 @@ diff -up nfs-utils-2.1.1/configure.ac.orig nfs-utils-2.1.1/configure.ac
  	support/Makefile
 diff -up nfs-utils-2.1.1/systemd/Makefile.am.orig nfs-utils-2.1.1/systemd/Makefile.am
 --- nfs-utils-2.1.1/systemd/Makefile.am.orig	2017-01-12 10:21:39.000000000 -0500
-+++ nfs-utils-2.1.1/systemd/Makefile.am	2017-01-16 14:24:01.691124185 -0500
++++ nfs-utils-2.1.1/systemd/Makefile.am	2017-02-15 10:53:12.623674876 -0500
 @@ -5,6 +5,7 @@ MAINTAINERCLEANFILES = Makefile.in
  unit_files =  \
      nfs-client.target \
@@ -34,7 +34,7 @@ diff -up nfs-utils-2.1.1/systemd/Makefile.am.orig nfs-utils-2.1.1/systemd/Makefi
      nfs-utils.service \
 diff -up nfs-utils-2.1.1/systemd/nfs-blkmap.service.orig nfs-utils-2.1.1/systemd/nfs-blkmap.service
 --- nfs-utils-2.1.1/systemd/nfs-blkmap.service.orig	2017-01-12 10:21:39.000000000 -0500
-+++ nfs-utils-2.1.1/systemd/nfs-blkmap.service	2017-01-16 14:24:01.691124185 -0500
++++ nfs-utils-2.1.1/systemd/nfs-blkmap.service	2017-02-15 10:53:12.624674873 -0500
 @@ -10,7 +10,8 @@ PartOf=nfs-utils.service
  [Service]
  Type=forking
@@ -46,8 +46,8 @@ diff -up nfs-utils-2.1.1/systemd/nfs-blkmap.service.orig nfs-utils-2.1.1/systemd
  [Install]
  WantedBy=nfs-client.target
 diff -up nfs-utils-2.1.1/systemd/nfs-config.service.in.orig nfs-utils-2.1.1/systemd/nfs-config.service.in
---- nfs-utils-2.1.1/systemd/nfs-config.service.in.orig	2017-01-16 14:24:01.691124185 -0500
-+++ nfs-utils-2.1.1/systemd/nfs-config.service.in	2017-01-16 14:24:01.691124185 -0500
+--- nfs-utils-2.1.1/systemd/nfs-config.service.in.orig	2017-02-15 10:53:12.624674873 -0500
++++ nfs-utils-2.1.1/systemd/nfs-config.service.in	2017-02-15 10:53:12.624674873 -0500
 @@ -0,0 +1,13 @@
 +[Unit]
 +Description=Preprocess NFS configuration
@@ -64,7 +64,7 @@ diff -up nfs-utils-2.1.1/systemd/nfs-config.service.in.orig nfs-utils-2.1.1/syst
 +ExecStart=@_libexecdir@/nfs-utils/nfs-utils_env.sh
 diff -up nfs-utils-2.1.1/systemd/nfs-idmapd.service.orig nfs-utils-2.1.1/systemd/nfs-idmapd.service
 --- nfs-utils-2.1.1/systemd/nfs-idmapd.service.orig	2017-01-12 10:21:39.000000000 -0500
-+++ nfs-utils-2.1.1/systemd/nfs-idmapd.service	2017-01-16 14:24:01.691124185 -0500
++++ nfs-utils-2.1.1/systemd/nfs-idmapd.service	2017-02-15 10:53:12.625674869 -0500
 @@ -6,6 +6,10 @@ After=var-lib-nfs-rpc_pipefs.mount local
  
  BindsTo=nfs-server.service
@@ -78,10 +78,10 @@ diff -up nfs-utils-2.1.1/systemd/nfs-idmapd.service.orig nfs-utils-2.1.1/systemd
 -ExecStart=/usr/sbin/rpc.idmapd
 +ExecStart=/usr/sbin/rpc.idmapd $RPCIDMAPDARGS
 diff -up nfs-utils-2.1.1/systemd/nfs-mountd.service.orig nfs-utils-2.1.1/systemd/nfs-mountd.service
---- nfs-utils-2.1.1/systemd/nfs-mountd.service.orig	2017-01-12 10:21:39.000000000 -0500
-+++ nfs-utils-2.1.1/systemd/nfs-mountd.service	2017-01-16 14:24:01.691124185 -0500
-@@ -6,6 +6,10 @@ After=proc-fs-nfsd.mount
- After=network.target local-fs.target
+--- nfs-utils-2.1.1/systemd/nfs-mountd.service.orig	2017-02-15 10:52:26.501835762 -0500
++++ nfs-utils-2.1.1/systemd/nfs-mountd.service	2017-02-15 10:53:12.625674869 -0500
+@@ -7,6 +7,10 @@ After=network.target local-fs.target
+ After=rpcbind.socket
  BindsTo=nfs-server.service
  
 +Wants=nfs-config.service
@@ -94,7 +94,7 @@ diff -up nfs-utils-2.1.1/systemd/nfs-mountd.service.orig nfs-utils-2.1.1/systemd
 +ExecStart=/usr/sbin/rpc.mountd $RPCMOUNTDARGS
 diff -up nfs-utils-2.1.1/systemd/nfs-server.service.orig nfs-utils-2.1.1/systemd/nfs-server.service
 --- nfs-utils-2.1.1/systemd/nfs-server.service.orig	2017-01-12 10:21:39.000000000 -0500
-+++ nfs-utils-2.1.1/systemd/nfs-server.service	2017-01-16 14:24:01.692124186 -0500
++++ nfs-utils-2.1.1/systemd/nfs-server.service	2017-02-15 10:53:12.626674866 -0500
 @@ -16,11 +16,16 @@ Before= rpc-statd-notify.service
  Wants=auth-rpcgss-module.service
  After=rpc-gssd.service gssproxy.service rpc-svcgssd.service
@@ -115,7 +115,7 @@ diff -up nfs-utils-2.1.1/systemd/nfs-server.service.orig nfs-utils-2.1.1/systemd
  ExecStopPost=/usr/sbin/exportfs -f
 diff -up nfs-utils-2.1.1/systemd/README.orig nfs-utils-2.1.1/systemd/README
 --- nfs-utils-2.1.1/systemd/README.orig	2017-01-12 10:21:39.000000000 -0500
-+++ nfs-utils-2.1.1/systemd/README	2017-01-16 14:24:01.691124185 -0500
++++ nfs-utils-2.1.1/systemd/README	2017-02-15 10:53:12.626674866 -0500
 @@ -19,8 +19,8 @@ by a suitable 'preset' setting:
      can work (if no type is given, ".service" is assumed).
  
@@ -154,7 +154,7 @@ diff -up nfs-utils-2.1.1/systemd/README.orig nfs-utils-2.1.1/systemd/README
  is present.
 diff -up nfs-utils-2.1.1/systemd/rpc-gssd.service.in.orig nfs-utils-2.1.1/systemd/rpc-gssd.service.in
 --- nfs-utils-2.1.1/systemd/rpc-gssd.service.in.orig	2017-01-12 10:21:39.000000000 -0500
-+++ nfs-utils-2.1.1/systemd/rpc-gssd.service.in	2017-01-16 14:24:01.692124186 -0500
++++ nfs-utils-2.1.1/systemd/rpc-gssd.service.in	2017-02-15 10:53:12.627674862 -0500
 @@ -9,6 +9,11 @@ ConditionPathExists=@_sysconfdir@/krb5.k
  
  PartOf=nfs-utils.service
@@ -170,7 +170,7 @@ diff -up nfs-utils-2.1.1/systemd/rpc-gssd.service.in.orig nfs-utils-2.1.1/system
 +ExecStart=/usr/sbin/rpc.gssd $RPCGSSDARGS
 diff -up nfs-utils-2.1.1/systemd/rpc-statd-notify.service.orig nfs-utils-2.1.1/systemd/rpc-statd-notify.service
 --- nfs-utils-2.1.1/systemd/rpc-statd-notify.service.orig	2017-01-12 10:21:39.000000000 -0500
-+++ nfs-utils-2.1.1/systemd/rpc-statd-notify.service	2017-01-16 14:24:01.692124186 -0500
++++ nfs-utils-2.1.1/systemd/rpc-statd-notify.service	2017-02-15 10:53:12.627674862 -0500
 @@ -10,6 +10,10 @@ After=nfs-server.service
  
  PartOf=nfs-utils.service
@@ -185,7 +185,7 @@ diff -up nfs-utils-2.1.1/systemd/rpc-statd-notify.service.orig nfs-utils-2.1.1/s
 +ExecStart=-/usr/sbin/sm-notify $SMNOTIFYARGS
 diff -up nfs-utils-2.1.1/systemd/rpc-statd.service.orig nfs-utils-2.1.1/systemd/rpc-statd.service
 --- nfs-utils-2.1.1/systemd/rpc-statd.service.orig	2017-01-12 10:21:39.000000000 -0500
-+++ nfs-utils-2.1.1/systemd/rpc-statd.service	2017-01-16 14:24:01.692124186 -0500
++++ nfs-utils-2.1.1/systemd/rpc-statd.service	2017-02-15 10:53:12.627674862 -0500
 @@ -7,8 +7,12 @@ After=network.target nss-lookup.target r
  
  PartOf=nfs-utils.service
