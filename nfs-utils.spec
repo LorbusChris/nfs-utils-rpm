@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 2.1.1
-Release: 2.rc1%{?dist}
+Release: 3.rc1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -13,6 +13,7 @@ Source1: id_resolver.conf
 Source2: nfs.sysconfig
 Source3: nfs-utils_env.sh
 Source4: lockd.conf
+Source5: 24-nfs-server.conf
 
 Patch001: nfs-utils-2.1.2-rc1.patch
 
@@ -56,7 +57,7 @@ Requires: libtirpc >= 0.2.3-1 libblkid libcap libmount
 Requires(post): systemd-units
 Requires(preun): systemd-units
 Requires(postun): systemd-units
-Requires: gssproxy => 0.3.0-0
+Requires: gssproxy => 0.7.0-3
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
@@ -127,6 +128,7 @@ mkdir -p ${RPM_BUILD_ROOT}%{_mandir}/man8
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/request-key.d
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/modprobe.d/
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/gssproxy
 make DESTDIR=$RPM_BUILD_ROOT install
 install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT%{_sbindir}
 install -m 644 utils/mount/nfsmount.conf  $RPM_BUILD_ROOT%{_sysconfdir}
@@ -138,6 +140,7 @@ mkdir -p $RPM_BUILD_ROOT/run/sysconfig
 mkdir -p $RPM_BUILD_ROOT/usr/lib/systemd/scripts
 install -m 755 %{SOURCE3} $RPM_BUILD_ROOT/usr/libexec/nfs-utils/nfs-utils_env.sh
 install -m 644 %{SOURCE4} $RPM_BUILD_ROOT%{_sysconfdir}/modprobe.d/lockd.conf
+install -m 644 %{SOURCE5} $RPM_BUILD_ROOT%{_sysconfdir}/gssproxy
 
 #
 # For backwards compatablity 
@@ -252,6 +255,7 @@ fi
 %config(noreplace) %{_sysconfdir}/request-key.d/id_resolver.conf
 %config(noreplace) %{_sysconfdir}/modprobe.d/lockd.conf
 %config(noreplace) %{_sysconfdir}/nfs.conf
+%attr(0600,root,root) %config(noreplace) /%{_sysconfdir}/gssproxy/24-nfs-server.conf
 %doc linux-nfs/ChangeLog linux-nfs/KNOWNBUGS linux-nfs/NEW linux-nfs/README
 %doc linux-nfs/THANKS linux-nfs/TODO
 /sbin/rpc.statd
@@ -281,6 +285,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Tue Mar 28 2017 Steve Dickson <steved@redhat.com> 2.1.1-2.rc1
+- Added gssproxy server config file (bz 1431272)
+
 * Wed Feb 15 2017 Steve Dickson <steved@redhat.com> 2.1.1-2.rc1
 - Updated to the latest RC release: nfs-utils-2-1-2-rc1
 
