@@ -1,10 +1,9 @@
+
 #
-# Optional arguments passed to in-kernel lockd 
-#LOCKDARG=
-# TCP port rpc.lockd should listen on.
-#LOCKD_TCPPORT=32803
-# UDP port rpc.lockd should listen on.
-#LOCKD_UDPPORT=32769
+#
+# To set lockd kernel module parameters please see
+#  /etc/modprobe.d/lockd.conf
+#
 #
 # Optional arguments passed to rpc.nfsd. See rpc.nfsd(8)
 RPCNFSDARGS=""
