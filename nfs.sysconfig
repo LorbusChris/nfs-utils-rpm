@@ -22,7 +22,7 @@ RPCNFSDARGS=""
 RPCMOUNTDOPTS=""
 #
 # Optional arguments passed to rpc.statd. See rpc.statd(8)
-STATDARG=""
+STATDARGS=""
 # Optional arguments passed to sm-notify. See sm-notify(8)
 SMNOTIFYARGS=""
 #
