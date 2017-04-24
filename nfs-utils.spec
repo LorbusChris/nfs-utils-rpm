@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 2.1.1
-Release: 4.rc2%{?dist}
+Release: 5.rc2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -238,6 +238,9 @@ fi
 
 /bin/systemctl --system daemon-reload >/dev/null 2>&1 || :
 
+%triggerin -- nfs-utils > 1:2.1.1-3
+/bin/systemctl try-restart gssproxy
+
 %files
 %defattr(-,root,root,-)
 %config(noreplace) /etc/sysconfig/nfs
@@ -285,6 +288,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Mon Apr 24 2017 Steve Dickson <steved@redhat.com> 2.1.1-4.rc2
+- Conditionally restart gssproxy now that config file is installed (bz 1440885)
+
 * Mon Apr 10 2017 Steve Dickson <steved@redhat.com> 2.1.1-4.rc2
 - Updated to the latest RC release: nfs-utils-2-1-2-rc2 (bz 1419351)
 - Fixed typo in nfs.sysconfig  (bz 1422249)
