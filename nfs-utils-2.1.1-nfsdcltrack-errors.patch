@@ -1,0 +1,37 @@
+commit 06bbb4ee6f5186e8e83d50767ad5b3b41968e5a6
+Author: Jeff Layton <jlayton@redhat.com>
+Date:   Wed Apr 26 12:13:50 2017 -0400
+
+    nfsdcltrack: silence some expected errors
+    
+    On a new install, we're unable to select from the parameters table, as
+    it doesn't exist yet. The code is set up to log that fact at L_ERROR
+    now, but it's an expected situation. Change it to log that at D_GENERAL
+    instead.
+    
+    Reported-and-Tested-by: ChunYu Wang <chunwang@redhat.com>
+    Signed-off-by: Jeff Layton <jlayton@redhat.com>
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff --git a/utils/nfsdcltrack/sqlite.c b/utils/nfsdcltrack/sqlite.c
+index 54cd748..1552eba 100644
+--- a/utils/nfsdcltrack/sqlite.c
++++ b/utils/nfsdcltrack/sqlite.c
+@@ -101,7 +101,7 @@ sqlite_query_schema_version(void)
+ 		"SELECT value FROM parameters WHERE key == \"version\";",
+ 		 -1, &stmt, NULL);
+ 	if (ret != SQLITE_OK) {
+-		xlog(L_ERROR, "Unable to prepare select statement: %s",
++		xlog(D_GENERAL, "Unable to prepare select statement: %s",
+ 			sqlite3_errmsg(dbh));
+ 		ret = 0;
+ 		goto out;
+@@ -110,7 +110,7 @@ sqlite_query_schema_version(void)
+ 	/* query schema version */
+ 	ret = sqlite3_step(stmt);
+ 	if (ret != SQLITE_ROW) {
+-		xlog(L_ERROR, "Select statement execution failed: %s",
++		xlog(D_GENERAL, "Select statement execution failed: %s",
+ 				sqlite3_errmsg(dbh));
+ 		ret = 0;
+ 		goto out;

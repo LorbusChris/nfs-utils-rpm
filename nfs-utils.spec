@@ -17,6 +17,7 @@ Source5: 24-nfs-server.conf
 
 Patch001: nfs-utils-2.1.2-rc2.patch
 Patch002: nfs-utils-2.1.1-network-online.patch
+Patch003: nfs-utils-2.1.1-nfsdcltrack-errors.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -77,6 +78,7 @@ This package also contains the mount.nfs and umount.nfs program.
 
 %patch001 -p1
 %patch002 -p1
+%patch003 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -293,6 +295,7 @@ fi
 * Wed Apr 26 2017 Steve Dickson <steved@redhat.com> 2.1.1-5.rc2
 - Conditionally restart gssproxy now that config file is installed (bz 1440885)
 - systemd: Afters are also needed for the Wants=network-online.target (bz 1419351)
+- nfsdcltrack: silence some expected errors (bz 1445863)
 
 * Mon Apr 10 2017 Steve Dickson <steved@redhat.com> 2.1.1-4.rc2
 - Updated to the latest RC release: nfs-utils-2-1-2-rc2 (bz 1419351)
