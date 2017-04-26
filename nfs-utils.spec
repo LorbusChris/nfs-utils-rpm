@@ -296,6 +296,7 @@ fi
 - Conditionally restart gssproxy now that config file is installed (bz 1440885)
 - systemd: Afters are also needed for the Wants=network-online.target (bz 1419351)
 - nfsdcltrack: silence some expected errors (bz 1445863)
+- Cleaned up fuzzy patches
 
 * Mon Apr 10 2017 Steve Dickson <steved@redhat.com> 2.1.1-4.rc2
 - Updated to the latest RC release: nfs-utils-2-1-2-rc2 (bz 1419351)

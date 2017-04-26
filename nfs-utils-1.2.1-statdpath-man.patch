@@ -1,6 +1,6 @@
-diff -up nfs-utils-1.3.4/utils/statd/sm-notify.man.orig nfs-utils-1.3.4/utils/statd/sm-notify.man
---- nfs-utils-1.3.4/utils/statd/sm-notify.man.orig	2016-12-17 14:07:32.571455752 -0500
-+++ nfs-utils-1.3.4/utils/statd/sm-notify.man	2016-12-17 14:10:58.429723983 -0500
+diff -up nfs-utils-2.1.1/utils/statd/sm-notify.man.orig nfs-utils-2.1.1/utils/statd/sm-notify.man
+--- nfs-utils-2.1.1/utils/statd/sm-notify.man.orig	2017-04-26 12:45:14.205742654 -0400
++++ nfs-utils-2.1.1/utils/statd/sm-notify.man	2017-04-26 12:45:44.042630801 -0400
 @@ -184,7 +184,7 @@ where NSM state information resides.
  If this option is not specified,
  .B sm-notify
@@ -10,7 +10,7 @@ diff -up nfs-utils-1.3.4/utils/statd/sm-notify.man.orig nfs-utils-1.3.4/utils/st
  by default.
  .IP
  After starting,
-@@ -312,13 +312,13 @@ Currently, the
+@@ -330,13 +330,13 @@ Currently, the
  command supports sending notification only via datagram transport protocols.
  .SH FILES
  .TP 2.5i
@@ -27,9 +27,9 @@ diff -up nfs-utils-1.3.4/utils/statd/sm-notify.man.orig nfs-utils-1.3.4/utils/st
  NSM state number for this host
  .TP 2.5i
  .I /proc/sys/fs/nfs/nsm_local_state
-diff -up nfs-utils-1.3.4/utils/statd/statd.man.orig nfs-utils-1.3.4/utils/statd/statd.man
---- nfs-utils-1.3.4/utils/statd/statd.man.orig	2016-12-17 14:07:32.572455749 -0500
-+++ nfs-utils-1.3.4/utils/statd/statd.man	2016-12-17 14:10:58.430723979 -0500
+diff -up nfs-utils-2.1.1/utils/statd/statd.man.orig nfs-utils-2.1.1/utils/statd/statd.man
+--- nfs-utils-2.1.1/utils/statd/statd.man.orig	2017-01-12 10:21:39.000000000 -0500
++++ nfs-utils-2.1.1/utils/statd/statd.man	2017-04-26 12:45:44.043630798 -0400
 @@ -253,7 +253,7 @@ where NSM state information resides.
  If this option is not specified,
  .B rpc.statd
