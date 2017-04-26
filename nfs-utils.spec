@@ -16,6 +16,7 @@ Source4: lockd.conf
 Source5: 24-nfs-server.conf
 
 Patch001: nfs-utils-2.1.2-rc2.patch
+Patch002: nfs-utils-2.1.1-network-online.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -75,6 +76,7 @@ This package also contains the mount.nfs and umount.nfs program.
 %setup -q
 
 %patch001 -p1
+%patch002 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -288,8 +290,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
-* Mon Apr 24 2017 Steve Dickson <steved@redhat.com> 2.1.1-4.rc2
+* Wed Apr 26 2017 Steve Dickson <steved@redhat.com> 2.1.1-5.rc2
 - Conditionally restart gssproxy now that config file is installed (bz 1440885)
+- systemd: Afters are also needed for the Wants=network-online.target (bz 1419351)
 
 * Mon Apr 10 2017 Steve Dickson <steved@redhat.com> 2.1.1-4.rc2
 - Updated to the latest RC release: nfs-utils-2-1-2-rc2 (bz 1419351)
@@ -313,7 +316,7 @@ fi
 * Mon Dec 19 2016 Miro Hronok <mhroncok@redhat.com> - 1:1.3.4-1.rc3.1
 - Rebuild for Python 3.6
 
-* Fri Nov 25 2016 Steve Dickson <steved@redhat.com> 1.3.4-1.rc3
+* Wed Nov 23 2016 Steve Dickson <steved@redhat.com> 1.3.4-1.rc3
 - Updated to the latest RC release: nfs-utils-1-3-5-rc3
 
 * Thu Aug 25 2016 Steve Dickson <steved@redhat.com> 1.3.4-1.rc2
