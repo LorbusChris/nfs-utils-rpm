@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 2.1.1
-Release: 5.rc4%{?dist}
+Release: 6.rc4%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -49,7 +49,7 @@ BuildRequires: libnfsidmap-devel libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, gcc, device-mapper-devel
 BuildRequires: krb5-devel, tcp_wrappers-devel, libmount-devel
-BuildRequires: fedfs-utils-devel >= 0.8.0-7, sqlite-devel
+BuildRequires: sqlite-devel
 BuildRequires: python3-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): util-linux
@@ -290,6 +290,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Wed Jul 19 2017 Steve Dickson <steved@redhat.com> 2.1.1-6.rc4
+- Removed build dependency on fedfs-utils-devel (bz 1427493)
+
 * Wed Jun 21 2017 Steve Dickson <steved@redhat.com> 2.1.1-5.rc4
 - Updated to the latest RC releease: nfs-utils-2-1-2-rc4 (bz 1462218)
 - rpc.c: added include file so UINT16_MAX is defined
