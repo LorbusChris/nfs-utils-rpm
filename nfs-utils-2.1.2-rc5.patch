@@ -169,6 +169,31 @@ index 22cf539..d42eeef 100644
 +	free(paths->tmpfn);
 +	free(paths->lockfn);
 +}
+diff --git a/support/include/conffile.h b/support/include/conffile.h
+index 3fe3a78..2d11a52 100644
+--- a/support/include/conffile.h
++++ b/support/include/conffile.h
+@@ -48,8 +48,6 @@ struct conf_list {
+ 	TAILQ_HEAD(conf_list_fields_head, conf_list_node) fields;
+ };
+ 
+-extern char    *conf_path;
+-
+ extern int      conf_begin(void);
+ extern int      conf_decode_base64(uint8_t *, uint32_t *, unsigned char *);
+ extern int      conf_end(int, int);
+@@ -61,9 +59,9 @@ extern int      conf_get_num(char *, char *, int);
+ extern _Bool    conf_get_bool(char *, char *, _Bool);
+ extern char    *conf_get_str(char *, char *);
+ extern char    *conf_get_section(char *, char *, char *);
+-extern void     conf_init(void);
++extern void     conf_init(const char *);
++extern void     conf_cleanup(void);
+ extern int      conf_match_num(char *, char *, int);
+-extern void     conf_reinit(void);
+ extern int      conf_remove(int, char *, char *);
+ extern int      conf_remove_section(int, char *);
+ extern void     conf_report(void);
 diff --git a/support/include/misc.h b/support/include/misc.h
 index eedc1fe..06e2a0c 100644
 --- a/support/include/misc.h
@@ -410,6 +435,30 @@ index 0000000..63597df
 +	strcpy(base, parentdir);
 +	return true;
 +}
+diff --git a/support/misc/tcpwrapper.c b/support/misc/tcpwrapper.c
+index 06b0a46..3128053 100644
+--- a/support/misc/tcpwrapper.c
++++ b/support/misc/tcpwrapper.c
+@@ -72,6 +72,7 @@ present_address(const struct sockaddr *sap, char *buf, const size_t buflen)
+ 	case AF_INET:
+ 		if (inet_ntop(AF_INET, &sin->sin_addr, buf, len) != 0)
+ 			return;
++		break;
+ 	case AF_INET6:
+ 		if (inet_ntop(AF_INET6, &sin6->sin6_addr, buf, len) != 0)
+ 			return;
+diff --git a/support/nfs/atomicio.c b/support/nfs/atomicio.c
+index 5e760e6..aa819ca 100644
+--- a/support/nfs/atomicio.c
++++ b/support/nfs/atomicio.c
+@@ -42,6 +42,7 @@ ssize_t atomicio(ssize_t(*f) (int, void *, size_t), int fd, void *_s, size_t n)
+ 		case -1:
+ 			if (errno == EINTR || errno == EAGAIN)
+ 				continue;
++			/* FALLTHRU */
+ 		case 0:
+ 			if (pos != 0)
+ 				return pos;
 diff --git a/support/nfs/cacheio.c b/support/nfs/cacheio.c
 index e5e2579..9912afa 100644
 --- a/support/nfs/cacheio.c
@@ -442,10 +491,516 @@ index e5e2579..9912afa 100644
  		stb.st_mtime = time(0);
  	
 diff --git a/support/nfs/conffile.c b/support/nfs/conffile.c
-index e717c1e..203efd2 100644
+index e717c1e..8690218 100644
 --- a/support/nfs/conffile.c
 +++ b/support/nfs/conffile.c
-@@ -533,7 +533,7 @@ retry:
+@@ -30,6 +30,10 @@
+  * This code was written under funding by Ericsson Radio Systems.
+  */
+ 
++#ifdef HAVE_CONFIG_H
++#include <config.h>
++#endif
++
+ #include <sys/param.h>
+ #include <sys/mman.h>
+ #include <sys/socket.h>
+@@ -52,9 +56,11 @@
+ #pragma GCC visibility push(hidden)
+ 
+ static void conf_load_defaults(void);
+-static int conf_load(int trans, char *path);
++static char * conf_load(const char *path);
+ static int conf_set(int , char *, char *, char *, 
+ 	char *, int , int );
++static void conf_parse(int trans, char *buf, 
++	char **section, char **subsection);
+ 
+ struct conf_trans {
+ 	TAILQ_ENTRY (conf_trans) link;
+@@ -73,8 +79,10 @@ TAILQ_HEAD (conf_trans_head, conf_trans) conf_trans_queue;
+ /*
+  * Radix-64 Encoding.
+  */
++#if 0
+ static const uint8_t bin2asc[]
+   = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
++#endif
+ 
+ static const uint8_t asc2bin[] =
+ {
+@@ -105,7 +113,6 @@ struct conf_binding {
+   int is_default;
+ };
+ 
+-char *conf_path;
+ LIST_HEAD (conf_bindings, conf_binding) conf_bindings[256];
+ 
+ static __inline__ uint8_t
+@@ -199,7 +206,6 @@ conf_set_now(char *section, char *arg, char *tag,
+ 	node->tag = strdup(tag);
+ 	node->value = strdup(value);
+ 	node->is_default = is_default;
+-
+ 	LIST_INSERT_HEAD(&conf_bindings[conf_hash (section)], node, link);
+ 	return 0;
+ }
+@@ -209,17 +215,10 @@ conf_set_now(char *section, char *arg, char *tag,
+  * headers and feed tag-value pairs into our configuration database.
+  */
+ static void
+-conf_parse_line(int trans, char *line, size_t sz)
++conf_parse_line(int trans, char *line, int lineno, char **section, char **subsection)
+ {
+ 	char *val, *ptr;
+-	size_t i;
+-	size_t j;
+-	static char *section = 0;
+-	static char *arg = 0;
+-	static int ln = 0;
+ 
+-	/* Lines starting with '#' or ';' are comments.  */
+-	ln++;
+ 	/* Ignore blank lines */
+ 	if (*line == '\0')
+ 		return;
+@@ -228,123 +227,188 @@ conf_parse_line(int trans, char *line, size_t sz)
+ 	while (isblank(*line)) 
+ 		line++;
+ 
++	/* Lines starting with '#' or ';' are comments.  */
+ 	if (*line == '#' || *line == ';')
+ 		return;
+ 
+ 	/* '[section]' parsing...  */
+ 	if (*line == '[') {
+ 		line++;
++
++		if (*section) {
++			free(*section);
++			*section = NULL;
++		}
++		if (*subsection) {
++			free(*subsection);
++			*subsection = NULL;
++		}
++
+ 		/* Strip off any blanks after '[' */
+ 		while (isblank(*line)) 
+ 			line++;
+-		for (i = 0; i < sz; i++) {
+-			if (line[i] == ']') {
+-				break;
+-			}
+-		}
+-		if (section)
+-			free(section);
+-		if (i == sz) {
++
++		/* find the closing ] */
++		ptr = strchr(line, ']');
++		if (ptr == NULL) {
+ 			xlog_warn("config file error: line %d: "
+- 				"non-matched ']', ignoring until next section", ln);
+-			section = 0;
++ 				"non-matched ']', ignoring until next section", lineno);
+ 			return;
+ 		}
++
++		/* just ignore everything after the closing ] */
++		*(ptr--) = '\0';
++
+ 		/* Strip off any blanks before ']' */
+-		val = line;
+-		j=0;
+-		while (*val && !isblank(*val)) 
+-			val++, j++;
+-		if (*val)
+-			i = j;
+-		section = malloc(i+1);
+-		if (!section) {
+-			xlog_warn("conf_parse_line: %d: malloc (%lu) failed", ln,
+-						(unsigned long)i);
++		while (ptr >= line && isblank(*ptr)) 
++			*(ptr--)='\0';
++
++		/* look for an arg to split from the section name */
++		val = strchr(line, '"');
++		if (val != NULL) {
++			ptr = val - 1;
++			*(val++) = '\0';
++
++			/* trim away any whitespace before the " */
++			while (ptr > line && isblank(*ptr))
++				*(ptr--)='\0';
++		}
++
++		/* copy the section name */
++		*section = strdup(line);
++		if (!*section) {
++			xlog_warn("conf_parse_line: %d: malloc failed", lineno);
+ 			return;
+ 		}
+-		strncpy(section, line, i);
+-		section[i] = '\0';
+ 
+-		if (arg) 
+-			free(arg);
+-		arg = 0;
++		/* there is no arg, we are done */
++		if (val == NULL) return;
+ 
++		/* check for the closing " */
+ 		ptr = strchr(val, '"');
+-		if (ptr == NULL)
+-			return;
+-		line = ++ptr;
+-		while (*ptr && *ptr != '"' && *ptr != ']')
+-			ptr++;
+-		if (*ptr == '\0' || *ptr == ']') {
++		if (ptr == NULL) {
+ 			xlog_warn("config file error: line %d: "
+- 				"non-matched '\"', ignoring until next section", ln);
+-		}  else {
+-			*ptr = '\0';
+-			arg = strdup(line);
+-			if (!arg) 
+-				xlog_warn("conf_parse_line: %d: malloc arg failed", ln);
++ 				"non-matched '\"', ignoring until next section", lineno);
++			return;
+ 		}
++		*ptr = '\0';
++		*subsection = strdup(val);
++		if (!*subsection) 
++			xlog_warn("conf_parse_line: %d: malloc arg failed", lineno);
+ 		return;
+ 	}
+ 
+ 	/* Deal with assignments.  */
+-	for (i = 0; i < sz; i++) {
+-		if (line[i] == '=') {
+-			/* If no section, we are ignoring the lines.  */
+-			if (!section) {
++	ptr = strchr(line, '=');
++
++	/* not an assignment line */
++	if (ptr == NULL) {
++		/* Other non-empty lines are weird.  */
++		if (line[strspn(line, " \t")])
+ 			xlog_warn("config file error: line %d: "
+-				"ignoring line due to no section", ln);
+-				return;
+-			}
+-			line[strcspn (line, " \t=")] = '\0';
+-			val = line + i + 1 + strspn (line + i + 1, " \t");
+-
+-			if (val[0] == '"') {
+-				val ++;
+-				j = strcspn(val, "\"");
+-				val[j] = 0;
+-			} else if (val[0] == '\'') {
+-				val ++;
+-				j = strcspn(val, "'");
+-				val[j] = 0;
+-			} else {
+-				/* Skip trailing spaces and comments */
+-				for (j = 0; val[j]; j++) {
+-					if ((val[j] == '#' || val[j] == ';')
+-					    && (j == 0 || isspace(val[j-1]))) {
+-						val[j] = '\0';
+-						break;
+-					}
+-				}
+-				while (j && isspace(val[j-1]))
+-					val[--j] = '\0';
+-			}
+-			if (strcasecmp(line, "include") == 0)
+-				conf_load(trans, val);
+-			else
+-				/* XXX Perhaps should we not ignore errors?  */
+-				conf_set(trans, section, arg, line, val, 0, 0);
++				"line not empty and not an assignment", lineno);
++		return;
++	}
++
++	/* If no section, we are ignoring the line.  */
++	if (!*section) {
++		xlog_warn("config file error: line %d: "
++			"ignoring line due to no section", lineno);
++		return;
++	}
++
++	val = ptr + 1;
++	*(ptr--) = '\0';
++
++	/* strip spaces before and after the = */
++	while (ptr >= line && isblank(*ptr))
++		*(ptr--)='\0';
++	while (*val != '\0' && isblank(*val))
++		val++;
++
++	if (*val == '"') {
++		val++;
++		ptr = strchr(val, '"');
++		if (ptr == NULL) {
++			xlog_warn("config file error: line %d: "
++				"unmatched quotes", lineno);
++			return;
++		}
++		*ptr = '\0';
++	} else
++	if (*val == '\'') {
++		val++;
++		ptr = strchr(val, '\'');
++		if (ptr == NULL) {
++			xlog_warn("config file error: line %d: "
++				"unmatched quotes", lineno);
+ 			return;
+ 		}
++		*ptr = '\0';
++	} else {
++		/* Trim any trailing spaces and comments */
++		if ((ptr=strchr(val, '#'))!=NULL)
++			*ptr = '\0';
++		if ((ptr=strchr(val, ';'))!=NULL)
++			*ptr = '\0';
++
++		ptr = val + strlen(val) - 1;
++		while (ptr > val && isspace(*ptr))
++			*(ptr--) = '\0';
+ 	}
+-	/* Other non-empty lines are weird.  */
+-	i = strspn(line, " \t");
+-	if (line[i])
+-		xlog_warn("config file error: line %d:", ln);
+ 
+-	return;
++	if (*line == '\0') {
++		xlog_warn("config file error: line %d: "
++			"missing tag in assignment", lineno);
++		return;
++	}
++	if (*val == '\0') {
++		xlog_warn("config file error: line %d: "
++			"missing value in assignment", lineno);
++		return;
++	}
++
++	if (strcasecmp(line, "include")==0) {
++		/* load and parse subordinate config files */
++		char * subconf = conf_load(val);
++		if (subconf == NULL) {
++			xlog_warn("config file error: line %d: "
++			"error loading included config", lineno);
++			return;
++		}
++
++		/* copy the section data so the included file can inherit it
++		 * without accidentally changing it for us */
++		char * inc_section = NULL;
++		char * inc_subsection = NULL;
++		if (*section != NULL) {
++			inc_section = strdup(*section);
++			if (*subsection != NULL)
++				inc_subsection = strdup(*subsection);
++		}
++
++		conf_parse(trans, subconf, &inc_section, &inc_subsection);
++
++		if (inc_section) free(inc_section);
++		if (inc_subsection) free(inc_subsection);
++		free(subconf);
++	} else {
++		/* XXX Perhaps should we not ignore errors?  */
++		conf_set(trans, *section, *subsection, line, val, 0, 0);
++	}
+ }
+ 
+ /* Parse the mapped configuration file.  */
+ static void
+-conf_parse(int trans, char *buf, size_t sz)
++conf_parse(int trans, char *buf, char **section, char **subsection)
+ {
+ 	char *cp = buf;
+-	char *bufend = buf + sz;
++	char *bufend = NULL;
+ 	char *line;
++	int lineno = 0;
+ 
+ 	line = cp;
++	bufend = buf + strlen(buf);
+ 	while (cp < bufend) {
+ 		if (*cp == '\n') {
+ 			/* Check for escaped newlines.  */
+@@ -352,7 +416,8 @@ conf_parse(int trans, char *buf, size_t sz)
+ 				*(cp - 1) = *cp = ' ';
+ 			else {
+ 				*cp = '\0';
+-				conf_parse_line(trans, line, cp - line);
++				lineno++;
++				conf_parse_line(trans, line, lineno, section, subsection);
+ 				line = cp + 1;
+ 			}
+ 		}
+@@ -369,33 +434,21 @@ conf_load_defaults(void)
+ 	return;
+ }
+ 
+-void
+-conf_init (void)
+-{
+-	unsigned int i;
+-
+-	for (i = 0; i < sizeof conf_bindings / sizeof conf_bindings[0]; i++)
+-		LIST_INIT (&conf_bindings[i]);
+-
+-	TAILQ_INIT (&conf_trans_queue);
+-	conf_reinit();
+-}
+-
+-static int
+-conf_load(int trans, char *path)
++static char *
++conf_load(const char *path)
+ {
+ 	struct stat sb;
+ 	if ((stat (path, &sb) == 0) || (errno != ENOENT)) {
+-		char *new_conf_addr;
++		char *new_conf_addr = NULL;
+ 		size_t sz = sb.st_size;
+ 		int fd = open (path, O_RDONLY, 0);
+ 
+ 		if (fd == -1) {
+ 			xlog_warn("conf_reinit: open (\"%s\", O_RDONLY) failed", path);
+-			return -1;
++			return NULL;
+ 		}
+ 
+-		new_conf_addr = malloc(sz);
++		new_conf_addr = malloc(sz+1);
+ 		if (!new_conf_addr) {
+ 			xlog_warn("conf_reinit: malloc (%lu) failed", (unsigned long)sz);
+ 			goto fail;
+@@ -410,42 +463,103 @@ conf_load(int trans, char *path)
+ 		close(fd);
+ 
+ 		/* XXX Should we not care about errors and rollback?  */
+-		conf_parse(trans, new_conf_addr, sz);
+-		free(new_conf_addr);
+-		return 0;
++		new_conf_addr[sz] = '\0';
++		return new_conf_addr;
+ 	fail:
+ 		close(fd);
+-		free(new_conf_addr);
++		if (new_conf_addr) free(new_conf_addr);
++	}
++	return NULL;
++}
++
++/* remove and free up any existing config state */
++static void conf_free_bindings(void)
++{
++	unsigned int i;
++	for (i = 0; i < sizeof conf_bindings / sizeof conf_bindings[0]; i++) {
++		struct conf_binding *cb, *next;
++
++		cb = LIST_FIRST(&conf_bindings[i]);
++		for (; cb; cb = next) {
++			next = LIST_NEXT(cb, link);
++			LIST_REMOVE(cb, link);
++			free(cb->section);
++			free(cb->arg);
++			free(cb->tag);
++			free(cb->value);
++			free(cb);
++		}
++		LIST_INIT(&conf_bindings[i]);
+ 	}
+-	return -1;
+ }
+ 
+ /* Open the config file and map it into our address space, then parse it.  */
+-void
+-conf_reinit(void)
++static void
++conf_reinit(const char *conf_file)
+ {
+-	struct conf_binding *cb = 0;
+ 	int trans;
+-	unsigned int i;
++	char * conf_data;
+ 
+ 	trans = conf_begin();
+-	if (conf_load(trans, conf_path) < 0)
++	conf_data = conf_load(conf_file);
++
++	if (conf_data == NULL)
+ 		return;
+ 
+ 	/* Load default configuration values.  */
+ 	conf_load_defaults();
+ 
++	/* Parse config contents into the transaction queue */
++	char *section = NULL;
++	char *subsection = NULL;
++	conf_parse(trans, conf_data, &section, &subsection);
++	if (section) free(section);
++	if (subsection) free(subsection);
++	free(conf_data);
++
+ 	/* Free potential existing configuration.  */
+-	for (i = 0; i < sizeof conf_bindings / sizeof conf_bindings[0]; i++) {
+-		cb = LIST_FIRST (&conf_bindings[i]);
+-		for (; cb; cb = LIST_FIRST (&conf_bindings[i]))
+-			conf_remove_now(cb->section, cb->tag);
+-	}
++	conf_free_bindings();
+ 
++	/* Apply the new configuration values */
+ 	conf_end(trans, 1);
+ 	return;
+ }
+ 
++void
++conf_init (const char *conf_file)
++{
++	unsigned int i;
++
++	for (i = 0; i < sizeof conf_bindings / sizeof conf_bindings[0]; i++)
++		LIST_INIT (&conf_bindings[i]);
++
++	TAILQ_INIT (&conf_trans_queue);
++
++	if (conf_file == NULL) conf_file=NFS_CONFFILE;
++	conf_reinit(conf_file);
++}
++
++/* 
++ * Empty the config and free up any used memory 
++ */
++void
++conf_cleanup(void)
++{
++	conf_free_bindings();
++
++	struct conf_trans *node, *next;
++	for (node = TAILQ_FIRST(&conf_trans_queue); node; node = next) {
++		next = TAILQ_NEXT(node, link);
++		TAILQ_REMOVE (&conf_trans_queue, node, link);
++		if (node->section) free(node->section);
++		if (node->arg) free(node->arg);
++		if (node->tag) free(node->tag);
++		if (node->value) free(node->value);
++		free (node);
++	}
++	TAILQ_INIT(&conf_trans_queue);
++}
++
+ /*
+  * Return the numeric value denoted by TAG in section SECTION or DEF
+  * if that tag does not exist.
+@@ -533,7 +647,7 @@ retry:
  				 * or from environment
  				 */
  				char *env = getenv(cb->value+1);
@@ -545,6 +1100,18 @@ index aafa755..52f5401 100644
  }
  
  /**
+diff --git a/support/nsm/rpc.c b/support/nsm/rpc.c
+index 4e5f40e..0a8e56f 100644
+--- a/support/nsm/rpc.c
++++ b/support/nsm/rpc.c
+@@ -38,6 +38,7 @@
+ #include <sys/socket.h>
+ #include <sys/time.h>
+ 
++#include <stdint.h>
+ #include <time.h>
+ #include <stdbool.h>
+ #include <string.h>
 diff --git a/systemd/Makefile.am b/systemd/Makefile.am
 index 0d15b9f..eef53c4 100644
 --- a/systemd/Makefile.am
@@ -614,16 +1181,17 @@ index acca86b..f38fe52 100644
  BindsTo=nfs-server.service
  
 diff --git a/systemd/nfs-mountd.service b/systemd/nfs-mountd.service
-index 15e828b..fec0399 100644
+index 15e828b..e8ece53 100644
 --- a/systemd/nfs-mountd.service
 +++ b/systemd/nfs-mountd.service
-@@ -2,8 +2,9 @@
+@@ -2,8 +2,10 @@
  Description=NFS Mount Daemon
  DefaultDependencies=no
  Requires=proc-fs-nfsd.mount
 +Wants=network-online.target
  After=proc-fs-nfsd.mount
 -After=network.target local-fs.target
++After=network-online.target local-fs.target
 +After=rpcbind.socket
  BindsTo=nfs-server.service
  
@@ -729,7 +1297,7 @@ index cc99969..737f109 100644
  
  	fclose(fstab);
 diff --git a/systemd/nfs-server.service b/systemd/nfs-server.service
-index 5be5de6..e6b8f58 100644
+index 5be5de6..136552b 100644
 --- a/systemd/nfs-server.service
 +++ b/systemd/nfs-server.service
 @@ -3,12 +3,12 @@ Description=NFS server and services
@@ -741,8 +1309,9 @@ index 5be5de6..e6b8f58 100644
  Wants=rpc-statd.service nfs-idmapd.service
  Wants=rpc-statd-notify.service
  
- After= local-fs.target
+-After= local-fs.target
 -After= network.target proc-fs-nfsd.mount rpcbind.socket nfs-mountd.service
++After= network-online.target local-fs.target
 +After= proc-fs-nfsd.mount rpcbind.socket nfs-mountd.service
  After= nfs-idmapd.service rpc-statd.service
  Before= rpc-statd-notify.service
@@ -792,6 +1361,50 @@ index 91c49a0..189b052 100644
  .BR keytab-file ,
  .BR cred-cache-directory ,
  .BR preferred-realm .
+diff --git a/systemd/nfs.systemd.man b/systemd/nfs.systemd.man
+index 01801eb..46b476a 100644
+--- a/systemd/nfs.systemd.man
++++ b/systemd/nfs.systemd.man
+@@ -79,7 +79,7 @@ unit should be enabled.
+ Several other units which might be considered to be optional, such as
+ .I rpc-gssd.service
+ are careful to only start if the required configuration file exists.
+-.I rpc-gsdd.service
++.I rpc-gssd.service
+ will not start if the
+ .I krb5.keytab
+ file does not exist (typically in
+@@ -120,10 +120,11 @@ be needed to reduce system load to an absolute minimum, or to reduce
+ attack surface by not running daemons that are not absolutely
+ required.
+ .PP
+-Two particular services which this can apply to are
+-.I rpcbind
++Three particular services which this can apply to are
++.IR rpcbind ,
++.IR idmapd ,
+ and
+-.IR idmapd .
++.IR rpc-gssd .
+ .I rpcbind
+ is not part of the
+ .I nfs-utils
+@@ -155,6 +156,15 @@ is not needed and not wanted, it can be masked with
+ .RS
+ .B systemctl mask idmapd
+ .RE
++.I rpc-gssd
++is assumed to be needed if the
++.I krb5.keytab
++file is present.  If a site needs this file present but does not want
++.I rpc-gssd
++running, it can be masked with
++.RS
++.B systemctl mask rpc-gssd
++.RE
+ .SH FILES
+ /etc/nfs.conf
+ .br
 diff --git a/systemd/rpc-gssd.service.in b/systemd/rpc-gssd.service.in
 index b353027..6807db3 100644
 --- a/systemd/rpc-gssd.service.in
@@ -809,10 +1422,10 @@ index b353027..6807db3 100644
  
 diff --git a/systemd/rpc-pipefs-generator.c b/systemd/rpc-pipefs-generator.c
 new file mode 100644
-index 0000000..66addb9
+index 0000000..59eee87
 --- /dev/null
 +++ b/systemd/rpc-pipefs-generator.c
-@@ -0,0 +1,138 @@
+@@ -0,0 +1,137 @@
 +/*
 + * rpc-pipefs-generator:
 + *   systemd generator to create ordering dependencies between
@@ -837,7 +1450,6 @@ index 0000000..66addb9
 +#include "systemd.h"
 +
 +#define RPC_PIPEFS_DEFAULT "/var/lib/nfs/rpc_pipefs"
-+char *conf_path = NFS_CONFFILE;
 +
 +static int generate_mount_unit(const char *pipefs_path, const char *pipefs_unit,
 +			       const char *dirname)
@@ -937,7 +1549,7 @@ index 0000000..66addb9
 +		exit(1);
 +	}
 +
-+	conf_init();
++	conf_init(NFS_CONFFILE);
 +	s = conf_get_str("general", "pipefs-directory");
 +	if (!s)
 +		exit(0);
@@ -952,20 +1564,22 @@ index 0000000..66addb9
 +	exit(ret);
 +}
 diff --git a/systemd/rpc-statd-notify.service b/systemd/rpc-statd-notify.service
-index 7bfc9b1..f54d4c5 100644
+index 7bfc9b1..687fe31 100644
 --- a/systemd/rpc-statd-notify.service
 +++ b/systemd/rpc-statd-notify.service
-@@ -1,7 +1,7 @@
+@@ -1,8 +1,8 @@
  [Unit]
  Description=Notify NFS peers of a restart
  DefaultDependencies=no
 -Requires=network.target
+-After=local-fs.target network.target nss-lookup.target
 +Wants=network-online.target
- After=local-fs.target network.target nss-lookup.target
++After=local-fs.target network-online.target nss-lookup.target
  
  # if we run an nfs server, it needs to be running before we
+ # tell clients that it has restarted.
 diff --git a/systemd/rpc-statd.service b/systemd/rpc-statd.service
-index 60d600f..8cef022 100644
+index 60d600f..f41ae20 100644
 --- a/systemd/rpc-statd.service
 +++ b/systemd/rpc-statd.service
 @@ -3,7 +3,8 @@ Description=NFS status monitor for NFSv2/3 locking.
@@ -974,7 +1588,7 @@ index 60d600f..8cef022 100644
  Requires=nss-lookup.target rpcbind.socket
 -After=network.target nss-lookup.target rpcbind.socket
 +Wants=network-online.target
-+After=nss-lookup.target rpcbind.socket
++After=network-online.target nss-lookup.target rpcbind.socket
  
  PartOf=nfs-utils.service
  
@@ -1152,6 +1766,30 @@ index 0000000..25235ec
 +char *systemd_escape(char *path, char *suffix);
 +
 +#endif /* SYSTEMD_H */
+diff --git a/tools/mountstats/mountstats.py b/tools/mountstats/mountstats.py
+index 88ccdae..a68d702 100644
+--- a/tools/mountstats/mountstats.py
++++ b/tools/mountstats/mountstats.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/python
+ # -*- python-mode -*-
+ """Parse /proc/self/mountstats and display it in human readable form
+ """
+diff --git a/tools/rpcdebug/rpcdebug.c b/tools/rpcdebug/rpcdebug.c
+index 18b1622..68206cc 100644
+--- a/tools/rpcdebug/rpcdebug.c
++++ b/tools/rpcdebug/rpcdebug.c
+@@ -74,7 +74,8 @@ main(int argc, char **argv)
+ 			opt_c = 1;
+ 			break;
+ 		case 'h':
+-			usage(0, module);
++			usage(0, module); /* usage does not return */
++			break;
+ 		case 'm':
+ 			module = optarg;
+ 			break;
 diff --git a/utils/blkmapd/blkmapd.man b/utils/blkmapd/blkmapd.man
 index 914b80f..4b3d3f0 100644
 --- a/utils/blkmapd/blkmapd.man
@@ -1183,10 +1821,18 @@ index 914b80f..4b3d3f0 100644
  RFC 5661 for the NFS version 4.1 specification.
  .br
 diff --git a/utils/blkmapd/device-discovery.c b/utils/blkmapd/device-discovery.c
-index 8eb3fd0..d2da764 100644
+index 8eb3fd0..29bafb2 100644
 --- a/utils/blkmapd/device-discovery.c
 +++ b/utils/blkmapd/device-discovery.c
-@@ -50,20 +50,36 @@
+@@ -26,6 +26,7 @@
+  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
++#include <sys/sysmacros.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include <sys/ioctl.h>
+@@ -50,21 +51,36 @@
  #include <errno.h>
  #include <libdevmapper.h>
  
@@ -1220,11 +1866,11 @@ index 8eb3fd0..d2da764 100644
  struct bl_disk *visible_disk_list;
  int    bl_watch_fd, bl_pipe_fd, nfs_pipedir_wfd, rpc_pipedir_wfd;
  int    pidfd = -1;
-+char   *conf_path = NULL;
-+
  
++
  struct bl_disk_path *bl_get_path(const char *filepath,
  				 struct bl_disk_path *paths)
+ {
 @@ -358,8 +374,8 @@ static void bl_rpcpipe_cb(void)
  				continue;
  			if (event->mask & IN_CREATE) {
@@ -1245,15 +1891,14 @@ index 8eb3fd0..d2da764 100644
  				if (bl_pipe_fd < 0)
  					BL_LOG_ERR("open %s failed: %s\n",
  						event->name, strerror(errno));
-@@ -437,6 +453,19 @@ int main(int argc, char **argv)
+@@ -437,6 +453,18 @@ int main(int argc, char **argv)
  {
  	int opt, dflag = 0, fg = 0, ret = 1;
  	char pidbuf[64];
 +	char *xrpcpipe_dir = NULL;
 +
 +	strncpy(rpcpipe_dir, RPCPIPE_DIR, sizeof(rpcpipe_dir));
-+	conf_path = NFS_CONFFILE;
-+	conf_init();
++	conf_init(NFS_CONFFILE);
 +	CONF_SAVE(xrpcpipe_dir, conf_get_str("general", "pipefs-directory"));
 +	if (xrpcpipe_dir != NULL)
 +		strlcpy(rpcpipe_dir, xrpcpipe_dir, sizeof(rpcpipe_dir));
@@ -1265,7 +1910,7 @@ index 8eb3fd0..d2da764 100644
  
  	while ((opt = getopt(argc, argv, "hdf")) != -1) {
  		switch (opt) {
-@@ -496,12 +525,12 @@ int main(int argc, char **argv)
+@@ -496,12 +524,12 @@ int main(int argc, char **argv)
  	}
  
  	/* open pipe file */
@@ -1282,20 +1927,41 @@ index 8eb3fd0..d2da764 100644
  
  	while (1) {
  		/* discover device when needed */
+diff --git a/utils/blkmapd/device-inq.c b/utils/blkmapd/device-inq.c
+index 0062a8f..c7952c3 100644
+--- a/utils/blkmapd/device-inq.c
++++ b/utils/blkmapd/device-inq.c
+@@ -216,6 +216,7 @@ struct bl_serial *bldev_read_serial(int fd, const char *filename)
+ 			if ((dev_id->len != 8) && (dev_id->len != 12) &&
+ 			    (dev_id->len != 16))
+ 				break;
++			/* FALLTHRU */
+ 		case 3:	/* NAA */
+ 			/* TODO: NAA validity judgement too complicated,
+ 			 * so just ingore it here.
+@@ -224,6 +225,7 @@ struct bl_serial *bldev_read_serial(int fd, const char *filename)
+ 				BL_LOG_ERR("Binary code_set expected\n");
+ 				break;
+ 			}
++			/* FALLTHRU */
+ 		case 0:	/* vendor specific */
+ 		case 1:	/* T10 vendor identification */
+ 			current_id = dev_id->ids & 0xf;
 diff --git a/utils/exportfs/exportfs.c b/utils/exportfs/exportfs.c
-index 61dddfb..02d5b6d 100644
+index 61dddfb..beed1b3 100644
 --- a/utils/exportfs/exportfs.c
 +++ b/utils/exportfs/exportfs.c
-@@ -52,6 +52,8 @@ static const char *lockfile = EXP_LOCKFILE;
- static int _lockfd = -1;
- char *conf_path = NFS_CONFFILE;
+@@ -50,7 +50,8 @@ static void release_lockfile(void);
  
-+struct state_paths etab;
+ static const char *lockfile = EXP_LOCKFILE;
+ static int _lockfd = -1;
+-char *conf_path = NFS_CONFFILE;
 +
++struct state_paths etab;
+ 
  /*
   * If we aren't careful, changes made by exportfs can be lost
-  * when multiple exports process run at once:
-@@ -95,6 +97,7 @@ main(int argc, char **argv)
+@@ -95,6 +96,7 @@ main(int argc, char **argv)
  	int	f_ignore = 0;
  	int	i, c;
  	int	force_flush = 0;
@@ -1303,8 +1969,12 @@ index 61dddfb..02d5b6d 100644
  
  	if ((progname = strrchr(argv[0], '/')) != NULL)
  		progname++;
-@@ -108,6 +111,11 @@ main(int argc, char **argv)
- 	conf_init();
+@@ -105,9 +107,14 @@ main(int argc, char **argv)
+ 	xlog_stderr(1);
+ 	xlog_syslog(0);
+ 
+-	conf_init();
++	conf_init(NFS_CONFFILE);
  	xlog_from_conffile("exportfs");
  
 +	/* NOTE: following uses "mountd" section of nfs.conf !!!! */
@@ -1315,7 +1985,7 @@ index 61dddfb..02d5b6d 100644
  	while ((c = getopt(argc, argv, "ad:fhio:ruvs")) != EOF) {
  		switch(c) {
  		case 'a':
-@@ -159,13 +167,17 @@ main(int argc, char **argv)
+@@ -159,13 +166,17 @@ main(int argc, char **argv)
  		xlog(L_ERROR, "-r and -u are incompatible");
  		return 1;
  	}
@@ -1333,7 +2003,7 @@ index 61dddfb..02d5b6d 100644
  			return 0;
  		}
  	}
-@@ -206,6 +218,7 @@ main(int argc, char **argv)
+@@ -206,6 +217,7 @@ main(int argc, char **argv)
  	}
  	xtab_export_write();
  	cache_flush(force_flush);
@@ -1402,10 +2072,18 @@ index 0c516fa..9efa29f 100644
  
  .TP
 diff --git a/utils/gssd/gssd.c b/utils/gssd/gssd.c
-index 4d18d35..28f9649 100644
+index 4d18d35..053a223 100644
 --- a/utils/gssd/gssd.c
 +++ b/utils/gssd/gssd.c
-@@ -87,6 +87,7 @@ int  root_uses_machine_creds = 1;
+@@ -79,7 +79,6 @@ static int pipefs_fd;
+ static int inotify_fd;
+ struct event inotify_ev;
+ 
+-char *conf_path = NFS_CONFFILE;
+ char *keytabfile = GSSD_DEFAULT_KEYTAB_FILE;
+ char **ccachesearch;
+ int  use_memcache = 0;
+@@ -87,6 +86,7 @@ int  root_uses_machine_creds = 1;
  unsigned int  context_timeout = 0;
  unsigned int  rpc_timeout = 5;
  char *preferred_realm = NULL;
@@ -1413,7 +2091,7 @@ index 4d18d35..28f9649 100644
  /* Avoid DNS reverse lookups on server names */
  static bool avoid_dns = true;
  int thread_started = false;
-@@ -837,18 +838,9 @@ usage(char *progname)
+@@ -837,21 +837,12 @@ usage(char *progname)
  	exit(1);
  }
  
@@ -1433,8 +2111,12 @@ index 4d18d35..28f9649 100644
 -	struct event sighup_ev;
  	char *s;
  
- 	conf_init();
-@@ -865,6 +857,10 @@ main(int argc, char *argv[])
+-	conf_init();
++	conf_init(NFS_CONFFILE);
+ 	use_memcache = conf_get_bool("gssd", "use-memcache", use_memcache);
+ 	root_uses_machine_creds = conf_get_bool("gssd", "use-machine-creds",
+ 						root_uses_machine_creds);
+@@ -865,6 +856,10 @@ main(int argc, char *argv[])
  	s = conf_get_str("gssd", "pipefs-directory");
  	if (!s)
  		s = conf_get_str("general", "pipefs-directory");
@@ -1445,7 +2127,7 @@ index 4d18d35..28f9649 100644
  	if (s)
  		pipefs_path = s;
  	s = conf_get_str("gssd", "keytab-file");
-@@ -877,6 +873,22 @@ main(int argc, char *argv[])
+@@ -877,6 +872,22 @@ main(int argc, char *argv[])
  	if (s)
  		preferred_realm = s;
  
@@ -1567,28 +2249,53 @@ index d74d372..4fc81c3 100644
  	free(info);
  	return;
  }
+diff --git a/utils/gssd/svcgssd.c b/utils/gssd/svcgssd.c
+index 1fb579a..3514ae1 100644
+--- a/utils/gssd/svcgssd.c
++++ b/utils/gssd/svcgssd.c
+@@ -63,8 +63,6 @@
+ #include "err_util.h"
+ #include "conffile.h"
+ 
+-char *conf_path = NFS_CONFFILE;
+-
+ void
+ sig_die(int signal)
+ {
+@@ -103,7 +101,7 @@ main(int argc, char *argv[])
+ 	char *principal = NULL;
+ 	char *s;
+ 
+-	conf_init();
++	conf_init(NFS_CONFFILE); 
+ 
+ 	s = conf_get_str("svcgssd", "principal");
+ 	if (!s)
 diff --git a/utils/idmapd/idmapd.c b/utils/idmapd/idmapd.c
-index f4e083a..56bf67e 100644
+index f4e083a..c12e878 100644
 --- a/utils/idmapd/idmapd.c
 +++ b/utils/idmapd/idmapd.c
-@@ -166,7 +166,7 @@ static uid_t nobodyuid;
+@@ -165,9 +165,6 @@ static char *nobodyuser, *nobodygroup;
+ static uid_t nobodyuid;
  static gid_t nobodygid;
  
- /* Used by conffile.c in libnfs.a */
+-/* Used by conffile.c in libnfs.a */
 -char *conf_path;
-+char *conf_path = NULL;
- 
+-
  static int
  flush_nfsd_cache(char *path, time_t now)
-@@ -220,7 +220,6 @@ main(int argc, char **argv)
+ {
+@@ -219,8 +216,8 @@ main(int argc, char **argv)
+ 	int serverstart = 1, clientstart = 1;
  	int ret;
  	char *progname;
++	char *conf_path = NULL;
  
 -	conf_path = _PATH_IDMAPDCONF;
  	nobodyuser = NFS4NOBODY_USER;
  	nobodygroup = NFS4NOBODY_GROUP;
  	strlcpy(pipefsdir, PIPEFS_DIR, sizeof(pipefsdir));
-@@ -234,8 +233,11 @@ main(int argc, char **argv)
+@@ -234,8 +231,11 @@ main(int argc, char **argv)
  #define GETOPTSTR "hvfd:p:U:G:c:CS"
  	opterr=0; /* Turn off error messages */
  	while ((opt = getopt(argc, argv, GETOPTSTR)) != -1) {
@@ -1601,7 +2308,7 @@ index f4e083a..56bf67e 100644
  		if (opt == '?') {
  			if (strchr(GETOPTSTR, optopt))
  				warnx("'-%c' option requires an argument.", optopt);
-@@ -247,17 +249,33 @@ main(int argc, char **argv)
+@@ -247,17 +247,33 @@ main(int argc, char **argv)
  	}
  	optind = 1;
  
@@ -1613,7 +2320,7 @@ index f4e083a..56bf67e 100644
 +			warn("Skipping configuration file \"%s\"", conf_path);
 +			conf_path = NULL;
 +		} else {
-+			conf_init();
++			conf_init(conf_path);
 +			verbose = conf_get_num("General", "Verbosity", 0);
 +			cache_entry_expiration = conf_get_num("General",
 +					"Cache-Expiration", DEFAULT_IDMAP_CACHE_EXPIRY);
@@ -1624,17 +2331,18 @@ index f4e083a..56bf67e 100644
 +			CONF_SAVE(nobodygroup, conf_get_str("Mapping", "Nobody-Group"));
 +		}
  	} else {
-+		conf_path = NFS_CONFFILE;
- 		conf_init();
+-		conf_init();
 -		verbose = conf_get_num("General", "Verbosity", 0);
 -		cache_entry_expiration = conf_get_num("General",
 -				"Cache-Expiration", DEFAULT_IDMAP_CACHE_EXPIRY);
++		conf_path = NFS_CONFFILE;
++		conf_init(conf_path);
  		CONF_SAVE(xpipefsdir, conf_get_str("General", "Pipefs-Directory"));
  		if (xpipefsdir != NULL)
  			strlcpy(pipefsdir, xpipefsdir, sizeof(pipefsdir));
 +
 +		conf_path = _PATH_IDMAPDCONF;
-+		conf_init();
++		conf_init(conf_path);
 +		verbose = conf_get_num("General", "Verbosity", 0);
 +		cache_entry_expiration = conf_get_num("General",
 +				"cache-expiration", DEFAULT_IDMAP_CACHE_EXPIRY);
@@ -1687,11 +2395,71 @@ index d4ab894..5f34d2b 100644
  .Xr nfsidmap 8
  .\".Sh SEE ALSO
  .\".Xr nylon.conf 4
+diff --git a/utils/mount/configfile.c b/utils/mount/configfile.c
+index 0a4cc04..e4b39ef 100644
+--- a/utils/mount/configfile.c
++++ b/utils/mount/configfile.c
+@@ -51,10 +51,6 @@
+ #define NFSMOUNT_SERVER "Server"
+ #endif
+ 
+-#ifndef MOUNTOPTS_CONFFILE
+-#define MOUNTOPTS_CONFFILE "/etc/nfsmount.conf"
+-#endif
+-char *conf_path = MOUNTOPTS_CONFFILE;
+ enum {
+ 	MNT_NOARG=0,
+ 	MNT_INTARG,
+@@ -264,7 +260,7 @@ default_value(char *mopt)
+ 		}
+ 	} else if (strncasecmp(field, "vers", strlen("vers")) == 0) {
+ 		if ((options = po_split(field)) != NULL) {
+-			if (!nfs_nfs_version(options, &config_default_vers)) {
++			if (!nfs_nfs_version("nfs", options, &config_default_vers)) {
+ 				xlog_warn("Unable to set default version: %s", 
+ 					strerror(errno));
+ 				
+diff --git a/utils/mount/mount_config.h b/utils/mount/mount_config.h
+index 69ffd1e..e4f8511 100644
+--- a/utils/mount/mount_config.h
++++ b/utils/mount/mount_config.h
+@@ -20,6 +20,10 @@
+ #include "conffile.h"
+ #include "xlog.h"
+ 
++#ifndef MOUNTOPTS_CONFFILE
++#define MOUNTOPTS_CONFFILE "/etc/nfsmount.conf"
++#endif
++
+ extern char *conf_get_mntopts(char *, char *, char *);
+ 
+ static inline void mount_config_init(char *program)
+@@ -28,7 +32,7 @@ static inline void mount_config_init(char *program)
+ 	/*
+ 	 * Read the the default mount options
+ 	 */
+-	conf_init();
++	conf_init(MOUNTOPTS_CONFFILE);
+ }
+ 
+ static inline char *mount_config_opts(char *spec,
+diff --git a/utils/mount/mount_libmount.c b/utils/mount/mount_libmount.c
+index 1f01f7f..2d40657 100644
+--- a/utils/mount/mount_libmount.c
++++ b/utils/mount/mount_libmount.c
+@@ -188,6 +188,7 @@ static int umount_main(struct libmnt_context *cxt, int argc, char **argv)
+ 	};
+ 
+ 	mnt_context_init_helper(cxt, MNT_ACT_UMOUNT, 0);
++	mnt_context_disable_canonicalize(cxt, 1);
+ 
+ 	while ((c = getopt_long (argc, argv, "fvnrlh", longopts, NULL)) != -1) {
+ 
 diff --git a/utils/mount/network.c b/utils/mount/network.c
-index 7dceb2d..281e935 100644
+index 7dceb2d..8ab5be8 100644
 --- a/utils/mount/network.c
 +++ b/utils/mount/network.c
-@@ -33,6 +33,7 @@
+@@ -33,12 +33,19 @@
  #include <errno.h>
  #include <netdb.h>
  #include <time.h>
@@ -1699,7 +2467,28 @@ index 7dceb2d..281e935 100644
  
  #include <sys/types.h>
  #include <sys/socket.h>
-@@ -804,6 +805,7 @@ int start_statd(void)
+ #include <sys/wait.h>
+ #include <sys/stat.h>
+-#include <linux/in6.h>
++#if defined(__GLIBC__) && (__GLIBC__ < 2) || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 24)
++/* Cannot safely include linux/in6.h in old glibc, so hardcode the needed values */
++# define IPV6_PREFER_SRC_PUBLIC 2
++# define IPV6_ADDR_PREFERENCES 72
++#else
++# include <linux/in6.h>
++#endif
+ #include <netinet/in.h>
+ #include <rpc/rpc.h>
+ #include <rpc/pmap_prot.h>
+@@ -93,7 +100,6 @@ static const char *nfs_version_opttbl[] = {
+ 	"v4",
+ 	"vers",
+ 	"nfsvers",
+-	"minorversion",
+ 	NULL,
+ };
+ 
+@@ -804,6 +810,7 @@ int start_statd(void)
  			pid_t pid = fork();
  			switch (pid) {
  			case 0: /* child */
@@ -1707,7 +2496,110 @@ index 7dceb2d..281e935 100644
  				setgid(0);
  				setuid(0);
  				execle(START_STATD, START_STATD, NULL, envp);
-@@ -1638,6 +1640,7 @@ int nfs_options2pmap(struct mount_options *options,
+@@ -1233,6 +1240,7 @@ nfs_nfs_program(struct mount_options *options, unsigned long *program)
+ 			*program = tmp;
+ 			return 1;
+ 		}
++		/* FALLTHRU */
+ 	case PO_BAD_VALUE:
+ 		nfs_error(_("%s: invalid value for 'nfsprog=' option"),
+ 				progname);
+@@ -1252,7 +1260,7 @@ nfs_nfs_program(struct mount_options *options, unsigned long *program)
+  * or FALSE if the option was specified with an invalid value.
+  */
+ int
+-nfs_nfs_version(struct mount_options *options, struct nfs_version *version)
++nfs_nfs_version(char *type, struct mount_options *options, struct nfs_version *version)
+ {
+ 	char *version_key, *version_val, *cptr;
+ 	int i, found = 0;
+@@ -1267,10 +1275,11 @@ nfs_nfs_version(struct mount_options *options, struct nfs_version *version)
+ 		}
+ 	}
+ 
+-	if (!found)
++	if (!found && strcmp(type, "nfs4") == 0)
++		version_val = type + 3;
++	else if (!found)
+ 		return 1;
+-
+-	if (i <= 2 ) {
++	else if (i <= 2 ) {
+ 		/* v2, v3, v4 */
+ 		version_val = version_key + 1;
+ 		version->v_mode = V_SPECIFIC;
+@@ -1282,17 +1291,19 @@ nfs_nfs_version(struct mount_options *options, struct nfs_version *version)
+ 	if (!version_val)
+ 		goto ret_error;
+ 
+-	if (!(version->major = strtol(version_val, &cptr, 10)))
++	version->major = strtol(version_val, &cptr, 10);
++	if (cptr == version_val || (*cptr && *cptr != '.'))
+ 		goto ret_error;
+-
+-	if (strcmp(nfs_version_opttbl[i], "minorversion") == 0) {
++	if (version->major == 4 && *cptr != '.' &&
++	    (version_val = po_get(options, "minorversion")) != NULL) {
++		version->minor = strtol(version_val, &cptr, 10);
++		i = -1;
++		if (*cptr)
++			goto ret_error;
+ 		version->v_mode = V_SPECIFIC;
+-		version->minor = version->major;
+-		version->major = 4;
+ 	} else if (version->major < 4)
+ 		version->v_mode = V_SPECIFIC;
+-
+-	if (*cptr == '.') {
++	else if (*cptr == '.') {
+ 		version_val = ++cptr;
+ 		if (!(version->minor = strtol(version_val, &cptr, 10)) && cptr == version_val)
+ 			goto ret_error;
+@@ -1306,7 +1317,10 @@ nfs_nfs_version(struct mount_options *options, struct nfs_version *version)
+ 	return 1;
+ 
+ ret_error:
+-	if (i <= 2 ) {
++	if (i < 0) {
++		nfs_error(_("%s: parsing error on 'minorversion=' option"),
++			progname);
++	} else if (i <= 2 ) {
+ 		nfs_error(_("%s: parsing error on 'v' option"),
+ 			progname);
+ 	} else if (i == 3 ) {
+@@ -1381,6 +1395,7 @@ nfs_nfs_port(struct mount_options *options, unsigned long *port)
+ 			*port = tmp;
+ 			return 1;
+ 		}
++		/* FALLTHRU */
+ 	case PO_BAD_VALUE:
+ 		nfs_error(_("%s: invalid value for 'port=' option"),
+ 				progname);
+@@ -1476,6 +1491,7 @@ nfs_mount_program(struct mount_options *options, unsigned long *program)
+ 			*program = tmp;
+ 			return 1;
+ 		}
++		/* FALLTHRU */
+ 	case PO_BAD_VALUE:
+ 		nfs_error(_("%s: invalid value for 'mountprog=' option"),
+ 				progname);
+@@ -1507,6 +1523,7 @@ nfs_mount_version(struct mount_options *options, unsigned long *version)
+ 			*version = tmp;
+ 			return 1;
+ 		}
++		/* FALLTHRU */
+ 	case PO_BAD_VALUE:
+ 		nfs_error(_("%s: invalid value for 'mountvers=' option"),
+ 				progname);
+@@ -1573,6 +1590,7 @@ nfs_mount_port(struct mount_options *options, unsigned long *port)
+ 			*port = tmp;
+ 			return 1;
+ 		}
++		/* FALLTHRU */
+ 	case PO_BAD_VALUE:
+ 		nfs_error(_("%s: invalid value for 'mountport=' option"),
+ 				progname);
+@@ -1638,10 +1656,11 @@ int nfs_options2pmap(struct mount_options *options,
  		     struct pmap *nfs_pmap, struct pmap *mnt_pmap)
  {
  	struct nfs_version version;
@@ -1715,11 +2607,139 @@ index 7dceb2d..281e935 100644
  
  	if (!nfs_nfs_program(options, &nfs_pmap->pm_prog))
  		return 0;
+-	if (!nfs_nfs_version(options, &version))
++	if (!nfs_nfs_version("nfs", options, &version))
+ 		return 0;
+ 	if (version.v_mode == V_DEFAULT)
+ 		nfs_pmap->pm_vers = 0;
+diff --git a/utils/mount/network.h b/utils/mount/network.h
+index 9cc5dec..ecaac33 100644
+--- a/utils/mount/network.h
++++ b/utils/mount/network.h
+@@ -72,7 +72,7 @@ struct nfs_version {
+ 
+ int nfs_nfs_proto_family(struct mount_options *options, sa_family_t *family);
+ int nfs_mount_proto_family(struct mount_options *options, sa_family_t *family);
+-int nfs_nfs_version(struct mount_options *options, struct nfs_version *version);
++int nfs_nfs_version(char *type, struct mount_options *options, struct nfs_version *version);
+ int  nfs_nfs_protocol(struct mount_options *options, unsigned long *protocol);
+ 
+ int nfs_options2pmap(struct mount_options *,
+diff --git a/utils/mount/nfs4mount.c b/utils/mount/nfs4mount.c
+index 028e7cd..89629ed 100644
+--- a/utils/mount/nfs4mount.c
++++ b/utils/mount/nfs4mount.c
+@@ -444,6 +444,7 @@ int nfs4mount(const char *spec, const char *node, int flags,
+ 			case RPC_SYSTEMERROR:
+ 				if (errno == ETIMEDOUT)
+ 					break;
++				/* FALLTHRU */
+ 			default:
+ 				rpc_mount_errors(hostname, 0, bg);
+ 				goto fail;
+diff --git a/utils/mount/nfsmount.c b/utils/mount/nfsmount.c
+index 930622d..ae4a3da 100644
+--- a/utils/mount/nfsmount.c
++++ b/utils/mount/nfsmount.c
+@@ -683,6 +683,7 @@ nfsmount(const char *spec, const char *node, int flags,
+ 			case RPC_SYSTEMERROR:
+ 				if (errno == ETIMEDOUT)
+ 					break;
++				/* FALLTHRU */
+ 			default:
+ 				rpc_mount_errors(*nfs_server.hostname, 0, bg);
+ 		        goto fail;
+diff --git a/utils/mount/nfsumount.c b/utils/mount/nfsumount.c
+index de284f2..e16fb6a 100644
+--- a/utils/mount/nfsumount.c
++++ b/utils/mount/nfsumount.c
+@@ -180,7 +180,7 @@ static int nfs_umount_is_vers4(const struct mntentchn *mc)
+ 		options = po_split(pmc->m.mnt_opts);
+ 		if (options != NULL) {
+ 			struct nfs_version version;
+-			int rc = nfs_nfs_version(options, &version);
++			int rc = nfs_nfs_version("nfs", options, &version);
+ 			po_destroy(options);
+ 			if (rc && version.major == 4)
+ 				goto out_nfs4;
 diff --git a/utils/mount/stropts.c b/utils/mount/stropts.c
-index 387d734..a9ff95d 100644
+index 387d734..1d30d34 100644
 --- a/utils/mount/stropts.c
 +++ b/utils/mount/stropts.c
-@@ -517,6 +517,10 @@ nfs_rewrite_pmap_mount_options(struct mount_options *options, int checkv4)
+@@ -73,6 +73,13 @@
+ #define NFS_DEF_BG_TIMEOUT_MINUTES	(10000u)
+ #endif
+ 
++#ifndef NFS_DEFAULT_MAJOR
++#define NFS_DEFAULT_MAJOR	4
++#endif
++#ifndef NFS_DEFAULT_MINOR
++#define NFS_DEFAULT_MINOR	2
++#endif
++
+ extern int nfs_mount_data_version;
+ extern char *progname;
+ extern int verbose;
+@@ -80,8 +87,8 @@ extern int sloppy;
+ 
+ struct nfsmount_info {
+ 	const char		*spec,		/* server:/path */
+-				*node,		/* mounted-on dir */
+-				*type;		/* "nfs" or "nfs4" */
++				*node;		/* mounted-on dir */
++	char			*type;		/* "nfs" or "nfs4" */
+ 	char			*hostname;	/* server's hostname */
+ 	struct addrinfo		*address;	/* server's addresses */
+ 	sa_family_t		family;		/* Address family */
+@@ -112,20 +119,28 @@ static void nfs_default_version(struct nfsmount_info *mi)
+ 	if (mi->version.v_mode == V_DEFAULT &&
+ 		config_default_vers.v_mode != V_DEFAULT) {
+ 		mi->version.major = config_default_vers.major;
+-		mi->version.minor = config_default_vers.minor;
++		if (config_default_vers.v_mode == V_SPECIFIC)
++			mi->version.minor = config_default_vers.minor;
++		else
++			mi->version.minor = NFS_DEFAULT_MINOR;
+ 		return;
+ 	}
+ 
+ 	if (mi->version.v_mode == V_GENERAL) {
+ 		if (config_default_vers.v_mode != V_DEFAULT &&
+-		    mi->version.major == config_default_vers.major)
+-			mi->version.minor = config_default_vers.minor;
++		    mi->version.major == config_default_vers.major) {
++			if (config_default_vers.v_mode == V_SPECIFIC)
++				mi->version.minor = config_default_vers.minor;
++			else
++				mi->version.minor = NFS_DEFAULT_MINOR;
++		} else
++			mi->version.minor = NFS_DEFAULT_MINOR;
+ 		return;
+ 	}
+ 
+ #endif /* MOUNT_CONFIG */
+-	mi->version.major = 4;
+-	mi->version.minor = 2;
++	mi->version.major = NFS_DEFAULT_MAJOR;
++	mi->version.minor = NFS_DEFAULT_MINOR;
+ }
+ 
+ /*
+@@ -312,12 +327,9 @@ static int nfs_append_sloppy_option(struct mount_options *options)
+ 
+ static int nfs_set_version(struct nfsmount_info *mi)
+ {
+-	if (!nfs_nfs_version(mi->options, &mi->version))
++	if (!nfs_nfs_version(mi->type, mi->options, &mi->version))
+ 		return 0;
+ 
+-	if (strncmp(mi->type, "nfs4", 4) == 0)
+-		mi->version.major = 4;
+-
+ 	/*
+ 	 * Before 2.6.32, the kernel NFS client didn't
+ 	 * support "-t nfs vers=4" mounts, so NFS version
+@@ -517,6 +529,10 @@ nfs_rewrite_pmap_mount_options(struct mount_options *options, int checkv4)
  	unsigned long protocol;
  	struct pmap mnt_pmap;
  
@@ -1730,6 +2750,110 @@ index 387d734..a9ff95d 100644
  	/*
  	 * Version and transport negotiation is not required
  	 * and does not work for RDMA mounts.
+@@ -705,7 +721,7 @@ static int nfs_do_mount_v4(struct nfsmount_info *mi,
+ {
+ 	struct mount_options *options = po_dup(mi->options);
+ 	int result = 0;
+-	char version_opt[16];
++	char version_opt[32];
+ 	char *extra_opts = NULL;
+ 
+ 	if (!options) {
+@@ -727,13 +743,25 @@ static int nfs_do_mount_v4(struct nfsmount_info *mi,
+ 	}
+ 
+ 	if (mi->version.v_mode != V_SPECIFIC) {
+-		if (mi->version.v_mode == V_GENERAL)
+-			snprintf(version_opt, sizeof(version_opt) - 1,
+-				"vers=%lu", mi->version.major);
+-		else
+-			snprintf(version_opt, sizeof(version_opt) - 1,
+-				"vers=%lu.%lu", mi->version.major,
+-				mi->version.minor);
++		char *fmt;
++		switch (mi->version.minor) {
++			/* Old kernels don't support the new "vers=x.y"
++			 * option, but do support old versions of NFS4.
++			 * So use the format that is most widely understood.
++			 */
++		case 0:
++			fmt = "vers=%lu";
++			break;
++		case 1:
++			fmt = "vers=%lu,minorversion=%lu";
++			break;
++		default:
++			fmt = "vers=%lu.%lu";
++			break;
++		}
++		snprintf(version_opt, sizeof(version_opt) - 1,
++			fmt, mi->version.major,
++			mi->version.minor);
+ 
+ 		if (po_append(options, version_opt) == PO_FAILED) {
+ 			errno = EINVAL;
+@@ -834,9 +862,6 @@ check_result:
+ 	case EINVAL:
+ 		/* A less clear indication that our client
+ 		 * does not support NFSv4 minor version. */
+-		if (mi->version.v_mode == V_GENERAL &&
+-			mi->version.minor == 0)
+-				return result;
+ 		if (mi->version.v_mode != V_SPECIFIC) {
+ 			if (mi->version.minor > 0) {
+ 				mi->version.minor--;
+@@ -858,19 +883,28 @@ check_result:
+ 		/* UDP-Only servers won't support v4, but maybe it
+ 		 * just isn't ready yet.  So try v3, but double-check
+ 		 * with rpcbind for v4. */
++		if (mi->version.v_mode == V_GENERAL)
++			/* Mustn't try v2,v3 */
++			return result;
+ 		result = nfs_try_mount_v3v2(mi, TRUE);
+ 		if (result == 0 && errno == EAGAIN) {
+ 			/* v4 server seems to be registered now. */
+ 			result = nfs_try_mount_v4(mi);
+ 			if (result == 0 && errno != ECONNREFUSED)
+ 				goto check_result;
+-		}
++		} else if (result == 0)
++			/* Restore original errno with v3 failures */
++			errno = ECONNREFUSED;
++
+ 		return result;
+ 	default:
+ 		return result;
+ 	}
+ 
+ fall_back:
++	if (mi->version.v_mode == V_GENERAL)
++		/* v2,3 fallback not allowed */
++		return result;
+ 	return nfs_try_mount_v3v2(mi, FALSE);
+ }
+ 
+@@ -1165,7 +1199,7 @@ static int nfsmount_start(struct nfsmount_info *mi)
+  *
+  * Returns a valid mount command exit code.
+  */
+-int nfsmount_string(const char *spec, const char *node, const char *type,
++int nfsmount_string(const char *spec, const char *node, char *type,
+ 		    int flags, char **extra_opts, int fake, int child)
+ {
+ 	struct nfsmount_info mi = {
+diff --git a/utils/mount/stropts.h b/utils/mount/stropts.h
+index 37316eb..6acd2ac 100644
+--- a/utils/mount/stropts.h
++++ b/utils/mount/stropts.h
+@@ -24,7 +24,7 @@
+ #ifndef _NFS_UTILS_MOUNT_STROPTS_H
+ #define _NFS_UTILS_MOUNT_STROPTS_H
+ 
+-int nfsmount_string(const char *, const char *, const char *, int,
++int nfsmount_string(const char *, const char *, char *, int,
+ 			char **, int, int);
+ 
+ #endif	/* _NFS_UTILS_MOUNT_STROPTS_H */
 diff --git a/utils/mountd/auth.c b/utils/mountd/auth.c
 index d065830..8299256 100644
 --- a/utils/mountd/auth.c
@@ -1757,8 +2881,20 @@ index d065830..8299256 100644
  		close(fd);
  	} else if (last_fd != -1 && stb.st_ino == last_inode) {
  		/* We opened the etab file before, and its inode
+diff --git a/utils/mountd/cache.c b/utils/mountd/cache.c
+index ca6c84f..e49300d 100644
+--- a/utils/mountd/cache.c
++++ b/utils/mountd/cache.c
+@@ -11,6 +11,7 @@
+ #include <config.h>
+ #endif
+ 
++#include <sys/sysmacros.h>
+ #include <sys/types.h>
+ #include <sys/select.h>
+ #include <sys/stat.h>
 diff --git a/utils/mountd/mountd.c b/utils/mountd/mountd.c
-index 61699e6..bbadfaf 100644
+index 61699e6..829f803 100644
 --- a/utils/mountd/mountd.c
 +++ b/utils/mountd/mountd.c
 @@ -29,6 +29,7 @@
@@ -1769,17 +2905,17 @@ index 61699e6..bbadfaf 100644
  
  extern void my_svc_run(void);
  
-@@ -40,6 +41,9 @@ int reverse_resolve = 0;
+@@ -40,7 +41,8 @@ int reverse_resolve = 0;
  int manage_gids;
  int use_ipaddr = -1;
  
+-char *conf_path = NFS_CONFFILE;
 +struct state_paths etab;
 +struct state_paths rmtab;
-+
- char *conf_path = NFS_CONFFILE;
  
  /* PRC: a high-availability callout program can be specified with -H
-@@ -110,8 +114,8 @@ unregister_services (void)
+  * When this is done, the program will receive callouts whenever clients
+@@ -110,8 +112,8 @@ unregister_services (void)
  static void
  cleanup_lockfiles (void)
  {
@@ -1790,7 +2926,7 @@ index 61699e6..bbadfaf 100644
  }
  
  /* Wait for all worker child processes to exit and reap them */
-@@ -181,6 +185,8 @@ fork_workers(void)
+@@ -181,6 +183,8 @@ fork_workers(void)
  	wait_for_workers();
  	unregister_services();
  	cleanup_lockfiles();
@@ -1799,7 +2935,7 @@ index 61699e6..bbadfaf 100644
  	xlog(L_NOTICE, "mountd: no more workers, exiting\n");
  	exit(0);
  }
-@@ -198,6 +204,8 @@ killer (int sig)
+@@ -198,6 +202,8 @@ killer (int sig)
  		wait_for_workers();
  	}
  	cleanup_lockfiles();
@@ -1808,7 +2944,7 @@ index 61699e6..bbadfaf 100644
  	xlog (L_NOTICE, "Caught signal %d, un-registering and exiting.", sig);
  	exit(0);
  }
-@@ -656,7 +664,6 @@ get_exportlist(void)
+@@ -656,7 +662,6 @@ get_exportlist(void)
  int
  main(int argc, char **argv)
  {
@@ -1816,7 +2952,16 @@ index 61699e6..bbadfaf 100644
  	char	*progname;
  	char	*s;
  	unsigned int listeners = 0;
-@@ -684,8 +691,8 @@ main(int argc, char **argv)
+@@ -674,7 +679,7 @@ main(int argc, char **argv)
+ 	else
+ 		progname = argv[0];
+ 
+-	conf_init();
++	conf_init(NFS_CONFFILE);
+ 	xlog_from_conffile("mountd");
+ 	manage_gids = conf_get_bool("mountd", "manage-gids", manage_gids);
+ 	descriptors = conf_get_num("mountd", "descriptors", descriptors);
+@@ -684,8 +689,8 @@ main(int argc, char **argv)
  	ha_callout_prog = conf_get_str("mountd", "ha-callout");
  
  	s = conf_get_str("mountd", "state-directory-path");
@@ -1827,7 +2972,7 @@ index 61699e6..bbadfaf 100644
  
  	/* NOTE: following uses "nfsd" section of nfs.conf !!!! */
  	if (conf_get_bool("nfsd", "udp", NFSCTL_UDPISSET(_rpcprotobits)))
-@@ -758,7 +765,8 @@ main(int argc, char **argv)
+@@ -758,7 +763,8 @@ main(int argc, char **argv)
  			reverse_resolve = 1;
  			break;
  		case 's':
@@ -1837,7 +2982,7 @@ index 61699e6..bbadfaf 100644
  			break;
  		case 't':
  			num_threads = atoi (optarg);
-@@ -790,11 +798,10 @@ main(int argc, char **argv)
+@@ -790,11 +796,10 @@ main(int argc, char **argv)
  		fprintf(stderr, "%s: No protocol versions specified!\n", progname); 
  		usage(progname, 1);
  	}
@@ -1853,7 +2998,7 @@ index 61699e6..bbadfaf 100644
  
  	if (getrlimit (RLIMIT_NOFILE, &rlim) != 0)
  		fprintf(stderr, "%s: getrlimit (RLIMIT_NOFILE) failed: %s\n",
-@@ -888,6 +895,8 @@ main(int argc, char **argv)
+@@ -888,6 +893,8 @@ main(int argc, char **argv)
  
  	xlog(L_ERROR, "RPC service loop terminated unexpectedly. Exiting...\n");
  	unregister_services();
@@ -1971,10 +3116,19 @@ index 527377f..3ae0dbb 100644
  		return NULL;
  	}
 diff --git a/utils/nfsd/nfsd.c b/utils/nfsd/nfsd.c
-index 20f4b79..cea850d 100644
+index 20f4b79..f973203 100644
 --- a/utils/nfsd/nfsd.c
 +++ b/utils/nfsd/nfsd.c
-@@ -44,7 +44,9 @@ static struct option longopts[] =
+@@ -34,8 +34,6 @@
+ #define NFSD_NPROC 8
+ #endif
+ 
+-char *conf_path = NFS_CONFFILE;
+-
+ static void	usage(const char *);
+ 
+ static struct option longopts[] =
+@@ -44,7 +42,9 @@ static struct option longopts[] =
  	{ "help", 0, 0, 'h' },
  	{ "no-nfs-version", 1, 0, 'N' },
  	{ "nfs-version", 1, 0, 'V' },
@@ -1984,7 +3138,7 @@ index 20f4b79..cea850d 100644
  	{ "no-udp", 0, 0, 'U' },
  	{ "port", 1, 0, 'P' },
  	{ "port", 1, 0, 'p' },
-@@ -67,8 +69,9 @@ main(int argc, char **argv)
+@@ -67,8 +67,9 @@ main(int argc, char **argv)
  	int	socket_up = 0;
  	unsigned int minorvers = 0;
  	unsigned int minorversset = 0;
@@ -1995,7 +3149,16 @@ index 20f4b79..cea850d 100644
  	int grace = -1;
  	int lease = -1;
  
-@@ -104,10 +107,16 @@ main(int argc, char **argv)
+@@ -79,7 +80,7 @@ main(int argc, char **argv)
+ 	xlog_syslog(0);
+ 	xlog_stderr(1);
+ 
+-	conf_init();
++	conf_init(NFS_CONFFILE); 
+ 	xlog_from_conffile("nfsd");
+ 	count = conf_get_num("nfsd", "threads", count);
+ 	grace = conf_get_num("nfsd", "grace-time", grace);
+@@ -104,10 +105,16 @@ main(int argc, char **argv)
  		else
  			NFSCTL_VERUNSET(versbits, i);
  	}
@@ -2013,7 +3176,7 @@ index 20f4b79..cea850d 100644
  		char tag[20];
  		sprintf(tag, "vers4.%d", i);
  		/* The default for minor version support is to let the
-@@ -119,12 +128,12 @@ main(int argc, char **argv)
+@@ -119,12 +126,12 @@ main(int argc, char **argv)
  		 * (i.e. don't set the bit in minorversset).
  		 */
  		if (!conf_get_bool("nfsd", tag, 1)) {
@@ -2030,16 +3193,16 @@ index 20f4b79..cea850d 100644
  		}
  	}
  
-@@ -138,7 +147,7 @@ main(int argc, char **argv)
+@@ -138,7 +145,7 @@ main(int argc, char **argv)
  		}
  	}
  
 -	while ((c = getopt_long(argc, argv, "dH:hN:V:p:P:sTUrG:L:", longopts, NULL)) != EOF) {
-+	while ((c = getopt_long(argc, argv, "dH:hN:V:p:P:stTitUrG:L:", longopts, NULL)) != EOF) {
++	while ((c = getopt_long(argc, argv, "dH:hN:V:p:P:stTituUrG:L:", longopts, NULL)) != EOF) {
  		switch(c) {
  		case 'd':
  			xlog_config(D_ALL, 1);
-@@ -179,13 +188,17 @@ main(int argc, char **argv)
+@@ -179,14 +186,19 @@ main(int argc, char **argv)
  			case 4:
  				if (*p == '.') {
  					int i = atoi(p+1);
@@ -2059,9 +3222,11 @@ index 20f4b79..cea850d 100644
 +					minorvers = 0;
 +					minorversset = minormask;
  				}
++				/* FALLTHRU */
  			case 3:
  			case 2:
-@@ -201,14 +214,14 @@ main(int argc, char **argv)
+ 				NFSCTL_VERUNSET(versbits, c);
+@@ -201,14 +213,15 @@ main(int argc, char **argv)
  			case 4:
  				if (*p == '.') {
  					int i = atoi(p+1);
@@ -2078,6 +3243,7 @@ index 20f4b79..cea850d 100644
 +					NFSCTL_MINORSET(minorvers, i);
 +				} else
 +					minorvers = minorversset = minormask;
++				/* FALLTHRU */
  			case 3:
  			case 2:
  				NFSCTL_VERSET(versbits, c);
@@ -2097,7 +3263,15 @@ index 20f4b79..cea850d 100644
  		case 'U':
  			NFSCTL_UDPUNSET(protobits);
  			break;
-@@ -372,9 +391,9 @@ usage(const char *prog)
+@@ -244,6 +263,7 @@ main(int argc, char **argv)
+ 			break;
+ 		default:
+ 			fprintf(stderr, "Invalid argument: '%c'\n", c);
++			/* FALLTHRU */
+ 		case 'h':
+ 			usage(progname);
+ 		}
+@@ -372,9 +392,9 @@ usage(const char *prog)
  {
  	fprintf(stderr, "Usage:\n"
  		"%s [-d|--debug] [-H hostname] [-p|-P|--port port]\n"
@@ -2264,6 +3438,58 @@ index cd5a7e8..39ebf37 100644
  void	nfssvc_setvers(unsigned int ctlbits, unsigned int minorvers4, unsigned int minorvers4set);
  int	nfssvc_threads(int nrservs);
 +void	nfssvc_get_minormask(unsigned int *mask);
+diff --git a/utils/nfsdcltrack/nfsdcltrack.c b/utils/nfsdcltrack/nfsdcltrack.c
+index 7af9efb..0baaa3e 100644
+--- a/utils/nfsdcltrack/nfsdcltrack.c
++++ b/utils/nfsdcltrack/nfsdcltrack.c
+@@ -56,8 +56,6 @@
+ /* defined by RFC 3530 */
+ #define NFS4_OPAQUE_LIMIT	1024
+ 
+-char *conf_path = NFS_CONFFILE;
+-
+ /* private data structures */
+ struct cltrack_cmd {
+ 	char *name;
+@@ -566,7 +564,7 @@ main(int argc, char **argv)
+ 	xlog_syslog(1);
+ 	xlog_stderr(0);
+ 
+-	conf_init();
++	conf_init(NFS_CONFFILE); 
+ 	xlog_from_conffile("nfsdcltrack");
+ 	val = conf_get_str("nfsdcltrack", "storagedir");
+ 	if (val)
+@@ -581,6 +579,7 @@ main(int argc, char **argv)
+ 		switch (arg) {
+ 		case 'd':
+ 			xlog_config(D_ALL, 1);
++			break;
+ 		case 'f':
+ 			xlog_syslog(0);
+ 			xlog_stderr(1);
+diff --git a/utils/nfsdcltrack/sqlite.c b/utils/nfsdcltrack/sqlite.c
+index 54cd748..1552eba 100644
+--- a/utils/nfsdcltrack/sqlite.c
++++ b/utils/nfsdcltrack/sqlite.c
+@@ -101,7 +101,7 @@ sqlite_query_schema_version(void)
+ 		"SELECT value FROM parameters WHERE key == \"version\";",
+ 		 -1, &stmt, NULL);
+ 	if (ret != SQLITE_OK) {
+-		xlog(L_ERROR, "Unable to prepare select statement: %s",
++		xlog(D_GENERAL, "Unable to prepare select statement: %s",
+ 			sqlite3_errmsg(dbh));
+ 		ret = 0;
+ 		goto out;
+@@ -110,7 +110,7 @@ sqlite_query_schema_version(void)
+ 	/* query schema version */
+ 	ret = sqlite3_step(stmt);
+ 	if (ret != SQLITE_ROW) {
+-		xlog(L_ERROR, "Select statement execution failed: %s",
++		xlog(D_GENERAL, "Select statement execution failed: %s",
+ 				sqlite3_errmsg(dbh));
+ 		ret = 0;
+ 		goto out;
 diff --git a/utils/statd/Makefile.am b/utils/statd/Makefile.am
 index 152b680..ea32075 100644
 --- a/utils/statd/Makefile.am
@@ -2277,7 +3503,7 @@ index 152b680..ea32075 100644
  
  EXTRA_DIST = sim_sm_inter.x $(man8_MANS) simulate.c
 diff --git a/utils/statd/sm-notify.c b/utils/statd/sm-notify.c
-index 623213e..0c6766f 100644
+index 623213e..d216ddb 100644
 --- a/utils/statd/sm-notify.c
 +++ b/utils/statd/sm-notify.c
 @@ -45,6 +45,8 @@
@@ -2289,7 +3515,21 @@ index 623213e..0c6766f 100644
  struct nsm_host {
  	struct nsm_host *	next;
  	char *			name;
-@@ -494,6 +496,7 @@ main(int argc, char **argv)
+@@ -67,7 +69,6 @@ static _Bool		opt_update_state = true;
+ static unsigned int	opt_max_retry = 15 * 60;
+ static char *		opt_srcaddr = NULL;
+ static char *		opt_srcport = NULL;
+-char *			conf_path = NFS_CONFFILE;
+ 
+ static void		notify(const int sock);
+ static int		notify_host(int, struct nsm_host *);
+@@ -489,11 +490,12 @@ main(int argc, char **argv)
+ 	else
+ 		progname = argv[0];
+ 
+-	conf_init();
++	conf_init(NFS_CONFFILE);
+ 	xlog_from_conffile("sm-notify");
  	opt_max_retry = conf_get_num("sm-notify", "retry-time", opt_max_retry / 60) * 60;
  	opt_srcport = conf_get_str("sm-notify", "outgoing-port");
  	opt_srcaddr = conf_get_str("sm-notify", "outgoing-addr");
@@ -2297,7 +3537,7 @@ index 623213e..0c6766f 100644
  	s = conf_get_str("statd", "state-directory-path");
  	if (s && !nsm_setup_pathnames(argv[0], s))
  		exit(1);
-@@ -570,7 +573,8 @@ usage:		fprintf(stderr,
+@@ -570,7 +572,8 @@ usage:		fprintf(stderr,
  	(void)nsm_retire_monitored_hosts();
  	if (nsm_load_notify_list(smn_get_host) == 0) {
  		xlog(D_GENERAL, "No hosts to notify; exiting");
@@ -2336,3 +3576,24 @@ index bb7f6e0..cfe1e4b 100644
  The value recognized in the
  .B [statd]
  section is
+diff --git a/utils/statd/statd.c b/utils/statd/statd.c
+index d333b29..1443715 100644
+--- a/utils/statd/statd.c
++++ b/utils/statd/statd.c
+@@ -37,7 +37,6 @@
+ #include <sys/socket.h>
+ 
+ int	run_mode = 0;		/* foreground logging mode */
+-char	*conf_path = NFS_CONFFILE;
+ 
+ /* LH - I had these local to main, but it seemed silly to have 
+  * two copies of each - one in main(), one static in log.c... 
+@@ -274,7 +273,7 @@ int main (int argc, char **argv)
+ 	/* Set hostname */
+ 	MY_NAME = NULL;
+ 
+-	conf_init();
++	conf_init(NFS_CONFFILE);
+ 	xlog_from_conffile("statd");
+ 	out_port = conf_get_num("statd", "outgoing-port", out_port);
+ 	port = conf_get_num("statd", "port", port);

@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://sourceforge.net/projects/nfs
 Version: 2.1.1
-Release: 6.rc4%{?dist}.1
+Release: 6.rc5%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -15,8 +15,7 @@ Source3: nfs-utils_env.sh
 Source4: lockd.conf
 Source5: 24-nfs-server.conf
 
-Patch001: nfs-utils-2.1.2-rc4.patch
-Patch002: nfs-utils-2.1.1-rpc-include.patch
+Patch001: nfs-utils-2.1.2-rc5.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -76,7 +75,6 @@ This package also contains the mount.nfs and umount.nfs program.
 %setup -q
 
 %patch001 -p1
-%patch002 -p1
 
 %patch100 -p1
 %patch101 -p1
@@ -290,6 +288,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Thu Jul 27 2017 Steve Dickson <steved@redhat.com> 2.1.1-6.rc5
+- Updated to the latest RC releease: nfs-utils-2-1-2-rc5
+
 * Wed Jul 26 2017 Fedora Release Engineering <releng@fedoraproject.org> - 1:2.1.1-6.rc4.1
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_27_Mass_Rebuild
 
