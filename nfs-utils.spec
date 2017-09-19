@@ -1,8 +1,8 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
-URL: http://sourceforge.net/projects/nfs
+URL: http://linux-nfs.org/
 Version: 2.1.1
-Release: 6.rc5%{?dist}
+Release: 7.rc5%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -288,6 +288,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Tue Sep 19 2017 Orion Poplawski <orion@nwra.com> 2.1.1-7.rc5
+- Fix URL
+
 * Thu Jul 27 2017 Steve Dickson <steved@redhat.com> 2.1.1-6.rc5
 - Updated to the latest RC releease: nfs-utils-2-1-2-rc5
 
