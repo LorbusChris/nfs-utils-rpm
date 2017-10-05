@@ -435,6 +435,30 @@ index 0000000..63597df
 +	strcpy(base, parentdir);
 +	return true;
 +}
+diff --git a/support/misc/tcpwrapper.c b/support/misc/tcpwrapper.c
+index 06b0a46..3128053 100644
+--- a/support/misc/tcpwrapper.c
++++ b/support/misc/tcpwrapper.c
+@@ -72,6 +72,7 @@ present_address(const struct sockaddr *sap, char *buf, const size_t buflen)
+ 	case AF_INET:
+ 		if (inet_ntop(AF_INET, &sin->sin_addr, buf, len) != 0)
+ 			return;
++		break;
+ 	case AF_INET6:
+ 		if (inet_ntop(AF_INET6, &sin6->sin6_addr, buf, len) != 0)
+ 			return;
+diff --git a/support/nfs/atomicio.c b/support/nfs/atomicio.c
+index 5e760e6..aa819ca 100644
+--- a/support/nfs/atomicio.c
++++ b/support/nfs/atomicio.c
+@@ -42,6 +42,7 @@ ssize_t atomicio(ssize_t(*f) (int, void *, size_t), int fd, void *_s, size_t n)
+ 		case -1:
+ 			if (errno == EINTR || errno == EAGAIN)
+ 				continue;
++			/* FALLTHRU */
+ 		case 0:
+ 			if (pos != 0)
+ 				return pos;
 diff --git a/support/nfs/cacheio.c b/support/nfs/cacheio.c
 index e5e2579..9912afa 100644
 --- a/support/nfs/cacheio.c
@@ -1076,6 +1100,21 @@ index aafa755..52f5401 100644
  }
  
  /**
+diff --git a/support/nsm/rpc.c b/support/nsm/rpc.c
+index 4e5f40e..ae49006 100644
+--- a/support/nsm/rpc.c
++++ b/support/nsm/rpc.c
+@@ -38,8 +38,10 @@
+ #include <sys/socket.h>
+ #include <sys/time.h>
+ 
++#include <stdint.h>
+ #include <time.h>
+ #include <stdbool.h>
++#include <stdint.h>
+ #include <string.h>
+ #include <unistd.h>
+ #include <fcntl.h>
 diff --git a/systemd/Makefile.am b/systemd/Makefile.am
 index 0d15b9f..eef53c4 100644
 --- a/systemd/Makefile.am
@@ -1325,6 +1364,50 @@ index 91c49a0..189b052 100644
  .BR keytab-file ,
  .BR cred-cache-directory ,
  .BR preferred-realm .
+diff --git a/systemd/nfs.systemd.man b/systemd/nfs.systemd.man
+index 01801eb..46b476a 100644
+--- a/systemd/nfs.systemd.man
++++ b/systemd/nfs.systemd.man
+@@ -79,7 +79,7 @@ unit should be enabled.
+ Several other units which might be considered to be optional, such as
+ .I rpc-gssd.service
+ are careful to only start if the required configuration file exists.
+-.I rpc-gsdd.service
++.I rpc-gssd.service
+ will not start if the
+ .I krb5.keytab
+ file does not exist (typically in
+@@ -120,10 +120,11 @@ be needed to reduce system load to an absolute minimum, or to reduce
+ attack surface by not running daemons that are not absolutely
+ required.
+ .PP
+-Two particular services which this can apply to are
+-.I rpcbind
++Three particular services which this can apply to are
++.IR rpcbind ,
++.IR idmapd ,
+ and
+-.IR idmapd .
++.IR rpc-gssd .
+ .I rpcbind
+ is not part of the
+ .I nfs-utils
+@@ -155,6 +156,15 @@ is not needed and not wanted, it can be masked with
+ .RS
+ .B systemctl mask idmapd
+ .RE
++.I rpc-gssd
++is assumed to be needed if the
++.I krb5.keytab
++file is present.  If a site needs this file present but does not want
++.I rpc-gssd
++running, it can be masked with
++.RS
++.B systemctl mask rpc-gssd
++.RE
+ .SH FILES
+ /etc/nfs.conf
+ .br
 diff --git a/systemd/rpc-gssd.service.in b/systemd/rpc-gssd.service.in
 index b353027..6807db3 100644
 --- a/systemd/rpc-gssd.service.in
@@ -1686,6 +1769,43 @@ index 0000000..25235ec
 +char *systemd_escape(char *path, char *suffix);
 +
 +#endif /* SYSTEMD_H */
+diff --git a/tools/mountstats/mountstats.py b/tools/mountstats/mountstats.py
+index 88ccdae..a68d702 100644
+--- a/tools/mountstats/mountstats.py
++++ b/tools/mountstats/mountstats.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/python
+ # -*- python-mode -*-
+ """Parse /proc/self/mountstats and display it in human readable form
+ """
+diff --git a/tools/nfs-iostat/nfs-iostat.py b/tools/nfs-iostat/nfs-iostat.py
+index 61d15a5..577a23d 100644
+--- a/tools/nfs-iostat/nfs-iostat.py
++++ b/tools/nfs-iostat/nfs-iostat.py
+@@ -429,6 +429,8 @@ def parse_stats_file(filename):
+         words = line.split()
+         if len(words) == 0:
+             continue
++	if line.startswith("no device mounted") :
++            continue
+         if words[0] == 'device':
+             key = words[4]
+             new = [ line.strip() ]
+diff --git a/tools/rpcdebug/rpcdebug.c b/tools/rpcdebug/rpcdebug.c
+index 18b1622..68206cc 100644
+--- a/tools/rpcdebug/rpcdebug.c
++++ b/tools/rpcdebug/rpcdebug.c
+@@ -74,7 +74,8 @@ main(int argc, char **argv)
+ 			opt_c = 1;
+ 			break;
+ 		case 'h':
+-			usage(0, module);
++			usage(0, module); /* usage does not return */
++			break;
+ 		case 'm':
+ 			module = optarg;
+ 			break;
 diff --git a/utils/blkmapd/blkmapd.man b/utils/blkmapd/blkmapd.man
 index 914b80f..4b3d3f0 100644
 --- a/utils/blkmapd/blkmapd.man
@@ -1717,10 +1837,18 @@ index 914b80f..4b3d3f0 100644
  RFC 5661 for the NFS version 4.1 specification.
  .br
 diff --git a/utils/blkmapd/device-discovery.c b/utils/blkmapd/device-discovery.c
-index 8eb3fd0..c66669d 100644
+index 8eb3fd0..29bafb2 100644
 --- a/utils/blkmapd/device-discovery.c
 +++ b/utils/blkmapd/device-discovery.c
-@@ -50,21 +50,36 @@
+@@ -26,6 +26,7 @@
+  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
++#include <sys/sysmacros.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include <sys/ioctl.h>
+@@ -50,21 +51,36 @@
  #include <errno.h>
  #include <libdevmapper.h>
  
@@ -1759,7 +1887,7 @@ index 8eb3fd0..c66669d 100644
  struct bl_disk_path *bl_get_path(const char *filepath,
  				 struct bl_disk_path *paths)
  {
-@@ -358,8 +373,8 @@ static void bl_rpcpipe_cb(void)
+@@ -358,8 +374,8 @@ static void bl_rpcpipe_cb(void)
  				continue;
  			if (event->mask & IN_CREATE) {
  				BL_LOG_WARNING("nfs pipe dir created\n");
@@ -1770,7 +1898,7 @@ index 8eb3fd0..c66669d 100644
  			} else if (event->mask & IN_DELETE) {
  				BL_LOG_WARNING("nfs pipe dir deleted\n");
  				inotify_rm_watch(bl_watch_fd, nfs_pipedir_wfd);
-@@ -372,7 +387,7 @@ static void bl_rpcpipe_cb(void)
+@@ -372,7 +388,7 @@ static void bl_rpcpipe_cb(void)
  				continue;
  			if (event->mask & IN_CREATE) {
  				BL_LOG_WARNING("blocklayout pipe file created\n");
@@ -1779,7 +1907,7 @@ index 8eb3fd0..c66669d 100644
  				if (bl_pipe_fd < 0)
  					BL_LOG_ERR("open %s failed: %s\n",
  						event->name, strerror(errno));
-@@ -437,6 +452,18 @@ int main(int argc, char **argv)
+@@ -437,6 +453,18 @@ int main(int argc, char **argv)
  {
  	int opt, dflag = 0, fg = 0, ret = 1;
  	char pidbuf[64];
@@ -1798,7 +1926,7 @@ index 8eb3fd0..c66669d 100644
  
  	while ((opt = getopt(argc, argv, "hdf")) != -1) {
  		switch (opt) {
-@@ -496,12 +523,12 @@ int main(int argc, char **argv)
+@@ -496,12 +524,12 @@ int main(int argc, char **argv)
  	}
  
  	/* open pipe file */
@@ -1815,6 +1943,26 @@ index 8eb3fd0..c66669d 100644
  
  	while (1) {
  		/* discover device when needed */
+diff --git a/utils/blkmapd/device-inq.c b/utils/blkmapd/device-inq.c
+index 0062a8f..c7952c3 100644
+--- a/utils/blkmapd/device-inq.c
++++ b/utils/blkmapd/device-inq.c
+@@ -216,6 +216,7 @@ struct bl_serial *bldev_read_serial(int fd, const char *filename)
+ 			if ((dev_id->len != 8) && (dev_id->len != 12) &&
+ 			    (dev_id->len != 16))
+ 				break;
++			/* FALLTHRU */
+ 		case 3:	/* NAA */
+ 			/* TODO: NAA validity judgement too complicated,
+ 			 * so just ingore it here.
+@@ -224,6 +225,7 @@ struct bl_serial *bldev_read_serial(int fd, const char *filename)
+ 				BL_LOG_ERR("Binary code_set expected\n");
+ 				break;
+ 			}
++			/* FALLTHRU */
+ 		case 0:	/* vendor specific */
+ 		case 1:	/* T10 vendor identification */
+ 			current_id = dev_id->ids & 0xf;
 diff --git a/utils/exportfs/exportfs.c b/utils/exportfs/exportfs.c
 index 61dddfb..beed1b3 100644
 --- a/utils/exportfs/exportfs.c
@@ -2139,8 +2287,21 @@ index 1fb579a..3514ae1 100644
  
  	s = conf_get_str("svcgssd", "principal");
  	if (!s)
+diff --git a/utils/idmapd/Makefile.am b/utils/idmapd/Makefile.am
+index c2f8ba1..1e8e9e6 100644
+--- a/utils/idmapd/Makefile.am
++++ b/utils/idmapd/Makefile.am
+@@ -15,7 +15,7 @@ idmapd_SOURCES = \
+ 	nfs_idmap.h \
+ 	queue.h
+ 
+-idmapd_LDADD = $(LIBEVENT) $(LIBNFSIDMAP) ../../support/nfs/libnfs.a
++idmapd_LDADD = ../../support/nfs/libnfs.a $(LIBEVENT) $(LIBNFSIDMAP)
+ 
+ MAINTAINERCLEANFILES = Makefile.in
+ 
 diff --git a/utils/idmapd/idmapd.c b/utils/idmapd/idmapd.c
-index f4e083a..c12e878 100644
+index f4e083a..4cbe148 100644
 --- a/utils/idmapd/idmapd.c
 +++ b/utils/idmapd/idmapd.c
 @@ -165,9 +165,6 @@ static char *nobodyuser, *nobodygroup;
@@ -2217,6 +2378,24 @@ index f4e083a..c12e878 100644
  		CONF_SAVE(nobodyuser, conf_get_str("Mapping", "Nobody-User"));
  		CONF_SAVE(nobodygroup, conf_get_str("Mapping", "Nobody-Group"));
  	}
+@@ -296,6 +312,8 @@ main(int argc, char **argv)
+ 
+ 	strncat(pipefsdir, "/nfs", sizeof(pipefsdir));
+ 
++	daemon_init(fg);
++
+ 	if ((pw = getpwnam(nobodyuser)) == NULL)
+ 		errx(1, "Could not find user \"%s\"", nobodyuser);
+ 	nobodyuid = pw->pw_uid;
+@@ -312,8 +330,6 @@ main(int argc, char **argv)
+ 	if (nfs4_init_name_mapping(conf_path))
+ 		errx(1, "Unable to create name to user id mappings.");
+ 
+-	daemon_init(fg);
+-
+ 	event_init();
+ 
+ 	if (verbose > 0)
 diff --git a/utils/idmapd/idmapd.man b/utils/idmapd/idmapd.man
 index d4ab894..5f34d2b 100644
 --- a/utils/idmapd/idmapd.man
@@ -2264,7 +2443,7 @@ index d4ab894..5f34d2b 100644
  .\".Sh SEE ALSO
  .\".Xr nylon.conf 4
 diff --git a/utils/mount/configfile.c b/utils/mount/configfile.c
-index 0a4cc04..dc964c7 100644
+index 0a4cc04..64688bf 100644
 --- a/utils/mount/configfile.c
 +++ b/utils/mount/configfile.c
 @@ -51,10 +51,6 @@
@@ -2278,6 +2457,48 @@ index 0a4cc04..dc964c7 100644
  enum {
  	MNT_NOARG=0,
  	MNT_INTARG,
+@@ -70,6 +66,7 @@ struct mnt_alias {
+ 	{"background", "bg", MNT_NOARG},
+ 	{"foreground", "fg", MNT_NOARG},
+ 	{"sloppy", "sloppy", MNT_NOARG},
++	{"nfsvers", "vers", MNT_UNSET},
+ };
+ int mnt_alias_sz = (sizeof(mnt_alias_tab)/sizeof(mnt_alias_tab[0]));
+ 
+@@ -264,7 +261,7 @@ default_value(char *mopt)
+ 		}
+ 	} else if (strncasecmp(field, "vers", strlen("vers")) == 0) {
+ 		if ((options = po_split(field)) != NULL) {
+-			if (!nfs_nfs_version(options, &config_default_vers)) {
++			if (!nfs_nfs_version("nfs", options, &config_default_vers)) {
+ 				xlog_warn("Unable to set default version: %s", 
+ 					strerror(errno));
+ 				
+@@ -296,20 +293,21 @@ conf_parse_mntopts(char *section, char *arg, char *opts)
+ 
+ 	list = conf_get_tag_list(section, arg);
+ 	TAILQ_FOREACH(node, &list->fields, link) {
++		/* check first if this is an alias for another option */
++		field = mountopts_alias(node->field, &argtype);
+ 		/*
+ 		 * Do not overwrite options if already exists 
+ 		 */
+-		snprintf(buf, BUFSIZ, "%s=", node->field);
++		snprintf(buf, BUFSIZ, "%s=", field);
+ 		if (opts && strcasestr(opts, buf) != NULL)
+ 			continue;
+ 
+-		if (lookup_entry(node->field) != NULL)
++		if (lookup_entry(field) != NULL)
+ 			continue;
+ 		buf[0] = '\0';
+ 		value = conf_get_section(section, arg, node->field);
+ 		if (value == NULL)
+ 			continue;
+-		field = mountopts_alias(node->field, &argtype);
+ 		if (strcasecmp(value, "false") == 0) {
+ 			if (argtype != MNT_NOARG)
+ 				snprintf(buf, BUFSIZ, "no%s", field);
 diff --git a/utils/mount/mount_config.h b/utils/mount/mount_config.h
 index 69ffd1e..e4f8511 100644
 --- a/utils/mount/mount_config.h
@@ -2315,10 +2536,10 @@ index 1f01f7f..2d40657 100644
  	while ((c = getopt_long (argc, argv, "fvnrlh", longopts, NULL)) != -1) {
  
 diff --git a/utils/mount/network.c b/utils/mount/network.c
-index 7dceb2d..281e935 100644
+index 7dceb2d..8ab5be8 100644
 --- a/utils/mount/network.c
 +++ b/utils/mount/network.c
-@@ -33,6 +33,7 @@
+@@ -33,12 +33,19 @@
  #include <errno.h>
  #include <netdb.h>
  #include <time.h>
@@ -2326,7 +2547,28 @@ index 7dceb2d..281e935 100644
  
  #include <sys/types.h>
  #include <sys/socket.h>
-@@ -804,6 +805,7 @@ int start_statd(void)
+ #include <sys/wait.h>
+ #include <sys/stat.h>
+-#include <linux/in6.h>
++#if defined(__GLIBC__) && (__GLIBC__ < 2) || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 24)
++/* Cannot safely include linux/in6.h in old glibc, so hardcode the needed values */
++# define IPV6_PREFER_SRC_PUBLIC 2
++# define IPV6_ADDR_PREFERENCES 72
++#else
++# include <linux/in6.h>
++#endif
+ #include <netinet/in.h>
+ #include <rpc/rpc.h>
+ #include <rpc/pmap_prot.h>
+@@ -93,7 +100,6 @@ static const char *nfs_version_opttbl[] = {
+ 	"v4",
+ 	"vers",
+ 	"nfsvers",
+-	"minorversion",
+ 	NULL,
+ };
+ 
+@@ -804,6 +810,7 @@ int start_statd(void)
  			pid_t pid = fork();
  			switch (pid) {
  			case 0: /* child */
@@ -2334,7 +2576,110 @@ index 7dceb2d..281e935 100644
  				setgid(0);
  				setuid(0);
  				execle(START_STATD, START_STATD, NULL, envp);
-@@ -1638,6 +1640,7 @@ int nfs_options2pmap(struct mount_options *options,
+@@ -1233,6 +1240,7 @@ nfs_nfs_program(struct mount_options *options, unsigned long *program)
+ 			*program = tmp;
+ 			return 1;
+ 		}
++		/* FALLTHRU */
+ 	case PO_BAD_VALUE:
+ 		nfs_error(_("%s: invalid value for 'nfsprog=' option"),
+ 				progname);
+@@ -1252,7 +1260,7 @@ nfs_nfs_program(struct mount_options *options, unsigned long *program)
+  * or FALSE if the option was specified with an invalid value.
+  */
+ int
+-nfs_nfs_version(struct mount_options *options, struct nfs_version *version)
++nfs_nfs_version(char *type, struct mount_options *options, struct nfs_version *version)
+ {
+ 	char *version_key, *version_val, *cptr;
+ 	int i, found = 0;
+@@ -1267,10 +1275,11 @@ nfs_nfs_version(struct mount_options *options, struct nfs_version *version)
+ 		}
+ 	}
+ 
+-	if (!found)
++	if (!found && strcmp(type, "nfs4") == 0)
++		version_val = type + 3;
++	else if (!found)
+ 		return 1;
+-
+-	if (i <= 2 ) {
++	else if (i <= 2 ) {
+ 		/* v2, v3, v4 */
+ 		version_val = version_key + 1;
+ 		version->v_mode = V_SPECIFIC;
+@@ -1282,17 +1291,19 @@ nfs_nfs_version(struct mount_options *options, struct nfs_version *version)
+ 	if (!version_val)
+ 		goto ret_error;
+ 
+-	if (!(version->major = strtol(version_val, &cptr, 10)))
++	version->major = strtol(version_val, &cptr, 10);
++	if (cptr == version_val || (*cptr && *cptr != '.'))
+ 		goto ret_error;
+-
+-	if (strcmp(nfs_version_opttbl[i], "minorversion") == 0) {
++	if (version->major == 4 && *cptr != '.' &&
++	    (version_val = po_get(options, "minorversion")) != NULL) {
++		version->minor = strtol(version_val, &cptr, 10);
++		i = -1;
++		if (*cptr)
++			goto ret_error;
+ 		version->v_mode = V_SPECIFIC;
+-		version->minor = version->major;
+-		version->major = 4;
+ 	} else if (version->major < 4)
+ 		version->v_mode = V_SPECIFIC;
+-
+-	if (*cptr == '.') {
++	else if (*cptr == '.') {
+ 		version_val = ++cptr;
+ 		if (!(version->minor = strtol(version_val, &cptr, 10)) && cptr == version_val)
+ 			goto ret_error;
+@@ -1306,7 +1317,10 @@ nfs_nfs_version(struct mount_options *options, struct nfs_version *version)
+ 	return 1;
+ 
+ ret_error:
+-	if (i <= 2 ) {
++	if (i < 0) {
++		nfs_error(_("%s: parsing error on 'minorversion=' option"),
++			progname);
++	} else if (i <= 2 ) {
+ 		nfs_error(_("%s: parsing error on 'v' option"),
+ 			progname);
+ 	} else if (i == 3 ) {
+@@ -1381,6 +1395,7 @@ nfs_nfs_port(struct mount_options *options, unsigned long *port)
+ 			*port = tmp;
+ 			return 1;
+ 		}
++		/* FALLTHRU */
+ 	case PO_BAD_VALUE:
+ 		nfs_error(_("%s: invalid value for 'port=' option"),
+ 				progname);
+@@ -1476,6 +1491,7 @@ nfs_mount_program(struct mount_options *options, unsigned long *program)
+ 			*program = tmp;
+ 			return 1;
+ 		}
++		/* FALLTHRU */
+ 	case PO_BAD_VALUE:
+ 		nfs_error(_("%s: invalid value for 'mountprog=' option"),
+ 				progname);
+@@ -1507,6 +1523,7 @@ nfs_mount_version(struct mount_options *options, unsigned long *version)
+ 			*version = tmp;
+ 			return 1;
+ 		}
++		/* FALLTHRU */
+ 	case PO_BAD_VALUE:
+ 		nfs_error(_("%s: invalid value for 'mountvers=' option"),
+ 				progname);
+@@ -1573,6 +1590,7 @@ nfs_mount_port(struct mount_options *options, unsigned long *port)
+ 			*port = tmp;
+ 			return 1;
+ 		}
++		/* FALLTHRU */
+ 	case PO_BAD_VALUE:
+ 		nfs_error(_("%s: invalid value for 'mountport=' option"),
+ 				progname);
+@@ -1638,10 +1656,11 @@ int nfs_options2pmap(struct mount_options *options,
  		     struct pmap *nfs_pmap, struct pmap *mnt_pmap)
  {
  	struct nfs_version version;
@@ -2342,8 +2687,91 @@ index 7dceb2d..281e935 100644
  
  	if (!nfs_nfs_program(options, &nfs_pmap->pm_prog))
  		return 0;
+-	if (!nfs_nfs_version(options, &version))
++	if (!nfs_nfs_version("nfs", options, &version))
+ 		return 0;
+ 	if (version.v_mode == V_DEFAULT)
+ 		nfs_pmap->pm_vers = 0;
+diff --git a/utils/mount/network.h b/utils/mount/network.h
+index 9cc5dec..ecaac33 100644
+--- a/utils/mount/network.h
++++ b/utils/mount/network.h
+@@ -72,7 +72,7 @@ struct nfs_version {
+ 
+ int nfs_nfs_proto_family(struct mount_options *options, sa_family_t *family);
+ int nfs_mount_proto_family(struct mount_options *options, sa_family_t *family);
+-int nfs_nfs_version(struct mount_options *options, struct nfs_version *version);
++int nfs_nfs_version(char *type, struct mount_options *options, struct nfs_version *version);
+ int  nfs_nfs_protocol(struct mount_options *options, unsigned long *protocol);
+ 
+ int nfs_options2pmap(struct mount_options *,
+diff --git a/utils/mount/nfs.man b/utils/mount/nfs.man
+index cc6e992..7d42f19 100644
+--- a/utils/mount/nfs.man
++++ b/utils/mount/nfs.man
+@@ -779,6 +779,23 @@ so if this mount option is not specified, the NFS version 4 client
+ uses the TCP protocol.
+ Refer to the TRANSPORT METHODS section for more details.
+ .TP 1.5i
++.BI minorversion= n
++Specifies the protocol minor version number.
++NFSv4 introduces "minor versioning," where NFS protocol enhancements can
++be introduced without bumping the NFS protocol version number.
++Before kernel 2.6.38, the minor version is always zero, and this
++option is not recognized.
++After this kernel, specifying "minorversion=1" enables a number of
++advanced features, such as NFSv4 sessions.
++.IP
++Recent kernels allow the minor version to be specified using the
++.B vers=
++option.
++For example, specifying
++.B vers=4.1
++is the same as specifying
++.BR vers=4,minorversion=1 .
++.TP 1.5i
+ .BI port= n
+ The numeric value of the server's NFS service port.
+ If the server's NFS service is not available on the specified port,
+diff --git a/utils/mount/nfs4mount.c b/utils/mount/nfs4mount.c
+index 028e7cd..89629ed 100644
+--- a/utils/mount/nfs4mount.c
++++ b/utils/mount/nfs4mount.c
+@@ -444,6 +444,7 @@ int nfs4mount(const char *spec, const char *node, int flags,
+ 			case RPC_SYSTEMERROR:
+ 				if (errno == ETIMEDOUT)
+ 					break;
++				/* FALLTHRU */
+ 			default:
+ 				rpc_mount_errors(hostname, 0, bg);
+ 				goto fail;
+diff --git a/utils/mount/nfsmount.c b/utils/mount/nfsmount.c
+index 930622d..ae4a3da 100644
+--- a/utils/mount/nfsmount.c
++++ b/utils/mount/nfsmount.c
+@@ -683,6 +683,7 @@ nfsmount(const char *spec, const char *node, int flags,
+ 			case RPC_SYSTEMERROR:
+ 				if (errno == ETIMEDOUT)
+ 					break;
++				/* FALLTHRU */
+ 			default:
+ 				rpc_mount_errors(*nfs_server.hostname, 0, bg);
+ 		        goto fail;
+diff --git a/utils/mount/nfsumount.c b/utils/mount/nfsumount.c
+index de284f2..e16fb6a 100644
+--- a/utils/mount/nfsumount.c
++++ b/utils/mount/nfsumount.c
+@@ -180,7 +180,7 @@ static int nfs_umount_is_vers4(const struct mntentchn *mc)
+ 		options = po_split(pmc->m.mnt_opts);
+ 		if (options != NULL) {
+ 			struct nfs_version version;
+-			int rc = nfs_nfs_version(options, &version);
++			int rc = nfs_nfs_version("nfs", options, &version);
+ 			po_destroy(options);
+ 			if (rc && version.major == 4)
+ 				goto out_nfs4;
 diff --git a/utils/mount/stropts.c b/utils/mount/stropts.c
-index 387d734..c2a739b 100644
+index 387d734..4401314 100644
 --- a/utils/mount/stropts.c
 +++ b/utils/mount/stropts.c
 @@ -73,6 +73,13 @@
@@ -2360,6 +2788,17 @@ index 387d734..c2a739b 100644
  extern int nfs_mount_data_version;
  extern char *progname;
  extern int verbose;
+@@ -80,8 +87,8 @@ extern int sloppy;
+ 
+ struct nfsmount_info {
+ 	const char		*spec,		/* server:/path */
+-				*node,		/* mounted-on dir */
+-				*type;		/* "nfs" or "nfs4" */
++				*node;		/* mounted-on dir */
++	char			*type;		/* "nfs" or "nfs4" */
+ 	char			*hostname;	/* server's hostname */
+ 	struct addrinfo		*address;	/* server's addresses */
+ 	sa_family_t		family;		/* Address family */
 @@ -112,20 +119,28 @@ static void nfs_default_version(struct nfsmount_info *mi)
  	if (mi->version.v_mode == V_DEFAULT &&
  		config_default_vers.v_mode != V_DEFAULT) {
@@ -2394,23 +2833,21 @@ index 387d734..c2a739b 100644
  }
  
  /*
-@@ -315,9 +330,12 @@ static int nfs_set_version(struct nfsmount_info *mi)
- 	if (!nfs_nfs_version(mi->options, &mi->version))
+@@ -312,12 +327,9 @@ static int nfs_append_sloppy_option(struct mount_options *options)
+ 
+ static int nfs_set_version(struct nfsmount_info *mi)
+ {
+-	if (!nfs_nfs_version(mi->options, &mi->version))
++	if (!nfs_nfs_version(mi->type, mi->options, &mi->version))
  		return 0;
  
 -	if (strncmp(mi->type, "nfs4", 4) == 0)
 -		mi->version.major = 4;
 -
-+	if (strncmp(mi->type, "nfs4", 4) == 0) {
-+		/* Set to default values */
-+		mi->version.major = NFS_DEFAULT_MAJOR;
-+		mi->version.minor = NFS_DEFAULT_MINOR;
-+		mi->version.v_mode = V_GENERAL;
-+	}
  	/*
  	 * Before 2.6.32, the kernel NFS client didn't
  	 * support "-t nfs vers=4" mounts, so NFS version
-@@ -517,6 +535,10 @@ nfs_rewrite_pmap_mount_options(struct mount_options *options, int checkv4)
+@@ -517,6 +529,10 @@ nfs_rewrite_pmap_mount_options(struct mount_options *options, int checkv4)
  	unsigned long protocol;
  	struct pmap mnt_pmap;
  
@@ -2421,7 +2858,16 @@ index 387d734..c2a739b 100644
  	/*
  	 * Version and transport negotiation is not required
  	 * and does not work for RDMA mounts.
-@@ -727,13 +749,9 @@ static int nfs_do_mount_v4(struct nfsmount_info *mi,
+@@ -705,7 +721,7 @@ static int nfs_do_mount_v4(struct nfsmount_info *mi,
+ {
+ 	struct mount_options *options = po_dup(mi->options);
+ 	int result = 0;
+-	char version_opt[16];
++	char version_opt[32];
+ 	char *extra_opts = NULL;
+ 
+ 	if (!options) {
+@@ -727,13 +743,25 @@ static int nfs_do_mount_v4(struct nfsmount_info *mi,
  	}
  
  	if (mi->version.v_mode != V_SPECIFIC) {
@@ -2432,23 +2878,42 @@ index 387d734..c2a739b 100644
 -			snprintf(version_opt, sizeof(version_opt) - 1,
 -				"vers=%lu.%lu", mi->version.major,
 -				mi->version.minor);
++		char *fmt;
++		switch (mi->version.minor) {
++			/* Old kernels don't support the new "vers=x.y"
++			 * option, but do support old versions of NFS4.
++			 * So use the format that is most widely understood.
++			 */
++		case 0:
++			fmt = "vers=%lu";
++			break;
++		case 1:
++			fmt = "vers=%lu,minorversion=%lu";
++			break;
++		default:
++			fmt = "vers=%lu.%lu";
++			break;
++		}
 +		snprintf(version_opt, sizeof(version_opt) - 1,
-+			"vers=%lu.%lu", mi->version.major,
++			fmt, mi->version.major,
 +			mi->version.minor);
  
  		if (po_append(options, version_opt) == PO_FAILED) {
  			errno = EINVAL;
-@@ -834,9 +852,6 @@ check_result:
+@@ -834,9 +862,9 @@ check_result:
  	case EINVAL:
  		/* A less clear indication that our client
  		 * does not support NFSv4 minor version. */
 -		if (mi->version.v_mode == V_GENERAL &&
 -			mi->version.minor == 0)
 -				return result;
++	case EACCES:
++		/* An unclear indication that the server
++		 * may not support NFSv4 minor version. */
  		if (mi->version.v_mode != V_SPECIFIC) {
  			if (mi->version.minor > 0) {
  				mi->version.minor--;
-@@ -858,19 +873,28 @@ check_result:
+@@ -858,19 +886,28 @@ check_result:
  		/* UDP-Only servers won't support v4, but maybe it
  		 * just isn't ready yet.  So try v3, but double-check
  		 * with rpcbind for v4. */
@@ -2478,6 +2943,28 @@ index 387d734..c2a739b 100644
  	return nfs_try_mount_v3v2(mi, FALSE);
  }
  
+@@ -1165,7 +1202,7 @@ static int nfsmount_start(struct nfsmount_info *mi)
+  *
+  * Returns a valid mount command exit code.
+  */
+-int nfsmount_string(const char *spec, const char *node, const char *type,
++int nfsmount_string(const char *spec, const char *node, char *type,
+ 		    int flags, char **extra_opts, int fake, int child)
+ {
+ 	struct nfsmount_info mi = {
+diff --git a/utils/mount/stropts.h b/utils/mount/stropts.h
+index 37316eb..6acd2ac 100644
+--- a/utils/mount/stropts.h
++++ b/utils/mount/stropts.h
+@@ -24,7 +24,7 @@
+ #ifndef _NFS_UTILS_MOUNT_STROPTS_H
+ #define _NFS_UTILS_MOUNT_STROPTS_H
+ 
+-int nfsmount_string(const char *, const char *, const char *, int,
++int nfsmount_string(const char *, const char *, char *, int,
+ 			char **, int, int);
+ 
+ #endif	/* _NFS_UTILS_MOUNT_STROPTS_H */
 diff --git a/utils/mountd/auth.c b/utils/mountd/auth.c
 index d065830..8299256 100644
 --- a/utils/mountd/auth.c
@@ -2505,6 +2992,18 @@ index d065830..8299256 100644
  		close(fd);
  	} else if (last_fd != -1 && stb.st_ino == last_inode) {
  		/* We opened the etab file before, and its inode
+diff --git a/utils/mountd/cache.c b/utils/mountd/cache.c
+index ca6c84f..e49300d 100644
+--- a/utils/mountd/cache.c
++++ b/utils/mountd/cache.c
+@@ -11,6 +11,7 @@
+ #include <config.h>
+ #endif
+ 
++#include <sys/sysmacros.h>
+ #include <sys/types.h>
+ #include <sys/select.h>
+ #include <sys/stat.h>
 diff --git a/utils/mountd/mountd.c b/utils/mountd/mountd.c
 index 61699e6..829f803 100644
 --- a/utils/mountd/mountd.c
@@ -2728,7 +3227,7 @@ index 527377f..3ae0dbb 100644
  		return NULL;
  	}
 diff --git a/utils/nfsd/nfsd.c b/utils/nfsd/nfsd.c
-index 20f4b79..2b38249 100644
+index 20f4b79..f973203 100644
 --- a/utils/nfsd/nfsd.c
 +++ b/utils/nfsd/nfsd.c
 @@ -34,8 +34,6 @@
@@ -2814,7 +3313,7 @@ index 20f4b79..2b38249 100644
  		switch(c) {
  		case 'd':
  			xlog_config(D_ALL, 1);
-@@ -179,13 +186,17 @@ main(int argc, char **argv)
+@@ -179,14 +186,19 @@ main(int argc, char **argv)
  			case 4:
  				if (*p == '.') {
  					int i = atoi(p+1);
@@ -2834,9 +3333,11 @@ index 20f4b79..2b38249 100644
 +					minorvers = 0;
 +					minorversset = minormask;
  				}
++				/* FALLTHRU */
  			case 3:
  			case 2:
-@@ -201,14 +212,14 @@ main(int argc, char **argv)
+ 				NFSCTL_VERUNSET(versbits, c);
+@@ -201,14 +213,15 @@ main(int argc, char **argv)
  			case 4:
  				if (*p == '.') {
  					int i = atoi(p+1);
@@ -2853,10 +3354,11 @@ index 20f4b79..2b38249 100644
 +					NFSCTL_MINORSET(minorvers, i);
 +				} else
 +					minorvers = minorversset = minormask;
++				/* FALLTHRU */
  			case 3:
  			case 2:
  				NFSCTL_VERSET(versbits, c);
-@@ -222,9 +233,15 @@ main(int argc, char **argv)
+@@ -222,9 +235,15 @@ main(int argc, char **argv)
  			xlog_syslog(1);
  			xlog_stderr(0);
  			break;
@@ -2872,7 +3374,15 @@ index 20f4b79..2b38249 100644
  		case 'U':
  			NFSCTL_UDPUNSET(protobits);
  			break;
-@@ -372,9 +389,9 @@ usage(const char *prog)
+@@ -244,6 +263,7 @@ main(int argc, char **argv)
+ 			break;
+ 		default:
+ 			fprintf(stderr, "Invalid argument: '%c'\n", c);
++			/* FALLTHRU */
+ 		case 'h':
+ 			usage(progname);
+ 		}
+@@ -372,9 +392,9 @@ usage(const char *prog)
  {
  	fprintf(stderr, "Usage:\n"
  		"%s [-d|--debug] [-H hostname] [-p|-P|--port port]\n"
@@ -2931,10 +3441,37 @@ index 8901fb6..d83ef86 100644
  .B \-L " or " \-\-lease-time seconds
  Set the lease-time used for NFSv4.  This corresponds to how often
 diff --git a/utils/nfsd/nfssvc.c b/utils/nfsd/nfssvc.c
-index 07f6ff1..e8609c1 100644
+index 07f6ff1..fc36792 100644
 --- a/utils/nfsd/nfssvc.c
 +++ b/utils/nfsd/nfssvc.c
-@@ -330,36 +330,78 @@ nfssvc_set_time(const char *type, const int seconds)
+@@ -112,7 +112,7 @@ static int
+ nfssvc_setfds(const struct addrinfo *hints, const char *node, const char *port)
+ {
+ 	int fd, on = 1, fac = L_ERROR;
+-	int sockfd = -1, rc = 0;
++	int sockfd = -1, rc = 0, bounded = 0;
+ 	struct addrinfo *addrhead = NULL, *addr;
+ 	char *proto, *family;
+ 
+@@ -233,6 +233,8 @@ nfssvc_setfds(const struct addrinfo *hints, const char *node, const char *port)
+ 			rc = errno;
+ 			goto error;
+ 		}
++		bounded++;
++
+ 		close(fd);
+ 		close(sockfd);
+ 		sockfd = fd = -1;
+@@ -245,7 +247,7 @@ error:
+ 		close(sockfd);
+ 	if (addrhead)
+ 		freeaddrinfo(addrhead);
+-	return rc;
++	return (bounded ? 0 : rc);
+ }
+ 
+ int
+@@ -330,36 +332,78 @@ nfssvc_set_time(const char *type, const int seconds)
  }
  
  void
@@ -3040,7 +3577,7 @@ index cd5a7e8..39ebf37 100644
  int	nfssvc_threads(int nrservs);
 +void	nfssvc_get_minormask(unsigned int *mask);
 diff --git a/utils/nfsdcltrack/nfsdcltrack.c b/utils/nfsdcltrack/nfsdcltrack.c
-index 7af9efb..124c923 100644
+index 7af9efb..0baaa3e 100644
 --- a/utils/nfsdcltrack/nfsdcltrack.c
 +++ b/utils/nfsdcltrack/nfsdcltrack.c
 @@ -56,8 +56,6 @@
@@ -3061,6 +3598,14 @@ index 7af9efb..124c923 100644
  	xlog_from_conffile("nfsdcltrack");
  	val = conf_get_str("nfsdcltrack", "storagedir");
  	if (val)
+@@ -581,6 +579,7 @@ main(int argc, char **argv)
+ 		switch (arg) {
+ 		case 'd':
+ 			xlog_config(D_ALL, 1);
++			break;
+ 		case 'f':
+ 			xlog_syslog(0);
+ 			xlog_stderr(1);
 diff --git a/utils/nfsdcltrack/sqlite.c b/utils/nfsdcltrack/sqlite.c
 index 54cd748..1552eba 100644
 --- a/utils/nfsdcltrack/sqlite.c
