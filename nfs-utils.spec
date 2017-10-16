@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.1.1
-Release: 7.rc6%{?dist}
+Release: 8.rc6%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -138,7 +138,7 @@ install -m 644 %{SOURCE2} $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/nfs
 
 mkdir -p $RPM_BUILD_ROOT/run/sysconfig
 mkdir -p $RPM_BUILD_ROOT/usr/lib/systemd/scripts
-install -m 755 %{SOURCE3} $RPM_BUILD_ROOT/usr/libexec/nfs-utils/nfs-utils_env.sh
+install -m 755 %{SOURCE3} $RPM_BUILD_ROOT/%{_libexecdir}/nfs-utils/nfs-utils_env.sh
 install -m 644 %{SOURCE4} $RPM_BUILD_ROOT%{_sysconfdir}/modprobe.d/lockd.conf
 install -m 644 %{SOURCE5} $RPM_BUILD_ROOT%{_sysconfdir}/gssproxy
 
@@ -249,6 +249,7 @@ fi
 %dir %{_sharedstatedir}/nfs/v4recovery
 %dir %{_sharedstatedir}/nfs/rpc_pipefs
 %dir %{_sharedstatedir}/nfs
+%dir %{_libexecdir}/nfs-utils
 %dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd
 %dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd/sm
 %dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd/sm.bak
@@ -280,7 +281,7 @@ fi
 %{_sbindir}/blkmapd
 %{_mandir}/*/*
 %{_pkgdir}/*/*
-%attr(755,root,root) /usr/libexec/nfs-utils/nfs-utils_env.sh
+%attr(755,root,root) %{_libexecdir}/nfs-utils/nfs-utils_env.sh
 
 %attr(4755,root,root)	/sbin/mount.nfs
 /sbin/mount.nfs4
@@ -288,6 +289,9 @@ fi
 /sbin/umount.nfs4
 
 %changelog
+* Mon Oct 16 2017 Steve Dickson <steved@redhat.com> 2.1.1-8.rc6
+- Own the /usr/libexec/nfs-utils dir (bz 1484300)
+
 * Thu Oct  5 2017 Steve Dickson <steved@redhat.com> 2.1.1-7.rc6
 - Updated to the latest RC releease: nfs-utils-2-1-2-rc6
 
