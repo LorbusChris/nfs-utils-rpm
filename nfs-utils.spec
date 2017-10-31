@@ -1,8 +1,8 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://linux-nfs.org/
-Version: 2.1.1
-Release: 8.rc6%{?dist}
+Version: 2.2.1
+Release: 0%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -15,15 +15,11 @@ Source3: nfs-utils_env.sh
 Source4: lockd.conf
 Source5: 24-nfs-server.conf
 
-Patch001: nfs-utils-2.1.2-rc6.patch
-
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
-Patch102: nfs-utils-1.2.3-sm-notify-res_init.patch
-Patch103: nfs-utils-1.2.5-idmap-errmsg.patch
-Patch104: nfs-utils-2.1.1-nfs-config.patch
+Patch102: nfs-utils-1.2.5-idmap-errmsg.patch
+Patch103: nfs-utils-2.1.1-nfs-config.patch
 
-Group: System Environment/Daemons
 Provides: exportfs    = %{epoch}:%{version}-%{release}
 Provides: nfsstat     = %{epoch}:%{version}-%{release}
 Provides: showmount   = %{epoch}:%{version}-%{release}
@@ -44,12 +40,11 @@ License: MIT and GPLv2 and GPLv2+ and BSD
 Requires: rpcbind, sed, gawk, sh-utils, fileutils, textutils, grep
 Requires: kmod, keyutils, quota
 BuildRequires: libevent-devel libcap-devel
-BuildRequires: libnfsidmap-devel libtirpc-devel libblkid-devel
+BuildRequires: libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, gcc, device-mapper-devel
 BuildRequires: krb5-devel, tcp_wrappers-devel, libmount-devel
 BuildRequires: sqlite-devel
-BuildRequires: python3-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): util-linux
 Requires: libnfsidmap libevent
@@ -58,6 +53,29 @@ Requires(post): systemd-units
 Requires(preun): systemd-units
 Requires(postun): systemd-units
 Requires: gssproxy => 0.7.0-3
+
+%package -n libnfsidmap
+Summary: NFSv4 User and Group ID Mapping Library
+Provides: libnfsidmap%{?_isa} = %{epoch}:%{version}-%{release}
+License: BSD
+BuildRequires: pkgconfig, openldap-devel
+BuildRequires: automake, libtool
+Requires(postun): /sbin/ldconfig
+Requires(pre): /sbin/ldconfig
+Requires: openldap
+
+%description -n libnfsidmap
+Library that handles mapping between names and ids for NFSv4.
+
+%package -n libnfsidmap-devel
+Summary: Development files for the libnfsidmap library
+Requires: libnfsidmap%{?_isa} = %{epoch}:%{version}-%{release}
+Requires: pkgconfig
+
+%description -n libnfsidmap-devel
+This package includes header files and libraries necessary for
+developing programs which use the libnfsidmap library.
+
 
 %description
 The nfs-utils package provides a daemon for the kernel NFS server and
@@ -72,15 +90,7 @@ clients which are mounted on that host.
 This package also contains the mount.nfs and umount.nfs program.
 
 %prep
-%setup -q
-
-%patch001 -p1
-
-%patch100 -p1
-%patch101 -p1
-%patch102 -p1
-%patch103 -p1
-%patch104 -p1
+%autosetup -p1
 
 # Remove .orig files
 find . -name "*.orig" | xargs rm -f
@@ -110,16 +120,17 @@ CFLAGS="`echo $RPM_OPT_FLAGS $ARCH_OPT_FLAGS $PIE -D_FILE_OFFSET_BITS=64`"
     --enable-ipv6 \
 	--with-statdpath=%{_statdpath} \
 	--enable-libmount-mount \
-	--with-systemd
+	--with-systemd \
+	--with-pluginpath=%{_libdir}/libnfsidmap
 
-make %{?_smp_mflags} all
+%make_build all
 
 %install
 %define _pkgdir %{_prefix}/lib/systemd
 
 rm -rf $RPM_BUILD_ROOT/*
 
-mkdir -p $RPM_BUILD_ROOT%/sbin
+mkdir -p $RPM_BUILD_ROOT/sbin
 mkdir -p $RPM_BUILD_ROOT%{_sbindir}
 mkdir -p $RPM_BUILD_ROOT%{_libexecdir}/nfs-utils/
 mkdir -p $RPM_BUILD_ROOT%{_pkgdir}/system
@@ -129,10 +140,13 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/request-key.d
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/modprobe.d/
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/gssproxy
-make DESTDIR=$RPM_BUILD_ROOT install
+
+%make_install
+
 install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT%{_sbindir}
 install -m 644 utils/mount/nfsmount.conf  $RPM_BUILD_ROOT%{_sysconfdir}
 install -m 644 nfs.conf  $RPM_BUILD_ROOT%{_sysconfdir}
+install -m 644 support/nfsidmap/idmapd.conf $RPM_BUILD_ROOT%{_sysconfdir}
 install -m 644 %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/request-key.d
 install -m 644 %{SOURCE2} $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/nfs
 
@@ -141,6 +155,9 @@ mkdir -p $RPM_BUILD_ROOT/usr/lib/systemd/scripts
 install -m 755 %{SOURCE3} $RPM_BUILD_ROOT/%{_libexecdir}/nfs-utils/nfs-utils_env.sh
 install -m 644 %{SOURCE4} $RPM_BUILD_ROOT%{_sysconfdir}/modprobe.d/lockd.conf
 install -m 644 %{SOURCE5} $RPM_BUILD_ROOT%{_sysconfdir}/gssproxy
+
+rm -rf $RPM_BUILD_ROOT%{_libdir}/*.{a,la}
+rm -rf $RPM_BUILD_ROOT%{_libdir}/libnfsidmap/*.{a,la}
 
 #
 # For backwards compatablity 
@@ -161,8 +178,6 @@ mkdir -p $RPM_BUILD_ROOT%{_sharedstatedir}/nfs/statd/sm.bak
 mkdir -p $RPM_BUILD_ROOT%{_sharedstatedir}/nfs/v4recovery
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/exports.d
 
-%clean
-rm -rf $RPM_BUILD_ROOT/*
 
 %pre
 # move files so the running service will have this applied as well
@@ -242,7 +257,6 @@ fi
 /bin/systemctl try-restart gssproxy
 
 %files
-%defattr(-,root,root,-)
 %config(noreplace) /etc/sysconfig/nfs
 %config(noreplace) /etc/nfsmount.conf
 %dir %{_sysconfdir}/exports.d
@@ -288,7 +302,23 @@ fi
 /sbin/umount.nfs
 /sbin/umount.nfs4
 
+%files -n libnfsidmap
+%doc support/nfsidmap/AUTHORS support/nfsidmap/README support/nfsidmap/COPYING
+%config(noreplace) %{_sysconfdir}/idmapd.conf
+%{_libdir}/libnfsidmap.so.*
+%{_libdir}/libnfsidmap/*.so
+%{_mandir}/man3/nfs4_uid_to_name.*
+%{_mandir}/man5/idmapd.conf.*
+
+%files -n libnfsidmap-devel
+%{_libdir}/pkgconfig/libnfsidmap.pc
+%{_includedir}/nfsidmap.h
+%{_libdir}/libnfsidmap.so
+
 %changelog
+* Mon Oct 30 2017 Steve Dickson <steved@redhat.com> 2.2.1-0
+- Updated to latest upstream release: nfs-utils-2-2-1
+
 * Mon Oct 16 2017 Steve Dickson <steved@redhat.com> 2.1.1-8.rc6
 - Own the /usr/libexec/nfs-utils dir (bz 1484300)
 
