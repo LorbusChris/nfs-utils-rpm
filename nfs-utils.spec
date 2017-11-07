@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.2.1
-Release: 1.rc1%{?dist}
+Release: 1.rc1%{?dist}.1
 Epoch: 1
 
 # group all 32bit related archs
@@ -40,7 +40,7 @@ Provides: sm-notify   = %{epoch}:%{version}-%{release}
 Provides: start-statd = %{epoch}:%{version}-%{release}
 
 License: MIT and GPLv2 and GPLv2+ and BSD
-Requires: rpcbind, sed, gawk, sh-utils, fileutils, textutils, grep
+Requires: rpcbind, sed, gawk, grep
 Requires: kmod, keyutils, quota
 BuildRequires: libevent-devel libcap-devel
 BuildRequires: libtirpc-devel libblkid-devel
@@ -52,6 +52,8 @@ BuildRequires: python3-devel
 BuildRequires: systemd
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): util-linux
+Requires(pre): coreutils
+Requires(preun): coreutils
 Requires: libnfsidmap libevent
 Requires: libtirpc >= 0.2.3-1 libblkid libcap libmount
 %{?systemd_requires}
@@ -319,6 +321,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Tue Nov 07 2017 Igor Gnatenko <ignatenkobrain@fedoraproject.org> - 1:2.2.1-1.rc1.1
+- Remove old crufty coreutils requires
+
 * Mon Nov  6 2017 Steve Dickson <steved@redhat.com> 2.2.1-1.rc1
 - Restore ABI compat with pre-merge libnfsidmap (bz 1509063)
 - Add a build-time dependency on python3-devel
