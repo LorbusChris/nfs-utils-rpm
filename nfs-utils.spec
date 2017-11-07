@@ -48,6 +48,7 @@ BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, gcc, device-mapper-devel
 BuildRequires: krb5-devel, tcp_wrappers-devel, libmount-devel
 BuildRequires: sqlite-devel
+BuildRequires: python3-devel
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): util-linux
 Requires: libnfsidmap libevent
@@ -321,6 +322,7 @@ fi
 %changelog
 * Mon Nov  6 2017 Steve Dickson <steved@redhat.com> 2.2.1-1.rc1
 - Restore ABI compat with pre-merge libnfsidmap (bz 1509063)
+- Add a build-time dependency on python3-devel
 
 * Thu Nov  2 2017 Steve Dickson <steved@redhat.com> 2.2.1-0.rc1
 -Updated to latest upstream RC release: nfs-utils-2-2-2-rc1
