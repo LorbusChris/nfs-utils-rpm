@@ -49,13 +49,12 @@ BuildRequires: automake, libtool, gcc, device-mapper-devel
 BuildRequires: krb5-devel, tcp_wrappers-devel, libmount-devel
 BuildRequires: sqlite-devel
 BuildRequires: python3-devel
+BuildRequires: systemd
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): util-linux
 Requires: libnfsidmap libevent
 Requires: libtirpc >= 0.2.3-1 libblkid libcap libmount
-Requires(post): systemd-units
-Requires(preun): systemd-units
-Requires(postun): systemd-units
+%{?systemd_requires}
 Requires: gssproxy => 0.7.0-3
 
 %package -n libnfsidmap
