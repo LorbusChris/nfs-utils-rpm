@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.2.1
-Release: 1.rc1%{?dist}.1
+Release: 1.rc2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -15,8 +15,7 @@ Source3: nfs-utils_env.sh
 Source4: lockd.conf
 Source5: 24-nfs-server.conf
 
-Patch001: nfs-utils-2.2.2-rc1.patch
-Patch002: nfs-utils-2.2.1-nfsidmap-abi.patch
+Patch001: nfs-utils-2.2.2-rc2.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -321,6 +320,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Fri Dec 15 2017 Steve Dickson <steved@redhat.com> 2.2.1-1.rc2
+- Updated to latest upstream RC release: nfs-utils-2-2-2-rc2
+
 * Tue Nov 07 2017 Igor Gnatenko <ignatenkobrain@fedoraproject.org> - 1:2.2.1-1.rc1.1
 - Remove old crufty coreutils requires
 
@@ -329,7 +331,7 @@ fi
 - Add a build-time dependency on python3-devel
 
 * Thu Nov  2 2017 Steve Dickson <steved@redhat.com> 2.2.1-0.rc1
--Updated to latest upstream RC release: nfs-utils-2-2-2-rc1
+- Updated to latest upstream RC release: nfs-utils-2-2-2-rc1
 
 * Mon Oct 30 2017 Steve Dickson <steved@redhat.com> 2.2.1-0
 - Updated to latest upstream release: nfs-utils-2-2-1

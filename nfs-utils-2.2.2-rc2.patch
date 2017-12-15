@@ -1,0 +1,713 @@
+diff --git a/.gitignore b/.gitignore
+index 540737d..f17db9c 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -35,6 +35,7 @@ support/include/stamp-h1
+ *.o
+ *.lo
+ *.la
++*.pc
+ .libs
+ lib*.a
+ test-driver
+diff --git a/configure.ac b/configure.ac
+index 9b2a502..c7651f2 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -441,6 +441,8 @@ if test -n "$path_plugins" ; then
+ fi
+ AM_CONDITIONAL(PATH_PLUGINS, test -n "$path_plugins")
+ 
++AC_SUBST(AM_CPPFLAGS, "$AM_CPPFLAGS -I../../support/nfsidmap")
++
+ dnl Check for IPv6 support
+ AC_IPV6
+ 
+diff --git a/support/include/conffile.h b/support/include/conffile.h
+index d4cb6b4..ad20067 100644
+--- a/support/include/conffile.h
++++ b/support/include/conffile.h
+@@ -60,7 +60,7 @@ extern _Bool    conf_get_bool(const char *, const char *, _Bool);
+ extern char    *conf_get_str(const char *, const char *);
+ extern char    *conf_get_str_with_def(const char *, const char *, char *);
+ extern char    *conf_get_section(const char *, const char *, const char *);
+-extern void     conf_init(const char *);
++extern void     conf_init_file(const char *);
+ extern void     conf_cleanup(void);
+ extern int      conf_match_num(const char *, const char *, int);
+ extern int      conf_remove(int, const char *, const char *);
+diff --git a/support/nfs/Makefile.am b/support/nfs/Makefile.am
+index c037c46..e573b69 100644
+--- a/support/nfs/Makefile.am
++++ b/support/nfs/Makefile.am
+@@ -7,10 +7,10 @@ libnfs_la_SOURCES = exports.c rmtab.c xio.c rpcmisc.c rpcdispatch.c \
+ 		   xcommon.c wildmat.c mydaemon.c \
+ 		   rpc_socket.c getport.c \
+ 		   svc_socket.c cacheio.c closeall.c nfs_mntent.c \
+-		   svc_create.c atomicio.c strlcpy.c strlcat.c
++		   svc_create.c atomicio.c strlcat.c
+ libnfs_la_LIBADD = libnfsconf.la
+ 
+-libnfsconf_la_SOURCES = conffile.c xlog.c
++libnfsconf_la_SOURCES = conffile.c xlog.c strlcpy.c
+ 
+ MAINTAINERCLEANFILES = Makefile.in
+ 
+diff --git a/support/nfs/conffile.c b/support/nfs/conffile.c
+index 9c5ed8e..dce8148 100644
+--- a/support/nfs/conffile.c
++++ b/support/nfs/conffile.c
+@@ -53,11 +53,9 @@
+ #include "conffile.h"
+ #include "xlog.h"
+ 
+-#pragma GCC visibility push(hidden)
+-
+ static void conf_load_defaults(void);
+-static char * conf_load(const char *path);
+-static int conf_set(int , const char *, const char *, const char *, 
++static char * conf_readfile(const char *path);
++int conf_set(int , const char *, const char *, const char *, 
+ 	const char *, int , int );
+ static void conf_parse(int trans, char *buf, 
+ 	char **section, char **subsection);
+@@ -79,12 +77,10 @@ TAILQ_HEAD (conf_trans_head, conf_trans) conf_trans_queue;
+ /*
+  * Radix-64 Encoding.
+  */
+-#if 0
+-static const uint8_t bin2asc[]
++const uint8_t bin2asc[]
+   = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+-#endif
+ 
+-static const uint8_t asc2bin[] =
++const uint8_t asc2bin[] =
+ {
+   255, 255, 255, 255, 255, 255, 255, 255,
+   255, 255, 255, 255, 255, 255, 255, 255,
+@@ -370,7 +366,7 @@ conf_parse_line(int trans, char *line, int lineno, char **section, char **subsec
+ 
+ 	if (strcasecmp(line, "include")==0) {
+ 		/* load and parse subordinate config files */
+-		char * subconf = conf_load(val);
++		char * subconf = conf_readfile(val);
+ 		if (subconf == NULL) {
+ 			xlog_warn("config file error: line %d: "
+ 			"error loading included config", lineno);
+@@ -435,7 +431,7 @@ conf_load_defaults(void)
+ }
+ 
+ static char *
+-conf_load(const char *path)
++conf_readfile(const char *path)
+ {
+ 	struct stat sb;
+ 	if ((stat (path, &sb) == 0) || (errno != ENOENT)) {
+@@ -444,19 +440,19 @@ conf_load(const char *path)
+ 		int fd = open (path, O_RDONLY, 0);
+ 
+ 		if (fd == -1) {
+-			xlog_warn("conf_reinit: open (\"%s\", O_RDONLY) failed", path);
++			xlog_warn("conf_readfile: open (\"%s\", O_RDONLY) failed", path);
+ 			return NULL;
+ 		}
+ 
+ 		new_conf_addr = malloc(sz+1);
+ 		if (!new_conf_addr) {
+-			xlog_warn("conf_reinit: malloc (%lu) failed", (unsigned long)sz);
++			xlog_warn("conf_readfile: malloc (%lu) failed", (unsigned long)sz);
+ 			goto fail;
+ 		}
+ 
+ 		/* XXX I assume short reads won't happen here.  */
+ 		if (read (fd, new_conf_addr, sz) != (int)sz) {
+-			xlog_warn("conf_reinit: read (%d, %p, %lu) failed",
++			xlog_warn("conf_readfile: read (%d, %p, %lu) failed",
+ 				fd, new_conf_addr, (unsigned long)sz);
+ 			goto fail;
+ 		}
+@@ -493,15 +489,19 @@ static void conf_free_bindings(void)
+ 	}
+ }
+ 
++#pragma GCC visibility push(hidden)
++/* these are the real fuinctions, hidden from being exported
++ * by libnfsidmap ABI compatability */
++
+ /* Open the config file and map it into our address space, then parse it.  */
+ static void
+-conf_reinit(const char *conf_file)
++conf_load_file(const char *conf_file)
+ {
+ 	int trans;
+ 	char * conf_data;
+ 
+ 	trans = conf_begin();
+-	conf_data = conf_load(conf_file);
++	conf_data = conf_readfile(conf_file);
+ 
+ 	if (conf_data == NULL)
+ 		return;
+@@ -526,7 +526,7 @@ conf_reinit(const char *conf_file)
+ }
+ 
+ void
+-conf_init (const char *conf_file)
++conf_init_file(const char *conf_file)
+ {
+ 	unsigned int i;
+ 
+@@ -536,7 +536,7 @@ conf_init (const char *conf_file)
+ 	TAILQ_INIT (&conf_trans_queue);
+ 
+ 	if (conf_file == NULL) conf_file=NFS_CONFFILE;
+-	conf_reinit(conf_file);
++	conf_load_file(conf_file);
+ }
+ 
+ /* 
+@@ -560,6 +560,8 @@ conf_cleanup(void)
+ 	TAILQ_INIT(&conf_trans_queue);
+ }
+ 
++#pragma GCC visibility pop
++
+ /*
+  * Return the numeric value denoted by TAG in section SECTION or DEF
+  * if that tag does not exist.
+@@ -575,6 +577,7 @@ conf_get_num(const char *section, const char *tag, int def)
+ 	return def;
+ }
+ 
++#pragma GCC visibility push(hidden)
+ /*
+  * Return the Boolean value denoted by TAG in section SECTION, or DEF
+  * if that tags does not exist.
+@@ -606,6 +609,7 @@ conf_get_bool(const char *section, const char *tag, _Bool def)
+ 		return false;
+ 	return def;
+ }
++#pragma GCC visibility pop
+ 
+ /* Validate X according to the range denoted by TAG in section SECTION.  */
+ int
+@@ -651,6 +655,7 @@ conf_get_str_with_def(const char *section, const char *tag, char *def)
+ 	return result;
+ }
+ 
++#pragma GCC visibility push(hidden)
+ /*
+  * Find a section that may or may not have an argument
+  */
+@@ -682,6 +687,7 @@ retry:
+ 	}
+ 	return 0;
+ }
++#pragma GCC visibility pop
+ 
+ /*
+  * Build a list of string values out of the comma separated value denoted by
+@@ -876,7 +882,7 @@ conf_trans_node(int transaction, enum conf_op op)
+ }
+ 
+ /* Queue a set operation.  */
+-static int
++int
+ conf_set(int transaction, const char *section, const char *arg,
+ 	const char *tag, const char *value, int override, int is_default)
+ {
+diff --git a/support/nfsidmap/libnfsidmap.c b/support/nfsidmap/libnfsidmap.c
+index 931387a..40011ee 100644
+--- a/support/nfsidmap/libnfsidmap.c
++++ b/support/nfsidmap/libnfsidmap.c
+@@ -89,6 +89,10 @@ gid_t nobody_gid = (gid_t)-1;
+ #define NFS4DNSTXTREC "_nfsv4idmapdomain"
+ #endif
+ 
++/* DEPRECATED these are for ABI compatibility only */
++char * conf_path = PATH_IDMAPDCONF;
++void conf_reinit(void);
++void conf_init(void);
+ 
+ /* Default logging fuction */
+ static void default_logger(const char *fmt, ...)
+@@ -342,7 +346,6 @@ int nfs4_init_name_mapping(char *conffile)
+ 	char *nobody_user, *nobody_group;
+ 	char *nostrip;
+ 	char *reformatgroup;
+-	char *conf_path;
+ 
+ 	/* XXX: need to be able to reload configurations... */
+ 	if (nfs4_plugins) /* already succesfully initialized */
+@@ -351,7 +354,7 @@ int nfs4_init_name_mapping(char *conffile)
+ 		conf_path = conffile;
+ 	else
+ 		conf_path = PATH_IDMAPDCONF;
+-	conf_init(conf_path);
++	conf_init_file(conf_path);
+ 	default_domain = conf_get_str("General", "Domain");
+ 	if (default_domain == NULL) {
+ 		dflt = 1;
+@@ -710,3 +713,13 @@ void nfs4_set_debug(int dbg_level, void (*logger)(const char *, ...))
+ 	idmap_verbosity = dbg_level;
+ }
+ 
++void conf_reinit(void)
++{
++	conf_init_file(conf_path);
++}
++
++void conf_init(void)
++{
++	conf_init_file(conf_path);
++}
++
+diff --git a/support/nfsidmap/libnfsidmap.pc b/support/nfsidmap/libnfsidmap.pc
+deleted file mode 100644
+index 5ec28ae..0000000
+--- a/support/nfsidmap/libnfsidmap.pc
++++ /dev/null
+@@ -1,11 +0,0 @@
+-prefix=/usr
+-exec_prefix=${prefix}
+-libdir=${exec_prefix}/lib64
+-includedir=${prefix}/include
+-
+-Name: libnfsidmap
+-Description: Library that handles mapping between names and ids for NFSv4.
+-Requires:
+-Version: 2.1.1
+-Libs: -L${exec_prefix}/lib64 -lnfsidmap
+-Cflags: -I${prefix}/include
+diff --git a/systemd/rpc-pipefs-generator.c b/systemd/rpc-pipefs-generator.c
+index 59eee87..6e1d69c 100644
+--- a/systemd/rpc-pipefs-generator.c
++++ b/systemd/rpc-pipefs-generator.c
+@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
+ 		exit(1);
+ 	}
+ 
+-	conf_init(NFS_CONFFILE);
++	conf_init_file(NFS_CONFFILE);
+ 	s = conf_get_str("general", "pipefs-directory");
+ 	if (!s)
+ 		exit(0);
+diff --git a/tools/mountstats/mountstats.man b/tools/mountstats/mountstats.man
+index a55130b..ff2f8ba 100644
+--- a/tools/mountstats/mountstats.man
++++ b/tools/mountstats/mountstats.man
+@@ -19,6 +19,8 @@ mountstats \- Displays various NFS client per-mount statistics
+ .RB [ \-r | \-\-rpc ]
+ |
+ .RB  [ \-R | \-\-raw ]
++|
++.RB  [ \-x | \-\-xprt ]
+ ]
+ .RI [ mountpoint ] ...
+ .P
+@@ -110,6 +112,9 @@ Display only the raw statistics.  This is intended for use with the
+ and
+ .BR \-S | \-\-since
+ options.
++.TP
++.B \-x, \-\-xprt
++Display only the transport statistics
+ .SS Options specific to the iostat sub-command
+ .IP "\fIinterval\fP"
+ Specifies the amount of time in seconds between each report.  The first report contains statistics for the time since each file system was mounted.  Each subsequent report contains statistics collected during the interval since the previous report.  This may not be used with the
+diff --git a/tools/mountstats/mountstats.py b/tools/mountstats/mountstats.py
+old mode 100644
+new mode 100755
+index 29b5f5a..440aa72
+--- a/tools/mountstats/mountstats.py
++++ b/tools/mountstats/mountstats.py
+@@ -87,7 +87,10 @@ XprtUdpCounters = [
+     'rpcreceives',
+     'badxids',
+     'inflightsends',
+-    'backlogutil'
++    'backlogutil',
++    'maxslots',
++    'sendutil',
++    'pendutil'
+ ]
+ 
+ XprtTcpCounters = [
+@@ -100,7 +103,10 @@ XprtTcpCounters = [
+     'rpcreceives',
+     'badxids',
+     'inflightsends',
+-    'backlogutil'
++    'backlogutil',
++    'maxslots',
++    'sendutil',
++    'pendutil'
+ ]
+ 
+ XprtRdmaCounters = [
+@@ -112,6 +118,7 @@ XprtRdmaCounters = [
+     'rpcsends',
+     'rpcreceives',
+     'badxids',
++    'inflightsends',
+     'backlogutil',
+     'read_chunks',
+     'write_chunks',
+@@ -122,7 +129,14 @@ XprtRdmaCounters = [
+     'fixup',
+     'hardway',
+     'failed_marshal',
+-    'bad_reply'
++    'bad_reply',
++    'nomsg_calls',
++    'recovered_mrs',
++    'orphaned_mrs',
++    'allocated_mrs',
++    'local_invalidates',
++    'empty_sendctx_q',
++    'reply_waits_for_send',
+ ]
+ 
+ Nfsv3ops = [
+@@ -273,17 +287,20 @@ class DeviceData:
+             if words[1] == 'udp':
+                 i = 2
+                 for key in XprtUdpCounters:
+-                    self.__rpc_data[key] = int(words[i])
++                    if i < len(words):
++                        self.__rpc_data[key] = int(words[i])
+                     i += 1
+             elif words[1] == 'tcp':
+                 i = 2
+                 for key in XprtTcpCounters:
+-                    self.__rpc_data[key] = int(words[i])
++                    if i < len(words):
++                        self.__rpc_data[key] = int(words[i])
+                     i += 1
+             elif words[1] == 'rdma':
+                 i = 2
+                 for key in XprtRdmaCounters:
+-                    self.__rpc_data[key] = int(words[i])
++                    if i < len(words):
++                        self.__rpc_data[key] = int(words[i])
+                     i += 1
+         elif words[0] == 'per-op':
+             self.__rpc_data['per-op'] = words
+@@ -361,12 +378,11 @@ class DeviceData:
+     def display_stats_header(self):
+         print('Stats for %s mounted on %s:' % \
+             (self.__nfs_data['export'], self.__nfs_data['mountpoint']))
++        print()
+ 
+     def display_nfs_options(self):
+         """Pretty-print the NFS options
+         """
+-        self.display_stats_header()
+-
+         print('  NFS mount options: %s' % ','.join(self.__nfs_data['mountoptions']))
+         print('  NFS server capabilities: %s' % ','.join(self.__nfs_data['servercapabilities']))
+         if 'nfsv4flags' in self.__nfs_data:
+@@ -432,7 +448,6 @@ class DeviceData:
+         """
+         sends = self.__rpc_data['rpcsends']
+ 
+-        print()
+         print('RPC statistics:')
+ 
+         print('  %d RPC requests sent, %d RPC replies received (%d XIDs not found)' % \
+@@ -655,6 +670,83 @@ class DeviceData:
+         self.__print_rpc_op_stats('WRITE', sample_time)
+         sys.stdout.flush()
+ 
++    def display_xprt_stats(self):
++        """Pretty-print the xprt statistics
++        """
++        if self.__rpc_data['protocol'] == 'udp':
++            print('\tTransport protocol: udp')
++            print('\tSource port: %d' % self.__rpc_data['port'])
++            print('\tBind count: %d' % self.__rpc_data['bind_count'])
++            print('\tRPC requests: %d' % self.__rpc_data['rpcsends'])
++            print('\tRPC replies: %d' % self.__rpc_data['rpcreceives'])
++            print('\tXIDs not found: %d' % self.__rpc_data['badxids'])
++            print('\tMax slots: %d' % self.__rpc_data['maxslots'])
++            if self.__rpc_data['rpcsends'] != 0:
++                print('\tAvg backlog length: %d' % \
++                    (float(self.__rpc_data['backlogutil']) / self.__rpc_data['rpcsends']))
++                print('\tAvg send queue length: %d' % \
++                    (float(self.__rpc_data['sendutil']) / self.__rpc_data['rpcsends']))
++                print('\tAvg pending queue length: %d' % \
++                    (float(self.__rpc_data['pendutil']) / self.__rpc_data['rpcsends']))
++        elif self.__rpc_data['protocol'] == 'tcp':
++            print('\tTransport protocol: tcp')
++            print('\tSource port: %d' % self.__rpc_data['port'])
++            print('\tBind count: %d' % self.__rpc_data['bind_count'])
++            print('\tConnect count: %d' % self.__rpc_data['connect_count'])
++            print('\tConnect time: %d seconds' % self.__rpc_data['connect_time'])
++            print('\tIdle time: %d seconds' % self.__rpc_data['idle_time'])
++            print('\tRPC requests: %d' % self.__rpc_data['rpcsends'])
++            print('\tRPC replies: %d' % self.__rpc_data['rpcreceives'])
++            print('\tXIDs not found: %d' % self.__rpc_data['badxids'])
++            print('\tMax slots: %d' % self.__rpc_data['maxslots'])
++            if self.__rpc_data['rpcsends'] != 0:
++                print('\tAvg backlog length: %d' % \
++                    (float(self.__rpc_data['backlogutil']) / self.__rpc_data['rpcsends']))
++                print('\tAvg send queue length: %d' % \
++                    (float(self.__rpc_data['sendutil']) / self.__rpc_data['rpcsends']))
++                print('\tAvg pending queue length: %d' % \
++                    (float(self.__rpc_data['pendutil']) / self.__rpc_data['rpcsends']))
++        elif self.__rpc_data['protocol'] == 'rdma':
++            print('\tTransport protocol: rdma')
++            print('\tConnect count: %d' % self.__rpc_data['connect_count'])
++            print('\tConnect time: %d seconds' % self.__rpc_data['connect_time'])
++            print('\tIdle time: %d seconds' % self.__rpc_data['idle_time'])
++            sends = self.__rpc_data['rpcsends']
++            print('\tRPC requests: %d' % self.__rpc_data['rpcsends'])
++            print('\tRPC replies: %d' % self.__rpc_data['rpcreceives'])
++            print('\tXIDs not found: %d' % self.__rpc_data['badxids'])
++            if self.__rpc_data['rpcsends'] != 0:
++                print('\tAvg backlog length: %d' % \
++                    (float(self.__rpc_data['backlogutil']) / self.__rpc_data['rpcsends']))
++            print('\tRead chunks: %d' % self.__rpc_data['read_chunks'])
++            print('\tWrite chunks: %d' % self.__rpc_data['write_chunks'])
++            print('\tReply chunks: %d' % self.__rpc_data['reply_chunks'])
++            print('\tRegistered: %d bytes' % self.__rpc_data['total_rdma_req'])
++            print('\tRDMA received: %d bytes' % self.__rpc_data['total_rdma_rep'])
++            print('\tTotal pull-up: %d bytes' % self.__rpc_data['pullup'])
++            print('\tTotal fix-up: %d bytes' % self.__rpc_data['fixup'])
++            print('\tHardway allocations: %d bytes' % self.__rpc_data['hardway'])
++            print('\tFailed marshals: %d' % self.__rpc_data['failed_marshal'])
++            print('\tBad replies: %d' % self.__rpc_data['bad_reply'])
++
++            """ Counters not present in all kernels """
++            if 'nomsg_calls' in self.__rpc_data:
++                print('\tRDMA_NOMSG calls: %d' % self.__rpc_data['nomsg_calls'])
++            if 'allocated_mrs' in self.__rpc_data:
++                print('\tAllocated MRs: %d' % self.__rpc_data['allocated_mrs'])
++            if 'recovered_mrs' in self.__rpc_data:
++                print('\tRecovered MRs: %d' % self.__rpc_data['recovered_mrs'])
++            if 'orphaned_mrs' in self.__rpc_data:
++                print('\tOrphaned MRs: %d' % self.__rpc_data['orphaned_mrs'])
++            if 'local_invalidates' in self.__rpc_data:
++                print('\tLocal Invalidates needed: %d' % self.__rpc_data['local_invalidates'])
++            if 'empty_sendctx_q' in self.__rpc_data:
++                print('\tEmpty sendctx queue count: %d' % self.__rpc_data['empty_sendctx_q'])
++            if 'reply_waits_for_send' in self.__rpc_data:
++                print('\tReplies that waited for Send completion: %d' % self.__rpc_data['reply_waits_for_send'])
++        else:
++            raise Exception('Unknown RPC transport protocol %s' % self.__rpc_data['protocol'])
++
+ def parse_stats_file(f):
+     """pop the contents of a mountstats file into a dictionary,
+     keyed by mount point.  each value object is a list of the
+@@ -681,8 +773,9 @@ def parse_stats_file(f):
+ 
+     return ms_dict
+ 
+-def print_mountstats(stats, nfs_only, rpc_only, raw):
++def print_mountstats(stats, nfs_only, rpc_only, raw, xprt_only):
+     if nfs_only:
++       stats.display_stats_header()
+        stats.display_nfs_options()
+        stats.display_nfs_events()
+        stats.display_nfs_bytes()
+@@ -692,7 +785,11 @@ def print_mountstats(stats, nfs_only, rpc_only, raw):
+        stats.display_rpc_op_stats()
+     elif raw:
+        stats.display_raw_stats()
++    elif xprt_only:
++       stats.display_stats_header()
++       stats.display_xprt_stats()
+     else:
++       stats.display_stats_header()
+        stats.display_nfs_options()
+        stats.display_nfs_bytes()
+        stats.display_rpc_generic_stats()
+@@ -734,14 +831,14 @@ def mountstats_command(args):
+         stats = DeviceData()
+         stats.parse_stats(mountstats[mp])
+         if not args.since:
+-            print_mountstats(stats, args.nfs_only, args.rpc_only, args.raw)
++            print_mountstats(stats, args.nfs_only, args.rpc_only, args.raw, args.xprt_only)
+         elif args.since and mp not in old_mountstats:
+-            print_mountstats(stats, args.nfs_only, args.rpc_only, args.raw)
++            print_mountstats(stats, args.nfs_only, args.rpc_only, args.raw, args.xprt_only)
+         else:
+             old_stats = DeviceData()
+             old_stats.parse_stats(old_mountstats[mp])
+             diff_stats = stats.compare_iostats(old_stats)
+-            print_mountstats(diff_stats, args.nfs_only, args.rpc_only, args.raw)
++            print_mountstats(diff_stats, args.nfs_only, args.rpc_only, args.raw, args.xprt_only)
+ 
+     args.infile.close()
+     if args.since:
+@@ -953,6 +1050,8 @@ def main():
+         help='Display only the RPC statistics')
+     group.add_argument('-R', '--raw', action='store_true',
+         help='Display only the raw statistics')
++    group.add_argument('-x', '--xprt', action='store_true', dest='xprt_only',
++        help='Display only the xprt statistics')
+     # The mountpoints argument cannot be moved into the common_parser because
+     # it will screw up the parsing of the iostat arguments (interval and count)
+     mountstats_parser.add_argument('mountpoints', nargs='*', metavar='mountpoint',
+diff --git a/utils/blkmapd/device-discovery.c b/utils/blkmapd/device-discovery.c
+index 29bafb2..cae8c8d 100644
+--- a/utils/blkmapd/device-discovery.c
++++ b/utils/blkmapd/device-discovery.c
+@@ -456,7 +456,7 @@ int main(int argc, char **argv)
+ 	char *xrpcpipe_dir = NULL;
+ 
+ 	strncpy(rpcpipe_dir, RPCPIPE_DIR, sizeof(rpcpipe_dir));
+-	conf_init(NFS_CONFFILE);
++	conf_init_file(NFS_CONFFILE);
+ 	CONF_SAVE(xrpcpipe_dir, conf_get_str("general", "pipefs-directory"));
+ 	if (xrpcpipe_dir != NULL)
+ 		strlcpy(rpcpipe_dir, xrpcpipe_dir, sizeof(rpcpipe_dir));
+diff --git a/utils/exportfs/exportfs.c b/utils/exportfs/exportfs.c
+index beed1b3..448f195 100644
+--- a/utils/exportfs/exportfs.c
++++ b/utils/exportfs/exportfs.c
+@@ -107,7 +107,7 @@ main(int argc, char **argv)
+ 	xlog_stderr(1);
+ 	xlog_syslog(0);
+ 
+-	conf_init(NFS_CONFFILE);
++	conf_init_file(NFS_CONFFILE);
+ 	xlog_from_conffile("exportfs");
+ 
+ 	/* NOTE: following uses "mountd" section of nfs.conf !!!! */
+diff --git a/utils/gssd/gssd.c b/utils/gssd/gssd.c
+index 053a223..2c14e5f 100644
+--- a/utils/gssd/gssd.c
++++ b/utils/gssd/gssd.c
+@@ -842,7 +842,7 @@ read_gss_conf(void)
+ {
+ 	char *s;
+ 
+-	conf_init(NFS_CONFFILE);
++	conf_init_file(NFS_CONFFILE);
+ 	use_memcache = conf_get_bool("gssd", "use-memcache", use_memcache);
+ 	root_uses_machine_creds = conf_get_bool("gssd", "use-machine-creds",
+ 						root_uses_machine_creds);
+diff --git a/utils/idmapd/idmapd.c b/utils/idmapd/idmapd.c
+index 4cbe148..2b9ecea 100644
+--- a/utils/idmapd/idmapd.c
++++ b/utils/idmapd/idmapd.c
+@@ -252,7 +252,7 @@ main(int argc, char **argv)
+ 			warn("Skipping configuration file \"%s\"", conf_path);
+ 			conf_path = NULL;
+ 		} else {
+-			conf_init(conf_path);
++			conf_init_file(conf_path);
+ 			verbose = conf_get_num("General", "Verbosity", 0);
+ 			cache_entry_expiration = conf_get_num("General",
+ 					"Cache-Expiration", DEFAULT_IDMAP_CACHE_EXPIRY);
+@@ -264,13 +264,13 @@ main(int argc, char **argv)
+ 		}
+ 	} else {
+ 		conf_path = NFS_CONFFILE;
+-		conf_init(conf_path);
++		conf_init_file(conf_path);
+ 		CONF_SAVE(xpipefsdir, conf_get_str("General", "Pipefs-Directory"));
+ 		if (xpipefsdir != NULL)
+ 			strlcpy(pipefsdir, xpipefsdir, sizeof(pipefsdir));
+ 
+ 		conf_path = _PATH_IDMAPDCONF;
+-		conf_init(conf_path);
++		conf_init_file(conf_path);
+ 		verbose = conf_get_num("General", "Verbosity", 0);
+ 		cache_entry_expiration = conf_get_num("General",
+ 				"cache-expiration", DEFAULT_IDMAP_CACHE_EXPIRY);
+diff --git a/utils/mount/mount_config.h b/utils/mount/mount_config.h
+index e4f8511..7cc72fc 100644
+--- a/utils/mount/mount_config.h
++++ b/utils/mount/mount_config.h
+@@ -32,7 +32,7 @@ static inline void mount_config_init(char *program)
+ 	/*
+ 	 * Read the the default mount options
+ 	 */
+-	conf_init(MOUNTOPTS_CONFFILE);
++	conf_init_file(MOUNTOPTS_CONFFILE);
+ }
+ 
+ static inline char *mount_config_opts(char *spec,
+diff --git a/utils/mount/stropts.c b/utils/mount/stropts.c
+index 4401314..1217823 100644
+--- a/utils/mount/stropts.c
++++ b/utils/mount/stropts.c
+@@ -384,7 +384,9 @@ static int nfs_set_version(struct nfsmount_info *mi)
+  */
+ static int nfs_validate_options(struct nfsmount_info *mi)
+ {
+-	if (!nfs_parse_devname(mi->spec, &mi->hostname, NULL))
++	/* For remount, ignore mi->spec: the kernel will. */
++	if (!(mi->flags & MS_REMOUNT) &&
++	    !nfs_parse_devname(mi->spec, &mi->hostname, NULL))
+ 		return 0;
+ 
+ 	if (!nfs_nfs_proto_family(mi->options, &mi->family))
+diff --git a/utils/mountd/mountd.c b/utils/mountd/mountd.c
+index 829f803..4c68702 100644
+--- a/utils/mountd/mountd.c
++++ b/utils/mountd/mountd.c
+@@ -679,7 +679,7 @@ main(int argc, char **argv)
+ 	else
+ 		progname = argv[0];
+ 
+-	conf_init(NFS_CONFFILE);
++	conf_init_file(NFS_CONFFILE);
+ 	xlog_from_conffile("mountd");
+ 	manage_gids = conf_get_bool("mountd", "manage-gids", manage_gids);
+ 	descriptors = conf_get_num("mountd", "descriptors", descriptors);
+diff --git a/utils/nfsd/nfsd.c b/utils/nfsd/nfsd.c
+index f973203..f41a2de 100644
+--- a/utils/nfsd/nfsd.c
++++ b/utils/nfsd/nfsd.c
+@@ -80,7 +80,7 @@ main(int argc, char **argv)
+ 	xlog_syslog(0);
+ 	xlog_stderr(1);
+ 
+-	conf_init(NFS_CONFFILE); 
++	conf_init_file(NFS_CONFFILE); 
+ 	xlog_from_conffile("nfsd");
+ 	count = conf_get_num("nfsd", "threads", count);
+ 	grace = conf_get_num("nfsd", "grace-time", grace);
+diff --git a/utils/nfsdcltrack/nfsdcltrack.c b/utils/nfsdcltrack/nfsdcltrack.c
+index 7830cf4..76b06d2 100644
+--- a/utils/nfsdcltrack/nfsdcltrack.c
++++ b/utils/nfsdcltrack/nfsdcltrack.c
+@@ -564,7 +564,7 @@ main(int argc, char **argv)
+ 	xlog_syslog(1);
+ 	xlog_stderr(0);
+ 
+-	conf_init(NFS_CONFFILE); 
++	conf_init_file(NFS_CONFFILE); 
+ 	xlog_from_conffile("nfsdcltrack");
+ 	val = conf_get_str("nfsdcltrack", "storagedir");
+ 	if (val)
+diff --git a/utils/statd/sm-notify.c b/utils/statd/sm-notify.c
+index d961dc0..6d19ec1 100644
+--- a/utils/statd/sm-notify.c
++++ b/utils/statd/sm-notify.c
+@@ -494,7 +494,7 @@ main(int argc, char **argv)
+ 	else
+ 		progname = argv[0];
+ 
+-	conf_init(NFS_CONFFILE);
++	conf_init_file(NFS_CONFFILE);
+ 	xlog_from_conffile("sm-notify");
+ 	opt_max_retry = conf_get_num("sm-notify", "retry-time", opt_max_retry / 60) * 60;
+ 	opt_srcport = conf_get_str("sm-notify", "outgoing-port");
+diff --git a/utils/statd/statd.c b/utils/statd/statd.c
+index 1443715..197d853 100644
+--- a/utils/statd/statd.c
++++ b/utils/statd/statd.c
+@@ -273,7 +273,7 @@ int main (int argc, char **argv)
+ 	/* Set hostname */
+ 	MY_NAME = NULL;
+ 
+-	conf_init(NFS_CONFFILE);
++	conf_init_file(NFS_CONFFILE);
+ 	xlog_from_conffile("statd");
+ 	out_port = conf_get_num("statd", "outgoing-port", out_port);
+ 	port = conf_get_num("statd", "port", port);
