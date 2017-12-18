@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.2.1
-Release: 1.rc2%{?dist}
+Release: 2.rc2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -45,7 +45,7 @@ BuildRequires: libevent-devel libcap-devel
 BuildRequires: libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, gcc, device-mapper-devel
-BuildRequires: krb5-devel, tcp_wrappers-devel, libmount-devel
+BuildRequires: krb5-devel, libmount-devel
 BuildRequires: sqlite-devel
 BuildRequires: python3-devel
 BuildRequires: systemd
@@ -125,6 +125,7 @@ CFLAGS="`echo $RPM_OPT_FLAGS $ARCH_OPT_FLAGS $PIE -D_FILE_OFFSET_BITS=64`"
 	--with-statdpath=%{_statdpath} \
 	--enable-libmount-mount \
 	--with-systemd \
+	--without-tcp-wrappers \
 	--with-pluginpath=%{_libdir}/libnfsidmap
 
 %make_build all
@@ -320,6 +321,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Mon Dec 18 2017 Steve Dickson <steved@redhat.com> 2.2.1-2.rc2
+- Removed tcp_wrappers dependency (bz 1518769)
+
 * Fri Dec 15 2017 Steve Dickson <steved@redhat.com> 2.2.1-1.rc2
 - Updated to latest upstream RC release: nfs-utils-2-2-2-rc2
 
