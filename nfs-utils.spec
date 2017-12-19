@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.2.1
-Release: 2.rc2%{?dist}
+Release: 3.rc2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -321,6 +321,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Tue Dec 19 2017 Steve Dickson <steved@redhat.com> 2.2.1-3.rc2
+- Fix typo in nfs-utils_env.sh (bz 1516004)
+
 * Mon Dec 18 2017 Steve Dickson <steved@redhat.com> 2.2.1-2.rc2
 - Removed tcp_wrappers dependency (bz 1518769)
 
