@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.2.1
-Release: 3.rc2%{?dist}
+Release: 4.rc2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
