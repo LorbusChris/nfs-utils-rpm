@@ -240,9 +240,6 @@ fi
 %systemd_post nfs-config
 %systemd_post nfs-server
 
-# Make sure statd used the correct uid/gid.
-chown -R rpcuser:rpcuser /var/lib/nfs/statd
-
 %preun
 if [ $1 -eq 0 ]; then
 	%systemd_preun nfs-client.target
@@ -321,6 +318,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Wed Dec 20 2017 Steve Dickson <steved@redhat.com> 2.2.1-4.rc2
+- Removed unnecessary chown rpcuser in %post
+
 * Tue Dec 19 2017 Steve Dickson <steved@redhat.com> 2.2.1-3.rc2
 - Fix typo in nfs-utils_env.sh (bz 1516004)
 
