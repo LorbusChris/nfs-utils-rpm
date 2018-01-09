@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.1
-Release: 0%{?dist}
+Release: 1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -47,6 +47,7 @@ BuildRequires: krb5-devel, libmount-devel
 BuildRequires: sqlite-devel
 BuildRequires: python3-devel
 BuildRequires: systemd
+BuildRequires: rpcgen
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): util-linux
 Requires(pre): coreutils
@@ -317,6 +318,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Tue Jan  9 2018 Steve Dickson <steved@redhat.com> 2.3.1-1
+- Added rpcgen dependency (bz 1531540)
+
 * Wed Dec 20 2017 Steve Dickson <steved@redhat.com> 2.3.1-0
 - Updated to latest upstream release: 2.3.1
 - Removed unnecessary chown rpcuser in %post
