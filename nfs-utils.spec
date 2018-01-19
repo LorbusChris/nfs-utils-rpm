@@ -19,6 +19,7 @@ Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
 Patch102: nfs-utils-1.2.5-idmap-errmsg.patch
 Patch103: nfs-utils-2.1.1-nfs-config.patch
+Patch104: nfs-utils-2.3.1-systemd-gssproxy-restart.patch
 
 Provides: exportfs    = %{epoch}:%{version}-%{release}
 Provides: nfsstat     = %{epoch}:%{version}-%{release}
@@ -318,6 +319,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Fri Jan 19 2018 Steve Dickson <steved@redhat.com> 2.3.1-2
+- Restart gssproxy (if running) when the NFS server is started (bz 1527653)
+
 * Tue Jan  9 2018 Steve Dickson <steved@redhat.com> 2.3.1-1
 - Added rpcgen dependency (bz 1531540)
 
