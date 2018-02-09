@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.1
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -319,6 +319,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Fri Feb 09 2018 Igor Gnatenko <ignatenkobrain@fedoraproject.org> - 1:2.3.1-4
+- Escape macros in %%changelog
+
 * Thu Feb 08 2018 Fedora Release Engineering <releng@fedoraproject.org> - 1:2.3.1-3
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_28_Mass_Rebuild
 
@@ -330,7 +333,7 @@ fi
 
 * Wed Dec 20 2017 Steve Dickson <steved@redhat.com> 2.3.1-0
 - Updated to latest upstream release: 2.3.1
-- Removed unnecessary chown rpcuser in %post
+- Removed unnecessary chown rpcuser in %%post
 
 * Tue Dec 19 2017 Steve Dickson <steved@redhat.com> 2.2.1-3.rc2
 - Fix typo in nfs-utils_env.sh (bz 1516004)
