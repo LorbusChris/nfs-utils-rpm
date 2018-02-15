@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.1
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -319,6 +319,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Wed Feb 14 2018 Kevin Fenzi <kevin@scrye.com> - 1:2.3.1-5
+- Rebuild for new libevent
+
 * Fri Feb 09 2018 Igor Gnatenko <ignatenkobrain@fedoraproject.org> - 1:2.3.1-4
 - Escape macros in %%changelog
 
