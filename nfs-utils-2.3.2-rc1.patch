@@ -1,0 +1,6449 @@
+diff --git a/.gitignore b/.gitignore
+index f17db9c..692ab0e 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -72,6 +72,7 @@ tests/nsm_client/nlm_sm_inter_clnt.c
+ tests/nsm_client/nlm_sm_inter_svc.c
+ tests/nsm_client/nlm_sm_inter_xdr.c
+ utils/nfsidmap/nfsidmap
++utils/nfsref/nfsref
+ systemd/nfs-server-generator
+ systemd/rpc-pipefs-generator
+ systemd/nfs-config.service
+diff --git a/aclocal/libxml2.m4 b/aclocal/libxml2.m4
+new file mode 100644
+index 0000000..5c399b2
+--- /dev/null
++++ b/aclocal/libxml2.m4
+@@ -0,0 +1,15 @@
++dnl Checks for libxml2.so
++AC_DEFUN([AC_LIBXML2], [
++
++  if test "$enable_junction" = yes; then
++
++    dnl look for the library; do not add to LIBS if found
++    AC_CHECK_LIB([xml2], [xmlParseFile], [LIBXML2=-lxml2],
++                 [AC_MSG_ERROR([libxml2 not found.])])
++    AC_SUBST(LIBXML2)
++
++    dnl XXX should also check for presence of xml headers
++
++  fi
++
++])dnl
+diff --git a/configure.ac b/configure.ac
+index 672dd40..5a11636 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -180,6 +180,13 @@ else
+ 	enable_libmount=no
+ fi
+ 
++AC_ARG_ENABLE(junction,
++	[AC_HELP_STRING([--enable-junction],
++			[enable support for NFS junctions @<:@default=no@:>@])],
++	enable_junction=$enableval,
++	enable_junction=no)
++AM_CONDITIONAL(CONFIG_JUNCTION, [test "$enable_junction" = "yes" ])
++
+ AC_ARG_ENABLE(tirpc,
+ 	[AC_HELP_STRING([--disable-tirpc],
+ 			[disable use of TI-RPC library @<:@default=no@:>@])],
+@@ -244,6 +251,9 @@ AC_LIBTIRPC
+ dnl Check for -lcap
+ AC_LIBCAP
+ 
++dnl Check for -lxml2
++AC_LIBXML2
++
+ # Check whether user wants TCP wrappers support
+ AC_TCP_WRAPPERS
+ 
+@@ -298,8 +308,6 @@ AC_CHECK_FUNC([getservbyname], ,
+ 
+ AC_CHECK_LIB([crypt], [crypt], [LIBCRYPT="-lcrypt"])
+ 
+-AC_CHECK_LIB([dl], [dlclose], [LIBDL="-ldl"])
+-
+ if test "$enable_nfsv4" = yes; then
+   dnl check for libevent libraries and headers
+   AC_LIBEVENT
+@@ -362,7 +370,6 @@ AC_SUBST(LIBSOCKET)
+ AC_SUBST(LIBCRYPT)
+ AC_SUBST(LIBBSD)
+ AC_SUBST(LIBBLKID)
+-AC_SUBST(LIBDL)
+ 
+ if test "$enable_libmount" = yes; then
+    AC_CHECK_LIB(mount, mnt_context_do_mount, [LIBMOUNT="-lmount"], AC_MSG_ERROR([libmount needed]))
+@@ -441,7 +448,7 @@ if test -n "$path_plugins" ; then
+ fi
+ AM_CONDITIONAL(PATH_PLUGINS, test -n "$path_plugins")
+ 
+-AC_SUBST(AM_CPPFLAGS, "$AM_CPPFLAGS -I../../support/nfsidmap")
++AC_SUBST(AM_CPPFLAGS, "$AM_CPPFLAGS")
+ AC_DEFINE([HAVE_NFS4_SET_DEBUG], 1,
+           [Bundled lib always has the `nfs4_set_debug' function.])
+ 
+@@ -456,7 +463,7 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h libintl.h limits.h \
+                  stdlib.h string.h sys/file.h sys/ioctl.h sys/mount.h \
+                  sys/param.h sys/socket.h sys/time.h sys/vfs.h \
+                  syslog.h unistd.h com_err.h et/com_err.h \
+-                 ifaddrs.h nfs-plugin.h libio.h])
++                 ifaddrs.h])
+ 
+ dnl *************************************************************
+ dnl Checks for typedefs, structures, and compiler characteristics
+@@ -536,22 +543,46 @@ AC_SUBST(CXXFLAGS_FOR_BUILD)
+ AC_SUBST(CPPFLAGS_FOR_BUILD)
+ AC_SUBST(LDFLAGS_FOR_BUILD)
+ 
+-dnl *************************************************************
+-dnl Set up "global" CFLAGS
+-dnl *************************************************************
+-dnl Use architecture-specific compile flags
+-dnl (We use $host and not $build in case we are cross-compiling)
+-dnl *************************************************************
+-dnl Note: we no longer have arch specific compile flags, but 
+-dnl the stub is left here in case they are needed one day.
+-case $host in
+-  *)
+-    ARCHFLAGS="" ;;
+-esac
+-
+-my_am_cflags="-Wall -Wextra -Wstrict-prototypes $ARCHFLAGS -pipe"
+-
+-AC_SUBST([AM_CFLAGS], ["$my_am_cflags"])
++my_am_cflags="\
++ -pipe \
++ -Wall \
++ -Wextra \
++ -Werror=strict-prototypes \
++ -Werror=missing-prototypes \
++ -Werror=missing-declarations \
++ -Werror=format=2 \
++ -Werror=undef \
++ -Werror=missing-include-dirs \
++ -Werror=strict-aliasing=2 \
++ -Werror=init-self \
++ -Werror=implicit-function-declaration \
++ -Werror=return-type \
++ -Werror=switch \
++ -Werror=overflow \
++ -Werror=parentheses \
++ -Werror=aggregate-return \
++ -Werror=unused-result \
++ -fno-strict-aliasing \
++"
++
++AC_DEFUN([CHECK_CCSUPPORT], [
++  my_save_cflags="$CFLAGS"
++  CFLAGS=$1
++  AC_MSG_CHECKING([whether CC supports $1])
++  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
++    [AC_MSG_RESULT([yes])]
++    [$2+=$1],
++    [AC_MSG_RESULT([no])]
++  )
++  CFLAGS="$my_save_cflags"
++])
++
++CHECK_CCSUPPORT([-Werror=format-overflow=2], [flg1])
++CHECK_CCSUPPORT([-Werror=int-conversion], [flg2])
++CHECK_CCSUPPORT([-Werror=incompatible-pointer-types], [flg3])
++CHECK_CCSUPPORT([-Werror=misleading-indentation], [flg4])
++
++AC_SUBST([AM_CFLAGS], ["$my_am_cflags $flg1 $flg2 $flg3 $flg4"])
+ 
+ # Make sure that $ACLOCAL_FLAGS are used during a rebuild
+ AC_SUBST([ACLOCAL_AMFLAGS], ["-I $ac_macro_dir \$(ACLOCAL_FLAGS)"])
+@@ -572,6 +603,7 @@ AC_CONFIG_FILES([
+ 	support/include/sys/fs/Makefile
+ 	support/include/sys/Makefile
+ 	support/include/Makefile
++	support/junction/Makefile
+ 	support/misc/Makefile
+ 	support/nfs/Makefile
+ 	support/nsm/Makefile
+@@ -593,6 +625,7 @@ AC_CONFIG_FILES([
+ 	utils/mount/Makefile
+ 	utils/mountd/Makefile
+ 	utils/nfsd/Makefile
++	utils/nfsref/Makefile
+ 	utils/nfsstat/Makefile
+ 	utils/nfsidmap/Makefile
+ 	utils/showmount/Makefile
+diff --git a/support/Makefile.am b/support/Makefile.am
+index 8365d3b..c962d4d 100644
+--- a/support/Makefile.am
++++ b/support/Makefile.am
+@@ -6,6 +6,10 @@ if CONFIG_NFSV4
+ OPTDIRS += nfsidmap
+ endif
+ 
++if CONFIG_JUNCTION
++OPTDIRS += junction
++endif
++
+ SUBDIRS = export include misc nfs nsm $(OPTDIRS)
+ 
+ MAINTAINERCLEANFILES = Makefile.in
+diff --git a/support/export/Makefile.am b/support/export/Makefile.am
+index be3de69..13f7a49 100644
+--- a/support/export/Makefile.am
++++ b/support/export/Makefile.am
+@@ -35,7 +35,7 @@ $(GENFILES_CLNT): %_clnt.c: %.x $(RPCGEN)
+ 
+ $(GENFILES_XDR): %_xdr.c: %.x $(RPCGEN)
+ 	test -f $@ && rm -rf $@ || true
+-	$(RPCGEN) -c -o $@ $<
++	$(RPCGEN) -c -i 0 -o $@ $<
+ 
+ $(GENFILES_H): %.h: %.x $(RPCGEN)
+ 	test -f $@ && rm -rf $@ || true
+diff --git a/support/include/Makefile.am b/support/include/Makefile.am
+index 5c80c8b..599f500 100644
+--- a/support/include/Makefile.am
++++ b/support/include/Makefile.am
+@@ -6,6 +6,7 @@ noinst_HEADERS = \
+ 	cld.h \
+ 	exportfs.h \
+ 	ha-callout.h \
++	junction.h \
+ 	misc.h \
+ 	nfs_mntent.h \
+ 	nfs_paths.h \
+diff --git a/support/include/junction.h b/support/include/junction.h
+new file mode 100644
+index 0000000..7257d80
+--- /dev/null
++++ b/support/include/junction.h
+@@ -0,0 +1,167 @@
++/*
++ * @file support/include/junction.h
++ * @brief Declarations for libjunction.a
++ */
++
++/*
++ * Copyright 2010, 2018 Oracle.  All rights reserved.
++ *
++ * This file is part of nfs-utils.
++ *
++ * nfs-utils is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2.0 as
++ * published by the Free Software Foundation.
++ *
++ * nfs-utils is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License version 2.0 for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * version 2.0 along with nfs-utils.  If not, see:
++ *
++ *	http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
++ */
++
++#ifndef _NFS_JUNCTION_H_
++#define _NFS_JUNCTION_H_
++
++#include <stdint.h>
++
++/*
++ * The libjunction APIs use the status codes from the FedFS ADMIN
++ * protocol, which includes non-errno codes like FEDFS_ERR_NOTJUNCT.
++ */
++enum FedFsStatus {
++	FEDFS_OK = 0,
++	FEDFS_ERR_ACCESS = 1,
++	FEDFS_ERR_BADCHAR = 2,
++	FEDFS_ERR_BADNAME = 3,
++	FEDFS_ERR_NAMETOOLONG = 4,
++	FEDFS_ERR_LOOP = 5,
++	FEDFS_ERR_BADXDR = 6,
++	FEDFS_ERR_EXIST = 7,
++	FEDFS_ERR_INVAL = 8,
++	FEDFS_ERR_IO = 9,
++	FEDFS_ERR_NOSPC = 10,
++	FEDFS_ERR_NOTJUNCT = 11,
++	FEDFS_ERR_NOTLOCAL = 12,
++	FEDFS_ERR_PERM = 13,
++	FEDFS_ERR_ROFS = 14,
++	FEDFS_ERR_SVRFAULT = 15,
++	FEDFS_ERR_NOTSUPP = 16,
++	FEDFS_ERR_NSDB_ROUTE = 17,
++	FEDFS_ERR_NSDB_DOWN = 18,
++	FEDFS_ERR_NSDB_CONN = 19,
++	FEDFS_ERR_NSDB_AUTH = 20,
++	FEDFS_ERR_NSDB_LDAP = 21,
++	FEDFS_ERR_NSDB_LDAP_VAL = 22,
++	FEDFS_ERR_NSDB_NONCE = 23,
++	FEDFS_ERR_NSDB_NOFSN = 24,
++	FEDFS_ERR_NSDB_NOFSL = 25,
++	FEDFS_ERR_NSDB_RESPONSE = 26,
++	FEDFS_ERR_NSDB_FAULT = 27,
++	FEDFS_ERR_NSDB_PARAMS = 28,
++	FEDFS_ERR_NSDB_LDAP_REFERRAL = 29,
++	FEDFS_ERR_NSDB_LDAP_REFERRAL_VAL = 30,
++	FEDFS_ERR_NSDB_LDAP_REFERRAL_NOTFOLLOWED = 31,
++	FEDFS_ERR_NSDB_PARAMS_LDAP_REFERRAL = 32,
++	FEDFS_ERR_PATH_TYPE_UNSUPP = 33,
++	FEDFS_ERR_DELAY = 34,
++	FEDFS_ERR_NO_CACHE = 35,
++	FEDFS_ERR_UNKNOWN_CACHE = 36,
++	FEDFS_ERR_NO_CACHE_UPDATE = 37,
++};
++typedef enum FedFsStatus FedFsStatus;
++
++/**
++ * Contains NFS fileset location information
++ *
++ * Each of these represents one server:/rootpath pair.  The NFS
++ * implementation can coalesce multiple pairs into a single
++ * fs_location4 result if jfl_rootpath is the same across
++ * multiple servers.
++ *
++ * The nfl_server field can contain either one presentation format
++ * IP address or one DNS hostname.
++ *
++ * See Section 11.9 and 11.10 of RFC 5661 or section 4.2.2.3 and
++ * 4.2.2.4 of the NSDB protocol draft for details.
++ */
++
++struct nfs_fsloc {
++	struct nfs_fsloc	 *nfl_next;
++
++	char			 *nfl_hostname;
++	uint16_t		  nfl_hostport;
++	char			**nfl_rootpath;
++
++	struct {
++		_Bool		  nfl_varsub;
++	} nfl_flags;
++	int32_t			  nfl_currency;
++	int32_t			  nfl_validfor;
++
++	struct {
++		_Bool		  nfl_writable, nfl_going, nfl_split;
++	} nfl_genflags;
++	struct {
++		_Bool		  nfl_rdma;
++	} nfl_transflags;
++	struct {
++		uint8_t		  nfl_simul, nfl_handle, nfl_fileid;
++		uint8_t		  nfl_writever, nfl_change, nfl_readdir;
++		uint8_t		  nfl_readrank, nfl_writerank;
++		uint8_t		  nfl_readorder, nfl_writeorder;
++	} nfl_info;
++};
++
++
++/**
++ ** NFS location data management functions
++ **/
++
++void		  nfs_free_location(struct nfs_fsloc *location);
++void		  nfs_free_locations(struct nfs_fsloc *locations);
++struct nfs_fsloc *nfs_new_location(void);
++
++__attribute_malloc__
++char		**nfs_dup_string_array(char **array);
++void		  nfs_free_string_array(char **array);
++
++
++/**
++ ** NFS junction management functions
++ **/
++
++FedFsStatus	 nfs_delete_junction(const char *pathname);
++FedFsStatus	 nfs_add_junction(const char *pathname,
++				struct nfs_fsloc *locations);
++FedFsStatus	 nfs_get_locations(const char *pathname,
++				struct nfs_fsloc **locations);
++FedFsStatus	 nfs_is_prejunction(const char *pathname);
++FedFsStatus	 nfs_is_junction(const char *pathname);
++
++
++/**
++ ** Flush kernel NFS server's export cache
++ **/
++FedFsStatus	 junction_flush_exports_cache(void);
++
++/**
++ ** Pathname conversion helpers
++ **/
++void		 nsdb_free_string_array(char **strings);
++FedFsStatus	 nsdb_path_array_to_posix(char * const *path_array,
++				char **pathname);
++FedFsStatus	 nsdb_posix_to_path_array(const char *pathname,
++				char ***path_array);
++
++/**
++ ** Readability helpers
++ **/
++
++const char      *nsdb_display_fedfsstatus(const FedFsStatus status);
++void             nsdb_print_fedfsstatus(const FedFsStatus status);
++
++#endif	/* !_NFS_JUNCTION_H_ */
+diff --git a/support/include/sockaddr.h b/support/include/sockaddr.h
+index 446b537..eeebcdf 100644
+--- a/support/include/sockaddr.h
++++ b/support/include/sockaddr.h
+@@ -24,9 +24,7 @@
+ #include <config.h>
+ #endif
+ 
+-#ifdef HAVE_LIBIO_H
+-#include <libio.h>
+-#endif
++#include <stdio.h>
+ #include <stdlib.h>
+ #include <stdbool.h>
+ #include <sys/socket.h>
+diff --git a/support/junction/Makefile.am b/support/junction/Makefile.am
+new file mode 100644
+index 0000000..97e7426
+--- /dev/null
++++ b/support/junction/Makefile.am
+@@ -0,0 +1,34 @@
++##
++## @file support/junction/Makefile.am
++## @brief Process this file with automake to produce src/libjunction/Makefile.in
++##
++
++##
++## Copyright 2010, 2018 Oracle.  All rights reserved.
++##
++## This file is part of nfs-utils.
++##
++## nfs-utils is free software; you can redistribute it and/or modify
++## it under the terms of the GNU General Public License version 2.0 as
++## published by the Free Software Foundation.
++##
++## nfs-utils is distributed in the hope that it will be useful, but
++## WITHOUT ANY WARRANTY; without even the implied warranty of
++## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++## GNU General Public License version 2.0 for more details.
++##
++## You should have received a copy of the GNU General Public License
++## version 2.0 along with nfs-utils.  If not, see:
++##
++##      http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
++##
++
++noinst_HEADERS		= junction-internal.h
++
++noinst_LTLIBRARIES	= libjunction.la
++libjunction_la_SOURCES	= display.c export-cache.c junction.c \
++			  locations.c nfs.c path.c xml.c
++
++MAINTAINERCLEANFILES	= Makefile.in
++
++AM_CPPFLAGS		= -I. -I../include -I/usr/include/libxml2
+diff --git a/support/junction/display.c b/support/junction/display.c
+new file mode 100644
+index 0000000..e1e1af1
+--- /dev/null
++++ b/support/junction/display.c
+@@ -0,0 +1,139 @@
++/**
++ * @file support/junction/display.c
++ * @brief Shared display helper functions
++ */
++
++/*
++ * Copyright 2010, 2018 Oracle.  All rights reserved.
++ *
++ * This file is part of nfs-utils.
++ *
++ * nfs-utils is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2.0 as
++ * published by the Free Software Foundation.
++ *
++ * nfs-utils is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License version 2.0 for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * version 2.0 along with nfs-utils.  If not, see:
++ *
++ *	http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
++ */
++
++#include <stdbool.h>
++#include <stdint.h>
++#include <stdlib.h>
++#include <stdio.h>
++#include <string.h>
++
++#include "junction.h"
++
++/**
++ * Return human-readable equivalent of a FedFsStatus value
++ *
++ * @param status FedFsStatus code
++ * @return a static NUL-terminated C string
++ */
++const char *
++nsdb_display_fedfsstatus(const FedFsStatus status)
++{
++	switch (status) {
++	case FEDFS_OK:
++		return "FEDFS_OK";
++	case FEDFS_ERR_ACCESS:
++		return "FEDFS_ERR_ACCESS";
++	case FEDFS_ERR_BADCHAR:
++		return "FEDFS_ERR_BADCHAR";
++	case FEDFS_ERR_BADNAME:
++		return "FEDFS_ERR_BADNAME";
++	case FEDFS_ERR_NAMETOOLONG:
++		return "FEDFS_ERR_NAMETOOLONG";
++	case FEDFS_ERR_LOOP:
++		return "FEDFS_ERR_LOOP";
++	case FEDFS_ERR_BADXDR:
++		return "FEDFS_ERR_BADXDR";
++	case FEDFS_ERR_EXIST:
++		return "FEDFS_ERR_EXIST";
++	case FEDFS_ERR_INVAL:
++		return "FEDFS_ERR_INVAL";
++	case FEDFS_ERR_IO:
++		return "FEDFS_ERR_IO";
++	case FEDFS_ERR_NOSPC:
++		return "FEDFS_ERR_NOSPC";
++	case FEDFS_ERR_NOTJUNCT:
++		return "FEDFS_ERR_NOTJUNCT";
++	case FEDFS_ERR_NOTLOCAL:
++		return "FEDFS_ERR_NOTLOCAL";
++	case FEDFS_ERR_PERM:
++		return "FEDFS_ERR_PERM";
++	case FEDFS_ERR_ROFS:
++		return "FEDFS_ERR_ROFS";
++	case FEDFS_ERR_SVRFAULT:
++		return "FEDFS_ERR_SVRFAULT";
++	case FEDFS_ERR_NOTSUPP:
++		return "FEDFS_ERR_NOTSUPP";
++	case FEDFS_ERR_NSDB_ROUTE:
++		return "FEDFS_ERR_NSDB_ROUTE";
++	case FEDFS_ERR_NSDB_DOWN:
++		return "FEDFS_ERR_NSDB_DOWN";
++	case FEDFS_ERR_NSDB_CONN:
++		return "FEDFS_ERR_NSDB_CONN";
++	case FEDFS_ERR_NSDB_AUTH:
++		return "FEDFS_ERR_NSDB_AUTH";
++	case FEDFS_ERR_NSDB_LDAP:
++		return "FEDFS_ERR_NSDB_LDAP";
++	case FEDFS_ERR_NSDB_LDAP_VAL:
++		return "FEDFS_ERR_NSDB_LDAP_VAL";
++	case FEDFS_ERR_NSDB_NONCE:
++		return "FEDFS_ERR_NSDB_NONCE";
++	case FEDFS_ERR_NSDB_NOFSN:
++		return "FEDFS_ERR_NSDB_NOFSN";
++	case FEDFS_ERR_NSDB_NOFSL:
++		return "FEDFS_ERR_NSDB_NOFSL";
++	case FEDFS_ERR_NSDB_RESPONSE:
++		return "FEDFS_ERR_NSDB_RESPONSE";
++	case FEDFS_ERR_NSDB_FAULT:
++		return "FEDFS_ERR_NSDB_FAULT";
++	case FEDFS_ERR_NSDB_PARAMS:
++		return "FEDFS_ERR_NSDB_PARAMS";
++	case FEDFS_ERR_NSDB_LDAP_REFERRAL:
++		return "FEDFS_ERR_NSDB_LDAP_REFERRAL";
++	case FEDFS_ERR_NSDB_LDAP_REFERRAL_VAL:
++		return "FEDFS_ERR_NSDB_LDAP_REFERRAL_VAL";
++	case FEDFS_ERR_NSDB_PARAMS_LDAP_REFERRAL:
++		return "FEDFS_ERR_NSDB_PARAMS_LDAP_REFERRAL";
++	case FEDFS_ERR_PATH_TYPE_UNSUPP:
++		return "FEDFS_ERR_PATH_TYPE_UNSUPP";
++	case FEDFS_ERR_DELAY:
++		return "FEDFS_ERR_DELAY";
++	case FEDFS_ERR_NO_CACHE:
++		return "FEDFS_ERR_NO_CACHE";
++	case FEDFS_ERR_UNKNOWN_CACHE:
++		return "FEDFS_ERR_UNKNOWN_CACHE";
++	case FEDFS_ERR_NO_CACHE_UPDATE:
++		return "FEDFS_ERR_NO_CACHE_UPDATE";
++	default:
++		break;
++	}
++	return "an unrecognized error code";
++}
++
++/**
++ * Display human-readable FedFsStatus on stderr
++ *
++ * @param status FedFsStatus value to display
++ */
++void
++nsdb_print_fedfsstatus(const FedFsStatus status)
++{
++	if (status == FEDFS_OK) {
++		printf("Call completed successfully\n");
++		return;
++	}
++
++	fprintf(stderr, "Server returned %s\n",
++			nsdb_display_fedfsstatus(status));
++}
+diff --git a/support/junction/export-cache.c b/support/junction/export-cache.c
+new file mode 100644
+index 0000000..4e578c9
+--- /dev/null
++++ b/support/junction/export-cache.c
+@@ -0,0 +1,118 @@
++/**
++ * @file support/junction/export-cache.c
++ * @brief Try to flush NFSD's exports cache
++ */
++
++/*
++ * Copyright 2011, 2018 Oracle.  All rights reserved.
++ *
++ * This file is part of nfs-utils.
++ *
++ * nfs-utils is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2.0 as
++ * published by the Free Software Foundation.
++ *
++ * nfs-utils is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License version 2.0 for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * version 2.0 along with nfs-utils.  If not, see:
++ *
++ *	http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
++ */
++
++#include <sys/types.h>
++#include <sys/stat.h>
++
++#include <stdbool.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++#include <fcntl.h>
++#include <time.h>
++
++
++#include "junction.h"
++#include "xlog.h"
++
++/**
++ * Ordered list of proc files to poke when requesting an NFSD cache flush
++ */
++static const char *junction_proc_files[] = {
++	"/proc/net/rpc/auth.unix.ip/flush",
++	"/proc/net/rpc/auth.unix.gid/flush",
++	"/proc/net/rpc/nfsd.fh/flush",
++	"/proc/net/rpc/nfsd.export/flush",
++	NULL,
++};
++
++/**
++ * Write time into one file
++ *
++ * @param pathname NUL-terminated C string containing POSIX pathname of file to write
++ * @param flushtime NUL-terminated C string containing current time in seconds since the Epoch
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++junction_write_time(const char *pathname, const char *flushtime)
++{
++	FedFsStatus retval;
++	ssize_t len;
++	int fd;
++
++	fd = open(pathname, O_RDWR);
++	if (fd == -1) {
++		xlog(D_GENERAL, "%s: Failed to open %s: %m",
++			__func__, pathname);
++		/* If the proc files don't exist, no server
++		 * is running on this system */
++		return FEDFS_ERR_NO_CACHE_UPDATE;
++	}
++
++	len = write(fd, flushtime, strlen(flushtime));
++	if (len != (ssize_t)strlen(flushtime)) {
++		xlog(D_GENERAL, "%s: Failed to write %s: %m",
++			__func__, pathname);
++		/* If the proc files exist but the update failed,
++		 * we don't know the state of the cache */
++		retval = FEDFS_ERR_UNKNOWN_CACHE;
++	} else
++		/* Cache flush succeeded */
++		retval = FEDFS_OK;
++
++	(void)close(fd);
++	return retval;
++}
++
++/**
++ * Flush the kernel NFSD's exports cache
++ *
++ * @return a FedFsStatus code
++ */
++FedFsStatus
++junction_flush_exports_cache(void)
++{
++	FedFsStatus retval;
++	char flushtime[20];
++	unsigned int i;
++	time_t now;
++
++	xlog(D_CALL, "%s: Flushing NFSD caches...", __func__);
++
++	now = time(NULL);
++	if (now == -1) {
++		xlog(D_GENERAL, "%s: time(3) failed", __func__);
++		return FEDFS_ERR_SVRFAULT;
++	}
++	snprintf(flushtime, sizeof(flushtime), "%ld\n", now);
++
++	for (i = 0; junction_proc_files[i] != NULL; i++) {
++		retval = junction_write_time(junction_proc_files[i], flushtime);
++		if (retval != FEDFS_OK)
++			return retval;
++	}
++	return FEDFS_OK;
++}
+diff --git a/support/junction/junction-internal.h b/support/junction/junction-internal.h
+new file mode 100644
+index 0000000..3dff4cc
+--- /dev/null
++++ b/support/junction/junction-internal.h
+@@ -0,0 +1,121 @@
++/*
++ * @file support/junction/junction-internal.h
++ * @brief Internal declarations for libjunction.a
++ */
++
++/*
++ * Copyright 2011, 2018 Oracle.  All rights reserved.
++ *
++ * This file is part of nfs-utils.
++ *
++ * nfs-utils is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2.0 as
++ * published by the Free Software Foundation.
++ *
++ * nfs-utils is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License version 2.0 for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * version 2.0 along with nfs-utils.  If not, see:
++ *
++ *	http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
++ */
++
++#ifndef _FEDFS_JUNCTION_INTERNAL_H_
++#define _FEDFS_JUNCTION_INTERNAL_H_
++
++#include <libxml/tree.h>
++#include <libxml/xpath.h>
++
++/**
++ ** Names of extended attributes that store junction data
++ **/
++
++/**
++ * Name of extended attribute containing saved mode bits
++ */
++#define JUNCTION_XATTR_NAME_MODE	"trusted.junction.mode"
++
++/**
++ * Name of extended attribute containing NFS-related junction data
++ */
++#define JUNCTION_XATTR_NAME_NFS		"trusted.junction.nfs"
++
++
++/**
++ ** Names of XML elements and attributes that represent junction data
++ **/
++
++/**
++ * Tag name of root element of a junction XML document
++ */
++#define JUNCTION_XML_ROOT_TAG		(const xmlChar *)"junction"
++
++/**
++ * Tag name of fileset element of a junction XML document
++ */
++#define JUNCTION_XML_FILESET_TAG	(const xmlChar *)"fileset"
++
++/**
++ * Tag name of savedmode element of a junction XML document
++ */
++#define JUNCTION_XML_SAVEDMODE_TAG	(const xmlChar *)"savedmode"
++
++/**
++ * Name of mode bits attribute on a savedmode element
++ */
++#define JUNCTION_XML_MODEBITS_ATTR	(const xmlChar *)"bits"
++
++/**
++ ** Junction helper functions
++ **/
++
++FedFsStatus	 junction_open_path(const char *pathname, int *fd);
++FedFsStatus	 junction_is_directory(int fd, const char *path);
++FedFsStatus	 junction_is_sticky_bit_set(int fd, const char *path);
++FedFsStatus	 junction_set_sticky_bit(int fd, const char *path);
++FedFsStatus	 junction_is_xattr_present(int fd, const char *path,
++				const char *name);
++FedFsStatus	 junction_read_xattr(int fd, const char *path, const char *name,
++				char **contents);
++FedFsStatus	 junction_get_xattr(int fd, const char *path, const char *name,
++				void **contents, size_t *contentlen);
++FedFsStatus	 junction_set_xattr(int fd, const char *path, const char *name,
++			const void *contents, const size_t contentlen);
++FedFsStatus	 junction_remove_xattr(int fd, const char *pathname,
++			const char *name);
++FedFsStatus	 junction_get_mode(const char *pathname, mode_t *mode);
++FedFsStatus	 junction_save_mode(const char *pathname);
++FedFsStatus	 junction_restore_mode(const char *pathname);
++
++
++/**
++ ** XML helper functions
++ **/
++
++_Bool		 junction_xml_is_empty(const xmlChar *content);
++_Bool		 junction_xml_match_node_name(xmlNodePtr node,
++			const xmlChar *name);
++xmlNodePtr	 junction_xml_find_child_by_name(xmlNodePtr parent,
++			const xmlChar *name);
++_Bool		 junction_xml_get_bool_attribute(xmlNodePtr node,
++			const xmlChar *attrname, _Bool *value);
++void		 junction_xml_set_bool_attribute(xmlNodePtr node,
++			const xmlChar *attrname, _Bool value);
++_Bool		 junction_xml_get_u8_attribute(xmlNodePtr node,
++			const xmlChar *attrname, uint8_t *value);
++_Bool		 junction_xml_get_int_attribute(xmlNodePtr node,
++			const xmlChar *attrname, int *value);
++void		 junction_xml_set_int_attribute(xmlNodePtr node,
++			const xmlChar *attrname, int value);
++_Bool		 junction_xml_get_int_content(xmlNodePtr node, int *value);
++xmlNodePtr	 junction_xml_set_int_content(xmlNodePtr parent,
++			const xmlChar *name, int value);
++FedFsStatus	 junction_xml_parse(const char *pathname, const char *name,
++			xmlDocPtr *doc);
++FedFsStatus	 junction_xml_write(const char *pathname, const char *name,
++			xmlDocPtr doc);
++
++#endif	/* !_FEDFS_JUNCTION_INTERNAL_H_ */
+diff --git a/support/junction/junction.c b/support/junction/junction.c
+new file mode 100644
+index 0000000..ab6caa6
+--- /dev/null
++++ b/support/junction/junction.c
+@@ -0,0 +1,494 @@
++/**
++ * @file support/junction/junction.c
++ * @brief Common utilities for managing junctions on the local file system
++ */
++
++/*
++ * Copyright 2010, 2018 Oracle.  All rights reserved.
++ *
++ * This file is part of nfs-utils.
++ *
++ * nfs-utils is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2.0 as
++ * published by the Free Software Foundation.
++ *
++ * nfs-utils is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License version 2.0 for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * version 2.0 along with nfs-utils.  If not, see:
++ *
++ *	http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
++ */
++
++#include <sys/types.h>
++#include <sys/stat.h>
++
++#include <stdbool.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++#include <fcntl.h>
++#include <wchar.h>
++#include <memory.h>
++#include <signal.h>
++#include <errno.h>
++#include <dirent.h>
++
++#include <sys/xattr.h>
++
++#include "junction.h"
++#include "junction-internal.h"
++#include "xlog.h"
++
++/**
++ * Open a file system object
++ *
++ * @param pathname NUL-terminated C string containing pathname of an object
++ * @param fd OUT: a file descriptor number is filled in
++ * @return a FedFsStatus code
++ */
++FedFsStatus
++junction_open_path(const char *pathname, int *fd)
++{
++	int tmp;
++
++	if (pathname == NULL || fd == NULL)
++		return FEDFS_ERR_INVAL;
++
++	tmp = open(pathname, O_DIRECTORY);
++	if (tmp == -1) {
++		switch (errno) {
++		case EPERM:
++			return FEDFS_ERR_ACCESS;
++		case EACCES:
++			return FEDFS_ERR_PERM;
++		default:
++			xlog(D_GENERAL, "%s: Failed to open path %s: %m",
++				__func__, pathname);
++			return FEDFS_ERR_INVAL;
++		}
++	}
++
++	*fd = tmp;
++	return FEDFS_OK;
++}
++
++/**
++ * Predicate: is object a directory?
++ *
++ * @param fd an open file descriptor
++ * @param path NUL-terminated C string containing pathname of a directory
++ * @return a FedFsStatus code
++ */
++FedFsStatus
++junction_is_directory(int fd, const char *path)
++{
++	struct stat stb;
++
++	if (fstat(fd, &stb) == -1) {
++		xlog(D_GENERAL, "%s: failed to stat %s: %m",
++				__func__, path);
++		return FEDFS_ERR_ACCESS;
++	}
++
++	if (!S_ISDIR(stb.st_mode)) {
++		xlog(D_CALL, "%s: %s is not a directory",
++				__func__, path);
++		return FEDFS_ERR_INVAL;
++	}
++
++	xlog(D_CALL, "%s: %s is a directory", __func__, path);
++	return FEDFS_OK;
++}
++
++/**
++ * Predicate: is a directory's sticky bit set?
++ *
++ * @param fd an open file descriptor
++ * @param path NUL-terminated C string containing pathname of a directory
++ * @return a FedFsStatus code
++ */
++FedFsStatus
++junction_is_sticky_bit_set(int fd, const char *path)
++{
++	struct stat stb;
++
++	if (fstat(fd, &stb) == -1) {
++		xlog(D_GENERAL, "%s: failed to stat %s: %m",
++				__func__, path);
++		return FEDFS_ERR_ACCESS;
++	}
++
++	if (stb.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH)) {
++		xlog(D_CALL, "%s: execute bit set on %s",
++				__func__, path);
++		return FEDFS_ERR_NOTJUNCT;
++	}
++
++	if (!(stb.st_mode & S_ISVTX)) {
++		xlog(D_CALL, "%s: sticky bit not set on %s",
++				__func__, path);
++		return FEDFS_ERR_NOTJUNCT;
++	}
++
++	xlog(D_CALL, "%s: sticky bit is set on %s", __func__, path);
++	return FEDFS_OK;
++}
++
++/**
++ * Set just a directory's sticky bit
++ *
++ * @param fd an open file descriptor
++ * @param path NUL-terminated C string containing pathname of a directory
++ * @return a FedFsStatus code
++ */
++FedFsStatus
++junction_set_sticky_bit(int fd, const char *path)
++{
++	struct stat stb;
++
++	if (fstat(fd, &stb) == -1) {
++		xlog(D_GENERAL, "%s: failed to stat %s: %m",
++			__func__, path);
++		return FEDFS_ERR_ACCESS;
++	}
++
++	stb.st_mode &= (unsigned int)~ALLPERMS;
++	stb.st_mode |= S_ISVTX;
++
++	if (fchmod(fd, stb.st_mode) == -1) {
++		xlog(D_GENERAL, "%s: failed to set sticky bit on %s: %m",
++			__func__, path);
++		return FEDFS_ERR_ROFS;
++	}
++
++	xlog(D_CALL, "%s: set sticky bit on %s", __func__, path);
++	return FEDFS_OK;
++}
++
++/**
++ * Predicate: does a directory have an xattr named "name"?
++ *
++ * @param fd an open file descriptor
++ * @param path NUL-terminated C string containing pathname of a directory
++ * @param name NUL-terminated C string containing name of xattr to check
++ * @return a FedFsStatus code
++ *
++ * @note Access to trusted attributes requires CAP_SYS_ADMIN.
++ */
++FedFsStatus
++junction_is_xattr_present(int fd, const char *path, const char *name)
++{
++	ssize_t rc;
++
++	/*
++	 * Do not assume the total number of extended attributes
++	 * this object may have.
++	 */
++	rc = fgetxattr(fd, name, NULL, 0);
++	if (rc == -1) {
++		switch (errno) {
++		case EPERM:
++			xlog(D_CALL, "%s: no access to xattr %s on %s",
++				__func__, name, path);
++			return FEDFS_ERR_PERM;
++		case ENODATA:
++			xlog(D_CALL, "%s: no xattr %s present on %s",
++				__func__, name, path);
++			return FEDFS_ERR_NOTJUNCT;
++		default:
++			xlog(D_CALL, "%s: xattr %s not found on %s: %m",
++				__func__, name, path);
++			return FEDFS_ERR_IO;
++		}
++	}
++
++	xlog(D_CALL, "%s: xattr %s found on %s",
++			__func__, name, path);
++	return FEDFS_OK;
++}
++
++/**
++ * Read the contents of xattr "name"
++ *
++ * @param fd an open file descriptor
++ * @param path NUL-terminated C string containing pathname of a directory
++ * @param name NUL-terminated C string containing name of xattr to retrieve
++ * @param contents OUT: NUL-terminated C string containing contents of xattr
++ * @return a FedFsStatus code
++ *
++ * If junction_read_xattr() returns FEDFS_OK, the caller must free "*contents"
++ * with free(3).
++ *
++ * @note Access to trusted attributes requires CAP_SYS_ADMIN.
++ */
++FedFsStatus
++junction_read_xattr(int fd, const char *path, const char *name, char **contents)
++{
++	char *xattrbuf = NULL;
++	ssize_t len;
++
++	len = fgetxattr(fd, name, xattrbuf, 0);
++	if (len < 0) {
++		xlog(D_GENERAL, "%s: failed to get size of xattr %s on %s: %m",
++			__func__, name, path);
++		return FEDFS_ERR_ACCESS;
++	}
++
++	xattrbuf = malloc((size_t)len + 1);
++	if (xattrbuf == NULL) {
++		xlog(D_GENERAL, "%s: failed to get buffer for xattr %s on %s",
++			__func__, name, path);
++		return FEDFS_ERR_SVRFAULT;
++	}
++
++	if (fgetxattr(fd, name, xattrbuf, (size_t)len) == -1) {
++		xlog(D_GENERAL, "%s: failed to get xattr %s on %s: %m",
++			__func__, name, path);
++		free(xattrbuf);
++		return FEDFS_ERR_ACCESS;
++	}
++	xattrbuf[len] = '\0';
++
++	xlog(D_CALL, "%s: read xattr %s from path %s",
++			__func__, name, path);
++	*contents = xattrbuf;
++	return FEDFS_OK;
++}
++
++/**
++ * Retrieve the contents of xattr "name"
++ *
++ * @param fd an open file descriptor
++ * @param path NUL-terminated C string containing pathname of a directory
++ * @param name NUL-terminated C string containing name of xattr to retrieve
++ * @param contents OUT: opaque byte array containing contents of xattr
++ * @param contentlen OUT: size of "contents"
++ * @return a FedFsStatus code
++ *
++ * If junction_get_xattr() returns FEDFS_OK, the caller must free "*contents"
++ * with free(3).
++ *
++ * @note Access to trusted attributes requires CAP_SYS_ADMIN.
++ */
++FedFsStatus
++junction_get_xattr(int fd, const char *path, const char *name, void **contents,
++		size_t *contentlen)
++{
++	void *xattrbuf = NULL;
++	ssize_t len;
++
++	len = fgetxattr(fd, name, xattrbuf, 0);
++	if (len < 0) {
++		xlog(D_GENERAL, "%s: failed to get size of xattr %s on %s: %m",
++			__func__, name, path);
++		return FEDFS_ERR_ACCESS;
++	}
++
++	xattrbuf = malloc((size_t)len);
++	if (xattrbuf == NULL) {
++		xlog(D_GENERAL, "%s: failed to get buffer for xattr %s on %s",
++			__func__, name, path);
++		return FEDFS_ERR_SVRFAULT;
++	}
++
++	if (fgetxattr(fd, name, xattrbuf, (size_t)len) == -1) {
++		xlog(D_GENERAL, "%s: failed to get xattr %s on %s: %m",
++			__func__, name, path);
++		free(xattrbuf);
++		return FEDFS_ERR_ACCESS;
++	}
++
++	xlog(D_CALL, "%s: read xattr %s from path %s",
++			__func__, name, path);
++	*contents = xattrbuf;
++	*contentlen = (size_t)len;
++	return FEDFS_OK;
++}
++
++/**
++ * Update the contents of an xattr
++ *
++ * @param fd an open file descriptor
++ * @param path NUL-terminated C string containing pathname of a directory
++ * @param name NUL-terminated C string containing name of xattr to set
++ * @param contents opaque byte array containing contents of xattr
++ * @param contentlen size of "contents"
++ * @return a FedFsStatus code
++ *
++ * The extended attribute is created if it does not exist.
++ * Its contents are replaced if it does.
++ *
++ * @note Access to trusted attributes requires CAP_SYS_ADMIN.
++ */
++FedFsStatus
++junction_set_xattr(int fd, const char *path, const char *name,
++			const void *contents, const size_t contentlen)
++{
++	/*
++	 * XXX: Eventually should distinguish among several errors:
++	 *	object isn't there, no root access, some other issue
++	 */
++	if (fsetxattr(fd, name, contents, contentlen, 0) == -1) {
++		xlog(D_GENERAL, "%s: Failed to set xattr %s on %s: %m",
++			__func__, name, path);
++		return FEDFS_ERR_IO;
++	}
++
++	xlog(D_CALL, "%s: Wrote xattr %s from path %s",
++			__func__, name, path);
++	return FEDFS_OK;
++}
++
++/**
++ * Remove one xattr
++ *
++ * @param fd an open file descriptor
++ * @param pathname NUL-terminated C string containing pathname of a directory
++ * @param name NUL-terminated C string containing name of xattr to set
++ * @return a FedFsStatus code
++ *
++ * @note Access to trusted attributes requires CAP_SYS_ADMIN.
++ */
++FedFsStatus
++junction_remove_xattr(int fd, const char *pathname, const char *name)
++{
++	/*
++	 * XXX: Eventually should distinguish among several errors:
++	 *	object isn't there, no root access, some other issue
++	 */
++	if (fremovexattr(fd, name) == -1) {
++		xlog(D_GENERAL, "%s: failed to remove xattr %s from %s: %m",
++			__func__, name, pathname);
++		return FEDFS_ERR_ACCESS;
++	}
++	xlog(D_CALL, "%s: removed xattr %s from path %s",
++			__func__, name, pathname);
++	return FEDFS_OK;
++}
++
++/**
++ * Retrieve object's mode bits.
++ *
++ * @param pathname NUL-terminated C string containing pathname of a directory
++ * @param mode OUT: mode bits
++ * @return a FedFsStatus code
++ */
++FedFsStatus
++junction_get_mode(const char *pathname, mode_t *mode)
++{
++	FedFsStatus retval;
++	struct stat stb;
++	int fd;
++
++	retval = junction_open_path(pathname, &fd);
++	if (retval != FEDFS_OK)
++		return retval;
++
++	if (fstat(fd, &stb) == -1) {
++		xlog(D_GENERAL, "%s: failed to stat %s: %m",
++			__func__, pathname);
++		(void)close(fd);
++		return FEDFS_ERR_ACCESS;
++	}
++	(void)close(fd);
++
++	xlog(D_CALL, "%s: pathname %s has mode %o",
++		__func__, pathname, stb.st_mode);
++	*mode = stb.st_mode;
++	return FEDFS_OK;
++
++}
++
++/**
++ * Save the object's mode in an xattr.  Saved mode is human-readable.
++ *
++ * @param pathname NUL-terminated C string containing pathname of a directory
++ * @return a FedFsStatus code
++ */
++FedFsStatus
++junction_save_mode(const char *pathname)
++{
++	FedFsStatus retval;
++	mode_t mode;
++	char buf[8];
++	int fd;
++
++	retval = junction_get_mode(pathname, &mode);
++	if (retval != FEDFS_OK)
++		return retval;
++	(void)snprintf(buf, sizeof(buf), "%o", ALLPERMS & mode);
++
++	retval = junction_open_path(pathname, &fd);
++	if (retval != FEDFS_OK)
++		return retval;
++
++	retval = junction_set_xattr(fd, pathname, JUNCTION_XATTR_NAME_MODE,
++				buf, strlen(buf));
++	if (retval != FEDFS_OK)
++		goto out;
++
++	retval = junction_set_sticky_bit(fd, pathname);
++	if (retval != FEDFS_OK) {
++		(void)junction_remove_xattr(fd, pathname,
++						JUNCTION_XATTR_NAME_MODE);
++		goto out;
++	}
++
++	xlog(D_CALL, "%s: saved mode %o to %s", __func__, mode, pathname);
++	retval = FEDFS_OK;
++
++out:
++	(void)close(fd);
++	return retval;
++
++}
++
++/**
++ * Restore an object's mode bits
++ *
++ * @param pathname NUL-terminated C string containing pathname of a directory
++ * @return a FedFsStatus code
++ */
++FedFsStatus
++junction_restore_mode(const char *pathname)
++{
++	FedFsStatus retval;
++	char *buf = NULL;
++	mode_t mode;
++	int fd;
++
++	retval = junction_open_path(pathname, &fd);
++	if (retval != FEDFS_OK)
++		return retval;
++
++	retval = junction_read_xattr(fd, pathname, JUNCTION_XATTR_NAME_MODE, &buf);
++	if (retval != FEDFS_OK)
++		goto out;
++
++	retval = FEDFS_ERR_SVRFAULT;
++	if (sscanf((char *)buf, "%o", &mode) != 1) {
++		xlog(D_GENERAL, "%s: failed to parse saved mode on %s",
++			__func__, pathname);
++		goto out;
++	}
++
++	retval = FEDFS_ERR_ROFS;
++	if (fchmod(fd, mode) == -1) {
++		xlog(D_GENERAL, "%s: failed to set mode of %s to %o: %m",
++			__func__, pathname, mode);
++		goto out;
++	}
++
++	xlog(D_CALL, "%s: restored mode %o to %s", __func__, mode, pathname);
++	retval = FEDFS_OK;
++
++out:
++	free(buf);
++	(void)close(fd);
++	return retval;
++}
+diff --git a/support/junction/locations.c b/support/junction/locations.c
+new file mode 100644
+index 0000000..c577981
+--- /dev/null
++++ b/support/junction/locations.c
+@@ -0,0 +1,131 @@
++/**
++ * @file support/junction/locations.c
++ * @brief Utility functions to manage NFS locations data
++ */
++
++/*
++ * Copyright 2011, 2018 Oracle.  All rights reserved.
++ *
++ * This file is part of nfs-utils.
++ *
++ * nfs-utils is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2.0 as
++ * published by the Free Software Foundation.
++ *
++ * nfs-utils is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License version 2.0 for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * version 2.0 along with nfs-utils.  If not, see:
++ *
++ *	http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
++ */
++
++#include <sys/types.h>
++#include <sys/stat.h>
++
++#include <stdbool.h>
++#include <stdint.h>
++#include <stdlib.h>
++#include <stdio.h>
++
++#include <string.h>
++#include <fcntl.h>
++#include <unistd.h>
++#include <errno.h>
++
++#include "junction.h"
++
++/**
++ * Free an array of NUL-terminated C strings
++ *
++ * @param array array of pointers to C strings
++ */
++void
++nfs_free_string_array(char **array)
++{
++	unsigned int i;
++
++	if (array == NULL)
++		return;
++	for (i = 0; array[i] != NULL; i++)
++		free(array[i]);
++	free(array);
++}
++
++/**
++ * Duplicate an array of NUL-terminated C strings
++ *
++ * @param array array of pointers to C strings
++ * @return freshly allocated array of points to C strings, or NULL
++ *
++ * Caller must free the returned array with nfs_free_string_array()
++ */
++__attribute_malloc__ char **
++nfs_dup_string_array(char **array)
++{
++	unsigned int size, i;
++	char **result;
++
++	if (array == NULL)
++		return NULL;
++
++	for (size = 0; array[size] != NULL; size++);
++
++	result = calloc(size + 1, sizeof(char *));
++	if (result == NULL)
++		return NULL;
++	for (i = 0; i < size; i++) {
++		result[i] = strdup(array[i]);
++		if (result[i] == NULL) {
++			nfs_free_string_array(result);
++			return NULL;
++		}
++	}
++	return result;
++}
++
++/**
++ * Free a single NFS location
++ *
++ * @param location pointer to nfs_fsloc data
++ */
++void
++nfs_free_location(struct nfs_fsloc *location)
++{
++	nfs_free_string_array(location->nfl_rootpath);
++	free(location->nfl_hostname);
++	free(location);
++}
++
++/**
++ * Free a list of NFS locations
++ *
++ * @param locations pointer to list of one or more locations
++ */
++void
++nfs_free_locations(struct nfs_fsloc *locations)
++{
++	struct nfs_fsloc *fsloc;
++
++	while (locations != NULL) {
++		fsloc = locations;
++		locations = fsloc->nfl_next;
++		nfs_free_location(fsloc);
++	}
++}
++
++/**
++ * Allocate a fresh nfs_fsloc structure
++ *
++ * @return pointer to new empty nfs_fsloc data structure
++ *
++ * Caller must free returned locations with nfs_free_location().
++ */
++struct nfs_fsloc *
++nfs_new_location(void)
++{
++	return calloc(1, sizeof(struct nfs_fsloc));
++}
+diff --git a/support/junction/nfs.c b/support/junction/nfs.c
+new file mode 100644
+index 0000000..73e3533
+--- /dev/null
++++ b/support/junction/nfs.c
+@@ -0,0 +1,1564 @@
++/**
++ * @file support/junction/nfs.c
++ * @brief Create, delete, and read NFS junctions on the local file system
++ */
++
++/*
++ * Copyright 2011, 2018 Oracle.  All rights reserved.
++ *
++ * This file is part of nfs-utils.
++ *
++ * nfs-utils is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2.0 as
++ * published by the Free Software Foundation.
++ *
++ * nfs-utils is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License version 2.0 for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * version 2.0 along with nfs-utils.  If not, see:
++ *
++ *	http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
++ */
++
++/*
++ * An NFS junction is a list of NFS FSLs, represented in a well-formed XML
++ * document:
++ *
++ * <?xml version="1.0" encoding="UTF-8"?>
++ * <junction>
++ *   <savedmode bits="1777" />
++ *   <fileset>
++ *     <location>
++ *       <host name="fileserver.example.net" port="2049" />
++ *       <path>
++ *         <component>foo</component>
++ *         <component>bar</component>
++ *         <component>baz</component>
++ *       </path>
++ *       <currency>-1</currency>
++ *       <genflags writable="false" going="false" split="true" />
++ *       <transflags rdma="true" />
++ *       <class simul="0" handle="0" fileid="0"
++ *              writever="0" change="0" readdir="0" />
++ *       <read rank="0" order="0" />
++ *       <write rank="0" order="0" />
++ *       <flags varsub="false" />
++ *       <validfor>0</validfor>
++ *     </location>
++ *
++ *     ....
++ *
++ *   </fileset>
++ * </junction>
++ *
++ * NFS junction XML is stored in an extended attribute called
++ * "trusted.junction.nfs".   The parent object is a directory.
++ *
++ * To help file servers discover junctions efficiently, the directory
++ * has no execute bits, and the sticky bit is set.  In addition, an
++ * extended attribute called "trusted.junction.type" is added.  The
++ * contents are ignored in user space.
++ *
++ * Finally, for pre-existing directories that are converted to
++ * junctions, their mode bits are saved in an extended attribute called
++ * "trusted.junction.mode".  When the junction data is removed, the
++ * directory's mode bits are restored from this information.
++ */
++
++#include <sys/types.h>
++#include <sys/stat.h>
++
++#include <stdbool.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++
++#include <rpcsvc/nfs_prot.h>
++
++#include "junction.h"
++#include "junction-internal.h"
++#include "xlog.h"
++
++/**
++ * Tag name of NFS location element of a junction XML document
++ */
++#define NFS_XML_LOCATION_TAG		(const xmlChar *)"location"
++
++/**
++ * Tag name of host child element of an NFS location element
++ */
++#define NFS_XML_HOST_TAG		(const xmlChar *)"host"
++
++/**
++ * Name of hostname attribute of a host element
++ */
++#define NFS_XML_HOST_NAME_ATTR		(const xmlChar *)"name"
++
++/**
++ * Name of IP port attribute of a host element
++ */
++#define NFS_XML_HOST_PORT_ATTR		(const xmlChar *)"port"
++
++/**
++ * Tag name of path child element of an NFS location element
++ */
++#define NFS_XML_PATH_TAG		(const xmlChar *)"path"
++
++/**
++ * Tag name of component child element of a path element
++ */
++#define NFS_XML_COMPONENT_TAG		(const xmlChar *)"component"
++
++/**
++ * Tag name of currency child element of an NFS location element
++ */
++#define NFS_XML_CURRENCY_TAG		(const xmlChar *)"currency"
++
++/**
++ * Tag name of genflags child element of an NFS location element
++ */
++#define NFS_XML_GENFLAGS_TAG		(const xmlChar *)"genflags"
++
++/**
++ * Name of writable attribute of a genflags element
++ */
++#define NFS_XML_GENFLAGS_WRITABLE_ATTR	(const xmlChar *)"writable"
++
++/**
++ * Name of going attribute of a genflags element
++ */
++#define NFS_XML_GENFLAGS_GOING_ATTR	(const xmlChar *)"going"
++
++/**
++ * Name of split attribute of a genflags element
++ */
++#define	NFS_XML_GENFLAGS_SPLIT_ATTR	(const xmlChar *)"split"
++
++/**
++ * Tag name of transflags child element of an NFS location element
++ */
++#define NFS_XML_TRANSFLAGS_TAG		(const xmlChar *)"transflags"
++
++/**
++ * Name of rdma attribute of a transflags element
++ */
++#define NFS_XML_TRANSFLAGS_RDMA_ATTR	(const xmlChar *)"rdma"
++
++/**
++ * Tag name of class child element of an NFS location element
++ */
++#define NFS_XML_CLASS_TAG		(const xmlChar *)"class"
++
++/**
++ * Name of simul attribute of a class element
++ */
++#define NFS_XML_CLASS_SIMUL_ATTR	(const xmlChar *)"simul"
++
++/**
++ * Name of handle attribute of a class element
++ */
++#define NFS_XML_CLASS_HANDLE_ATTR	(const xmlChar *)"handle"
++
++/**
++ * Name of fileid attribute of a class element
++ */
++#define NFS_XML_CLASS_FILEID_ATTR	(const xmlChar *)"fileid"
++
++/**
++ * Name of writever attribute of a class element
++ */
++#define NFS_XML_CLASS_WRITEVER_ATTR	(const xmlChar *)"writever"
++
++/**
++ * Name of change attribute of a class element
++ */
++#define NFS_XML_CLASS_CHANGE_ATTR	(const xmlChar *)"change"
++
++/**
++ * Name of readdir attribute of a class element
++ */
++#define NFS_XML_CLASS_READDIR_ATTR	(const xmlChar *)"readdir"
++
++/**
++ * Tag name of read child element of an NFS location element
++ */
++#define NFS_XML_READ_TAG		(const xmlChar *)"read"
++
++/**
++ * Name of rank attribute of a read element
++ */
++#define NFS_XML_READ_RANK_ATTR		(const xmlChar *)"rank"
++
++/**
++ * Name of order attribute of a read element
++ */
++#define NFS_XML_READ_ORDER_ATTR		(const xmlChar *)"order"
++
++/**
++ * Tag name of write attribute of an NFS location element
++ */
++#define NFS_XML_WRITE_TAG		(const xmlChar *)"write"
++
++/**
++ * Name of rank attribute of a write element
++ */
++#define NFS_XML_WRITE_RANK_ATTR		(const xmlChar *)"rank"
++
++/**
++ * Name of order attribute of a write element
++ */
++#define NFS_XML_WRITE_ORDER_ATTR	(const xmlChar *)"order"
++
++/**
++ * Tag name of flags child element of an NFS location element
++ */
++#define NFS_XML_FLAGS_TAG		(const xmlChar *)"flags"
++
++/**
++ * Name of varsub attribute of a flags element
++ */
++#define NFS_XML_FLAGS_VARSUB_ATTR	(const xmlChar *)"varsub"
++
++/**
++ * Tag name of a validfor child element of an NFS location element
++ */
++#define NFS_XML_VALIDFOR_TAG		(const xmlChar *)"validfor"
++
++/**
++ * XPath path to NFS location elements in a junction document
++ */
++#define NFS_XML_LOCATION_XPATH		(const xmlChar *)	\
++						"/junction/fileset/location"
++
++
++/**
++ * Remove all NFS-related xattrs from a directory
++ *
++ * @param pathname NUL-terminated C string containing pathname of a directory
++ * @return a FedFsStatus code
++ *
++ * @note Access to trusted attributes requires CAP_SYS_ADMIN.
++ */
++static FedFsStatus
++nfs_remove_locations(const char *pathname)
++{
++	FedFsStatus retval;
++	int fd;
++
++	retval = junction_open_path(pathname, &fd);
++	if (retval != FEDFS_OK)
++		return retval;
++
++	retval = junction_remove_xattr(fd, pathname, JUNCTION_XATTR_NAME_NFS);
++
++	(void)close(fd);
++	return retval;
++}
++
++/**
++ * Add a "host" child to a "location" element
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param parent parent element to which to add "host" child
++ * @param fsloc NFS location containing host information to add
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_location_host_xml(const char *pathname, xmlNodePtr parent,
++		struct nfs_fsloc *fsloc)
++{
++	uint16_t port = fsloc->nfl_hostport;
++	xmlNodePtr new;
++
++	new = xmlNewTextChild(parent, NULL, NFS_XML_HOST_TAG, NULL);
++	if (new == NULL) {
++		xlog(D_GENERAL, "%s: Failed to add host element for %s",
++			__func__, pathname);
++		return FEDFS_ERR_SVRFAULT;
++	}
++
++	xmlSetProp(new, NFS_XML_HOST_NAME_ATTR,
++			(const xmlChar *)fsloc->nfl_hostname);
++	if (port != NFS_PORT && port != 0)
++		junction_xml_set_int_attribute(new, NFS_XML_HOST_PORT_ATTR,
++									port);
++
++	return FEDFS_OK;
++}
++
++/**
++ * Add a "path" child to a "location" element
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param parent parent element to which to add "host" child
++ * @param fsloc NFS location containing host information to add
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_location_path_xml(const char *pathname, xmlNodePtr parent,
++		struct nfs_fsloc *fsloc)
++{
++	xmlNodePtr new;
++	int i;
++
++	new = xmlNewTextChild(parent, NULL, NFS_XML_PATH_TAG, NULL);
++	if (new == NULL) {
++		xlog(D_GENERAL, "%s: Failed to add path element for %s",
++			__func__, pathname);
++		return FEDFS_ERR_SVRFAULT;
++	}
++
++	for (i = 0; fsloc->nfl_rootpath[i] != NULL; i++) {
++		xmlNodePtr component;
++
++		component = xmlNewTextChild(new , NULL,
++						NFS_XML_COMPONENT_TAG,
++						(const xmlChar *)
++						fsloc->nfl_rootpath[i]);
++		if (component == NULL) {
++			xlog(D_GENERAL, "%s: Failed to add component "
++					"element for %s",
++				__func__, pathname);
++			return FEDFS_ERR_SVRFAULT;
++		}
++	}
++
++	return FEDFS_OK;
++}
++
++/**
++ * Add a "currency" child to a "location" element
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param parent parent element to which to add "host" child
++ * @param fsloc NFS location containing host information to add
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_location_currency_xml(__attribute__((unused)) const char *pathname,
++		xmlNodePtr parent, struct nfs_fsloc *fsloc)
++{
++	if (junction_xml_set_int_content(parent, NFS_XML_CURRENCY_TAG,
++						fsloc->nfl_currency) == NULL)
++		return FEDFS_ERR_SVRFAULT;
++	return FEDFS_OK;
++}
++
++/**
++ * Add a "genflags" child to a "location" element
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param parent parent element to which to add "host" child
++ * @param fsloc NFS location containing host information to add
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_location_genflags_xml(const char *pathname, xmlNodePtr parent,
++		struct nfs_fsloc *fsloc)
++{
++	xmlNodePtr new;
++
++	new = xmlNewTextChild(parent, NULL, NFS_XML_GENFLAGS_TAG, NULL);
++	if (new == NULL) {
++		xlog(D_GENERAL, "%s: Failed to add genflags element for %s",
++			__func__, pathname);
++		return FEDFS_ERR_SVRFAULT;
++	}
++
++	junction_xml_set_bool_attribute(new, NFS_XML_GENFLAGS_WRITABLE_ATTR,
++					fsloc->nfl_genflags.nfl_writable);
++	junction_xml_set_bool_attribute(new, NFS_XML_GENFLAGS_GOING_ATTR,
++					fsloc->nfl_genflags.nfl_going);
++	junction_xml_set_bool_attribute(new, NFS_XML_GENFLAGS_SPLIT_ATTR,
++					fsloc->nfl_genflags.nfl_split);
++
++	return FEDFS_OK;
++}
++
++/**
++ * Add a "transflags" child to a "location" element
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param parent parent element to which to add "host" child
++ * @param fsloc NFS location containing host information to add
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_location_transflags_xml(const char *pathname, xmlNodePtr parent,
++		struct nfs_fsloc *fsloc)
++{
++	xmlNodePtr new;
++
++	new = xmlNewTextChild(parent, NULL, NFS_XML_TRANSFLAGS_TAG, NULL);
++	if (new == NULL) {
++		xlog(D_GENERAL, "%s: Failed to add transflags element for %s",
++			__func__, pathname);
++		return FEDFS_ERR_SVRFAULT;
++	}
++
++	junction_xml_set_bool_attribute(new, NFS_XML_TRANSFLAGS_RDMA_ATTR,
++					fsloc->nfl_transflags.nfl_rdma);
++
++	return FEDFS_OK;
++}
++
++/**
++ * Add a "class" child to a "location" element
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param parent parent element to which to add "host" child
++ * @param fsloc NFS location containing host information to add
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_location_class_xml(const char *pathname, xmlNodePtr parent,
++		struct nfs_fsloc *fsloc)
++{
++	xmlNodePtr new;
++
++	new = xmlNewTextChild(parent, NULL, NFS_XML_CLASS_TAG, NULL);
++	if (new == NULL) {
++		xlog(D_GENERAL, "%s: Failed to add class element for %s",
++			__func__, pathname);
++		return FEDFS_ERR_SVRFAULT;
++	}
++
++	junction_xml_set_int_attribute(new, NFS_XML_CLASS_SIMUL_ATTR,
++						fsloc->nfl_info.nfl_simul);
++	junction_xml_set_int_attribute(new, NFS_XML_CLASS_HANDLE_ATTR,
++						fsloc->nfl_info.nfl_handle);
++	junction_xml_set_int_attribute(new, NFS_XML_CLASS_FILEID_ATTR,
++						fsloc->nfl_info.nfl_fileid);
++	junction_xml_set_int_attribute(new, NFS_XML_CLASS_WRITEVER_ATTR,
++						fsloc->nfl_info.nfl_writever);
++	junction_xml_set_int_attribute(new, NFS_XML_CLASS_CHANGE_ATTR,
++						fsloc->nfl_info.nfl_change);
++	junction_xml_set_int_attribute(new, NFS_XML_CLASS_READDIR_ATTR,
++						fsloc->nfl_info.nfl_readdir);
++
++	return FEDFS_OK;
++}
++
++/**
++ * Add a "read" child to a "location" element
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param parent parent element to which to add "host" child
++ * @param fsloc NFS location containing host information to add
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_location_read_xml(const char *pathname, xmlNodePtr parent,
++		struct nfs_fsloc *fsloc)
++{
++	xmlNodePtr new;
++
++	new = xmlNewTextChild(parent, NULL, NFS_XML_READ_TAG, NULL);
++	if (new == NULL) {
++		xlog(D_GENERAL, "%s: Failed to add read element for %s",
++			__func__, pathname);
++		return FEDFS_ERR_SVRFAULT;
++	}
++
++	junction_xml_set_int_attribute(new, NFS_XML_READ_RANK_ATTR,
++					fsloc->nfl_info.nfl_readrank);
++	junction_xml_set_int_attribute(new, NFS_XML_READ_ORDER_ATTR,
++					fsloc->nfl_info.nfl_readorder);
++
++	return FEDFS_OK;
++}
++
++/**
++ * Add a "write" child to a "location" element
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param parent parent element to which to add "host" child
++ * @param fsloc NFS location containing host information to add
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_location_write_xml(const char *pathname, xmlNodePtr parent,
++		struct nfs_fsloc *fsloc)
++{
++	xmlNodePtr new;
++
++	new = xmlNewTextChild(parent, NULL, NFS_XML_WRITE_TAG, NULL);
++	if (new == NULL) {
++		xlog(D_GENERAL, "%s: Failed to add write element for %s",
++			__func__, pathname);
++		return FEDFS_ERR_SVRFAULT;
++	}
++
++	junction_xml_set_int_attribute(new, NFS_XML_WRITE_RANK_ATTR,
++					fsloc->nfl_info.nfl_writerank);
++	junction_xml_set_int_attribute(new, NFS_XML_WRITE_ORDER_ATTR,
++					fsloc->nfl_info.nfl_writeorder);
++
++	return FEDFS_OK;
++}
++
++/**
++ * Add a "flags" child to a "location" element
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param parent parent element to which to add "host" child
++ * @param fsloc NFS location containing host information to add
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_location_flags_xml(const char *pathname, xmlNodePtr parent,
++		struct nfs_fsloc *fsloc)
++{
++	xmlNodePtr new;
++
++	new = xmlNewTextChild(parent, NULL, NFS_XML_FLAGS_TAG, NULL);
++	if (new == NULL) {
++		xlog(D_GENERAL, "%s: Failed to add flags element for %s",
++			__func__, pathname);
++		return FEDFS_ERR_SVRFAULT;
++	}
++
++	junction_xml_set_bool_attribute(new, NFS_XML_FLAGS_VARSUB_ATTR,
++					fsloc->nfl_flags.nfl_varsub);
++
++	return FEDFS_OK;
++}
++
++/**
++ * Add a "validfor" child to a "location" element
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param parent parent element to which to add "host" child
++ * @param fsloc NFS location containing host information to add
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_location_validfor_xml(__attribute__((unused)) const char *pathname,
++		xmlNodePtr parent, struct nfs_fsloc *fsloc)
++{
++	if (junction_xml_set_int_content(parent, NFS_XML_VALIDFOR_TAG,
++						fsloc->nfl_validfor) == NULL)
++		return FEDFS_ERR_SVRFAULT;
++	return FEDFS_OK;
++}
++
++/**
++ * Construct and add one "location" element to a "fileset"
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param fileset fileset element of junction XML parse tree
++ * @param fsloc one NFS location to add
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_location_xml(const char *pathname, xmlNodePtr fileset,
++		struct nfs_fsloc *fsloc)
++{
++	FedFsStatus retval;
++	xmlNodePtr new;
++
++	new = xmlNewTextChild(fileset, NULL, NFS_XML_LOCATION_TAG, NULL);
++	if (new == NULL) {
++		xlog(D_GENERAL, "%s: Failed to add location element for %s",
++			__func__, pathname);
++		return FEDFS_ERR_SVRFAULT;
++	}
++
++	retval = nfs_location_host_xml(pathname, new, fsloc);
++	if (retval != FEDFS_OK)
++		return retval;
++	retval = nfs_location_path_xml(pathname, new, fsloc);
++	if (retval != FEDFS_OK)
++		return retval;
++	retval = nfs_location_currency_xml(pathname, new, fsloc);
++	if (retval != FEDFS_OK)
++		return retval;
++	retval = nfs_location_genflags_xml(pathname, new, fsloc);
++	if (retval != FEDFS_OK)
++		return retval;
++	retval = nfs_location_transflags_xml(pathname, new, fsloc);
++	if (retval != FEDFS_OK)
++		return retval;
++	retval = nfs_location_class_xml(pathname, new, fsloc);
++	if (retval != FEDFS_OK)
++		return retval;
++	retval = nfs_location_read_xml(pathname, new, fsloc);
++	if (retval != FEDFS_OK)
++		return retval;
++	retval = nfs_location_write_xml(pathname, new, fsloc);
++	if (retval != FEDFS_OK)
++		return retval;
++	retval = nfs_location_flags_xml(pathname, new, fsloc);
++	if (retval != FEDFS_OK)
++		return retval;
++	return nfs_location_validfor_xml(pathname, new, fsloc);
++}
++
++/**
++ * Construct and add a "fileset" element
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param root root element of junction XML parse tree
++ * @param fslocs list of NFS locations to add
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_fileset_xml(const char *pathname, xmlNodePtr root,
++		struct nfs_fsloc *fslocs)
++{
++	struct nfs_fsloc *next;
++	xmlNodePtr fileset;
++	FedFsStatus retval;
++
++	fileset = xmlNewTextChild(root, NULL, JUNCTION_XML_FILESET_TAG, NULL);
++	if (fileset == NULL) {
++		xlog(D_GENERAL, "%s: Failed to add fileset element for %s",
++			__func__, pathname);
++		return FEDFS_ERR_SVRFAULT;
++	}
++
++	for (next = fslocs; next != NULL; next = next->nfl_next) {
++		retval = nfs_location_xml(pathname, fileset, next);
++		if (retval != FEDFS_OK)
++			return retval;
++	}
++
++	return FEDFS_OK;
++}
++
++/**
++ * Construct a "savedmode" element
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param root root element of XML document tree
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_savedmode_xml(const char *pathname, xmlNodePtr root)
++{
++	xmlNodePtr savedmode;
++	FedFsStatus retval;
++	mode_t mode;
++	char buf[8];
++
++	retval = junction_get_mode(pathname, &mode);
++	if (retval != FEDFS_OK)
++		return retval;
++
++	savedmode = xmlNewTextChild(root, NULL, JUNCTION_XML_SAVEDMODE_TAG, NULL);
++	if (savedmode == NULL) {
++		xlog(D_GENERAL, "%s: Failed to add savedmode element for %s\n",
++			__func__, pathname);
++		return FEDFS_ERR_SVRFAULT;
++	}
++
++	(void)snprintf(buf, sizeof(buf), "%o", ALLPERMS & mode);
++	xmlSetProp(savedmode, JUNCTION_XML_MODEBITS_ATTR, (const xmlChar *)buf);
++
++	return FEDFS_OK;
++}
++
++/**
++ * Construct NFS junction XML document from list of NFS locations
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param doc an XML parse tree in which to construct the junction XML document
++ * @param fslocs list of NFS locations to add
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_junction_xml(const char *pathname, xmlDocPtr doc,
++		struct nfs_fsloc *fslocs)
++{
++	FedFsStatus retval;
++	xmlNodePtr root;
++
++	root = xmlNewNode(NULL, JUNCTION_XML_ROOT_TAG);
++	if (root == NULL) {
++		xlog(D_GENERAL, "%s: Failed to create root element for %s",
++			__func__, pathname);
++		return FEDFS_ERR_SVRFAULT;
++	}
++	(void)xmlDocSetRootElement(doc, root);
++
++	retval = nfs_savedmode_xml(pathname, root);
++	if (retval != FEDFS_OK)
++		return retval;
++
++	return nfs_fileset_xml(pathname, root, fslocs);
++}
++
++/**
++ * Write NFS locations information into an NFS junction extended attribute
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param doc an empty XML parse tree in which to construct the junction XML document
++ * @param fslocs list of NFS locations to add
++ * @return a FedFsStatus code
++ *
++ * @note Access to trusted attributes requires CAP_SYS_ADMIN.
++ */
++static FedFsStatus
++nfs_write_junction(const char *pathname, xmlDocPtr doc,
++		struct nfs_fsloc *fslocs)
++{
++	FedFsStatus retval;
++
++	retval = nfs_junction_xml(pathname, doc, fslocs);
++	if (retval != FEDFS_OK)
++		return retval;
++
++	return junction_xml_write(pathname, JUNCTION_XATTR_NAME_NFS, doc);
++}
++
++/**
++ * Store NFS locations information into a junction object
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param fslocs list of NFS locations to add
++ * @return a FedFsStatus code
++ *
++ * @note Access to trusted attributes requires CAP_SYS_ADMIN.
++ */
++static FedFsStatus
++nfs_store_locations(const char *pathname, struct nfs_fsloc *fslocs)
++{
++	FedFsStatus retval;
++	xmlDocPtr doc;
++
++	doc = xmlNewDoc((xmlChar *)"1.0");
++	if (doc == NULL) {
++		xlog(D_GENERAL, "%s: Failed to create XML doc for %s",
++			__func__, pathname);
++		return FEDFS_ERR_SVRFAULT;
++	}
++
++	retval = nfs_write_junction(pathname, doc, fslocs);
++
++	xmlFreeDoc(doc);
++	return retval;
++}
++
++/**
++ * Add NFS junction information to a pre-existing object
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param fslocs list of NFS locations to add
++ * @return a FedFsStatus code
++ *
++ * An error occurs if the object referred to by "pathname" does not
++ * exist or contains existing junction data.
++ */
++FedFsStatus
++nfs_add_junction(const char *pathname, struct nfs_fsloc *fslocs)
++{
++	FedFsStatus retval;
++
++	if (fslocs == NULL)
++		return FEDFS_ERR_INVAL;
++
++	retval = nfs_is_prejunction(pathname);
++	if (retval != FEDFS_ERR_NOTJUNCT)
++		return retval;
++
++	retval = nfs_store_locations(pathname, fslocs);
++	if (retval != FEDFS_OK)
++		goto out_err;
++
++	retval = junction_save_mode(pathname);
++	if (retval != FEDFS_OK)
++		goto out_err;
++
++	return retval;
++
++out_err:
++	(void)nfs_remove_locations(pathname);
++	return retval;
++}
++
++/**
++ * Remove NFS junction information from an object
++ *
++ * @param pathname NUL-terminated C string containing pathname of a directory
++ * @return a FedFsStatus code
++ *
++ * An error occurs if the object referred to by "pathname" does not
++ * exist or does not contain NFS junction data.
++ */
++FedFsStatus
++nfs_delete_junction(const char *pathname)
++{
++	FedFsStatus retval;
++
++	retval = nfs_is_junction(pathname);
++	if (retval != FEDFS_OK)
++		return retval;
++
++	retval = junction_restore_mode(pathname);
++	if (retval != FEDFS_OK)
++		return retval;
++
++	return nfs_remove_locations(pathname);
++}
++
++/**
++ * Parse the first "host" child of "location"
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param location XML parse tree containing fileset location element
++ * @param fsloc a blank nfs_fsloc to fill in
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_parse_location_host(const char *pathname, xmlNodePtr location,
++		struct nfs_fsloc *fsloc)
++{
++	FedFsStatus retval;
++	xmlChar *hostname;
++	xmlNodePtr node;
++	int hostport;
++
++	retval = FEDFS_ERR_NOTJUNCT;
++	node = junction_xml_find_child_by_name(location, NFS_XML_HOST_TAG);
++	if (node == NULL)
++		return retval;
++
++	hostname = xmlGetProp(node, NFS_XML_HOST_NAME_ATTR);
++	if (!junction_xml_get_int_attribute(node, NFS_XML_HOST_PORT_ATTR,
++							&hostport))
++		fsloc->nfl_hostport = NFS_PORT;
++	else {
++		if (hostport < 1 || hostport > UINT16_MAX) {
++			xlog(D_GENERAL, "%s: Bad port attribute on %s",
++				__func__, pathname);
++			goto out;
++		}
++		fsloc->nfl_hostport = (uint16_t)hostport;
++	}
++	if (hostname == NULL) {
++		xlog(D_GENERAL, "%s: No hostname attribute on %s",
++			__func__, pathname);
++		goto out;
++	}
++	fsloc->nfl_hostname = strdup((const char *)hostname);
++	if (fsloc->nfl_hostname == NULL) {
++		retval = FEDFS_ERR_SVRFAULT;
++		goto out;
++	}
++
++	retval = FEDFS_OK;
++
++out:
++	xmlFree(hostname);
++	return retval;
++}
++
++/**
++ * Parse the first "path" child of "location" into a path array
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param location XML parse tree containing fileset location element
++ * @param fsloc a blank nfs_fsloc to fill in
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_parse_location_path(const char *pathname, xmlNodePtr location,
++		struct nfs_fsloc *fsloc)
++{
++	xmlNodePtr node, component;
++	unsigned int count;
++	xmlChar *value;
++	char **result;
++
++	node = junction_xml_find_child_by_name(location, NFS_XML_PATH_TAG);
++	if (node == NULL)
++		return FEDFS_ERR_NOTJUNCT;
++
++	count = 0;
++	for (component = node->children;
++	     component != NULL;
++	     component = component->next) {
++		if (!junction_xml_match_node_name(component,
++						NFS_XML_COMPONENT_TAG))
++			continue;
++		value = xmlNodeGetContent(component);
++		if (junction_xml_is_empty(value)) {
++			xlog(D_GENERAL, "%s: Bad pathname component in %s",
++				__func__, pathname);
++			return FEDFS_ERR_NOTJUNCT;
++		}
++		xmlFree(value);
++		count++;
++	}
++	xlog(D_GENERAL, "%s: Found %u component(s)", __func__, count);
++
++	if (count == 0) {
++		xlog(D_GENERAL, "%s: Zero-component pathname", __func__);
++		fsloc->nfl_rootpath = (char **)calloc(1, sizeof(char *));
++		if (fsloc->nfl_rootpath == NULL)
++			return FEDFS_ERR_SVRFAULT;
++		fsloc->nfl_rootpath[0] = NULL;
++		return FEDFS_OK;
++	}
++
++	result = calloc(count + 1, sizeof(char *));
++	if (result == NULL)
++		return FEDFS_ERR_SVRFAULT;
++
++	count = 0;
++	for (component = node->children;
++	     component != NULL;
++	     component = component->next) {
++		if (!junction_xml_match_node_name(component,
++						NFS_XML_COMPONENT_TAG))
++			continue;
++		value = xmlNodeGetContent(component);
++		result[count] = strdup((const char *)value);
++		xmlFree(value);
++		if (result[count] == NULL) {
++			nfs_free_string_array(result);
++			return FEDFS_ERR_SVRFAULT;
++		}
++		count++;
++	}
++
++	fsloc->nfl_rootpath = result;
++	return FEDFS_OK;
++}
++
++/**
++ * Parse the first "currency" child of "location"
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param location XML parse tree containing fileset location element
++ * @param fsloc a blank nfs_fsloc to fill in
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_parse_location_currency(const char *pathname, xmlNodePtr location,
++		struct nfs_fsloc *fsloc)
++{
++	xmlNodePtr node;
++
++	node = junction_xml_find_child_by_name(location, NFS_XML_CURRENCY_TAG);
++	if (node == NULL)
++		goto out_err;
++
++	if (!junction_xml_get_int_content(node, &fsloc->nfl_currency))
++		goto out_err;
++
++	return FEDFS_OK;
++
++out_err:
++	xlog(D_GENERAL, "%s: Missing or invalid currency element in %s",
++		__func__, pathname);
++	return FEDFS_ERR_NOTJUNCT;
++}
++
++/**
++ * Parse the first "genflags" child of "location"
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param location XML parse tree containing fileset location element
++ * @param fsloc a blank nfs_fsloc to fill in
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_parse_location_genflags(const char *pathname, xmlNodePtr location,
++		struct nfs_fsloc *fsloc)
++{
++	xmlNodePtr node;
++
++	node = junction_xml_find_child_by_name(location, NFS_XML_GENFLAGS_TAG);
++	if (node == NULL)
++		goto out_err;
++
++	if (!junction_xml_get_bool_attribute(node,
++					NFS_XML_GENFLAGS_WRITABLE_ATTR,
++					&fsloc->nfl_genflags.nfl_writable))
++		goto out_err;
++	if (!junction_xml_get_bool_attribute(node,
++					NFS_XML_GENFLAGS_GOING_ATTR,
++					&fsloc->nfl_genflags.nfl_going))
++		goto out_err;
++	if (!junction_xml_get_bool_attribute(node,
++					NFS_XML_GENFLAGS_SPLIT_ATTR,
++					&fsloc->nfl_genflags.nfl_split))
++		goto out_err;
++
++	return FEDFS_OK;
++
++out_err:
++	xlog(D_GENERAL, "%s: Missing or invalid genflags element in %s",
++		__func__, pathname);
++	return FEDFS_ERR_NOTJUNCT;
++}
++
++/**
++ * Parse the first "transflags" child of "location"
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param location XML parse tree containing fileset location element
++ * @param fsloc a blank nfs_fsloc to fill in
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_parse_location_transflags(const char *pathname, xmlNodePtr location,
++		struct nfs_fsloc *fsloc)
++{
++	xmlNodePtr node;
++
++	node = junction_xml_find_child_by_name(location, NFS_XML_TRANSFLAGS_TAG);
++	if (node == NULL)
++		goto out_err;
++
++	if (!junction_xml_get_bool_attribute(node,
++					NFS_XML_TRANSFLAGS_RDMA_ATTR,
++					&fsloc->nfl_transflags.nfl_rdma))
++		goto out_err;
++
++	return FEDFS_OK;
++
++out_err:
++	xlog(D_GENERAL, "%s: Missing or invalid transflags element in %s",
++		__func__, pathname);
++	return FEDFS_ERR_NOTJUNCT;
++}
++
++/**
++ * Parse the first "class" child of "location"
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param location XML parse tree containing fileset location element
++ * @param fsloc a blank nfs_fsloc to fill in
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_parse_location_class(const char *pathname, xmlNodePtr location,
++		struct nfs_fsloc *fsloc)
++{
++	xmlNodePtr node;
++
++	node = junction_xml_find_child_by_name(location, NFS_XML_CLASS_TAG);
++	if (node == NULL)
++		goto out_err;
++
++	if (!junction_xml_get_u8_attribute(node,
++					NFS_XML_CLASS_SIMUL_ATTR,
++					&fsloc->nfl_info.nfl_simul))
++		goto out_err;
++	if (!junction_xml_get_u8_attribute(node,
++					NFS_XML_CLASS_HANDLE_ATTR,
++					&fsloc->nfl_info.nfl_handle))
++		goto out_err;
++	if (!junction_xml_get_u8_attribute(node,
++					NFS_XML_CLASS_FILEID_ATTR,
++					&fsloc->nfl_info.nfl_fileid))
++		goto out_err;
++	if (!junction_xml_get_u8_attribute(node,
++					NFS_XML_CLASS_WRITEVER_ATTR,
++					&fsloc->nfl_info.nfl_writever))
++		goto out_err;
++	if (!junction_xml_get_u8_attribute(node,
++					NFS_XML_CLASS_WRITEVER_ATTR,
++					&fsloc->nfl_info.nfl_writever))
++		goto out_err;
++	if (!junction_xml_get_u8_attribute(node,
++					NFS_XML_CLASS_CHANGE_ATTR,
++					&fsloc->nfl_info.nfl_change))
++		goto out_err;
++	if (!junction_xml_get_u8_attribute(node,
++					NFS_XML_CLASS_READDIR_ATTR,
++					&fsloc->nfl_info.nfl_readdir))
++		goto out_err;
++
++	return FEDFS_OK;
++
++out_err:
++	xlog(D_GENERAL, "%s: Missing or invalid class element in %s",
++		__func__, pathname);
++	return FEDFS_ERR_NOTJUNCT;
++}
++
++/**
++ * Parse the first "read" child of "location"
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param location XML parse tree containing fileset location element
++ * @param fsloc a blank nfs_fsloc to fill in
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_parse_location_read(const char *pathname, xmlNodePtr location,
++		struct nfs_fsloc *fsloc)
++{
++	xmlNodePtr node;
++
++	node = junction_xml_find_child_by_name(location, NFS_XML_READ_TAG);
++	if (node == NULL)
++		goto out_err;
++
++	if (!junction_xml_get_u8_attribute(node,
++					NFS_XML_READ_RANK_ATTR,
++					&fsloc->nfl_info.nfl_readrank))
++		goto out_err;
++	if (!junction_xml_get_u8_attribute(node,
++					NFS_XML_READ_ORDER_ATTR,
++					&fsloc->nfl_info.nfl_readorder))
++		goto out_err;
++
++	return FEDFS_OK;
++
++out_err:
++	xlog(D_GENERAL, "%s: Missing or invalid read element in %s",
++		__func__, pathname);
++	return FEDFS_ERR_NOTJUNCT;
++}
++
++/**
++ * Parse the first "write" child of "location"
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param location XML parse tree containing fileset location element
++ * @param fsloc a blank nfs_fsloc to fill in
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_parse_location_write(const char *pathname, xmlNodePtr location,
++		struct nfs_fsloc *fsloc)
++{
++	xmlNodePtr node;
++
++	node = junction_xml_find_child_by_name(location, NFS_XML_WRITE_TAG);
++	if (node == NULL)
++		goto out_err;
++
++	if (!junction_xml_get_u8_attribute(node,
++					NFS_XML_WRITE_RANK_ATTR,
++					&fsloc->nfl_info.nfl_writerank))
++		goto out_err;
++	if (!junction_xml_get_u8_attribute(node,
++					NFS_XML_WRITE_ORDER_ATTR,
++					&fsloc->nfl_info.nfl_writeorder))
++		goto out_err;
++
++	return FEDFS_OK;
++
++out_err:
++	xlog(D_GENERAL, "%s: Missing or invalid write element in %s",
++		__func__, pathname);
++	return FEDFS_ERR_NOTJUNCT;
++}
++
++/**
++ * Parse the first "flags" child of "location"
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param location XML parse tree containing fileset location element
++ * @param fsloc a blank nfs_fsloc to fill in
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_parse_location_flags(const char *pathname, xmlNodePtr location,
++		struct nfs_fsloc *fsloc)
++{
++	xmlNodePtr node;
++
++	node = junction_xml_find_child_by_name(location, NFS_XML_FLAGS_TAG);
++	if (node == NULL)
++		goto out_err;
++
++	if (!junction_xml_get_bool_attribute(node,
++					NFS_XML_FLAGS_VARSUB_ATTR,
++					&fsloc->nfl_flags.nfl_varsub))
++		goto out_err;
++
++	return FEDFS_OK;
++
++out_err:
++	xlog(D_GENERAL, "%s: Missing or invalid flags element in %s",
++		__func__, pathname);
++	return FEDFS_ERR_NOTJUNCT;
++}
++
++/**
++ * Parse the first "validfor" child of "location"
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param location XML parse tree containing fileset location element
++ * @param fsloc a blank nfs_fsloc to fill in
++ * @return a FedFsStatus code
++ */
++static FedFsStatus
++nfs_parse_location_validfor(const char *pathname, xmlNodePtr location,
++		struct nfs_fsloc *fsloc)
++{
++	xmlNodePtr node;
++
++	node = junction_xml_find_child_by_name(location, NFS_XML_VALIDFOR_TAG);
++	if (node == NULL)
++		goto out_err;
++
++	if (!junction_xml_get_int_content(node, &fsloc->nfl_validfor))
++		goto out_err;
++
++	return FEDFS_OK;
++
++out_err:
++	xlog(D_GENERAL, "%s: Missing or invalid validfor element in %s",
++		__func__, pathname);
++	return FEDFS_ERR_NOTJUNCT;
++}
++
++/**
++ * Parse children of NFS location element in an NFS junction
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param location XML parse tree containing fileset location element
++ * @param fsloc a blank nfs_fsloc to fill in
++ * @return a FedFsStatus code
++ *
++ * All children are required only-once elements, and may appear in any order.
++ * Extraneous or repeated elements are ignored for now.
++ */
++static FedFsStatus
++nfs_parse_location_children(const char *pathname, xmlNodePtr location,
++		struct nfs_fsloc *fsloc)
++{
++	FedFsStatus retval;
++
++	retval = nfs_parse_location_host(pathname, location, fsloc);
++	if (retval != FEDFS_OK)
++		return retval;
++	retval = nfs_parse_location_path(pathname, location, fsloc);
++	if (retval != FEDFS_OK)
++		return retval;
++	retval = nfs_parse_location_currency(pathname, location, fsloc);
++	if (retval != FEDFS_OK)
++		return retval;
++	retval = nfs_parse_location_genflags(pathname, location, fsloc);
++	if (retval != FEDFS_OK)
++		return retval;
++	retval = nfs_parse_location_transflags(pathname, location, fsloc);
++	if (retval != FEDFS_OK)
++		return retval;
++	retval = nfs_parse_location_class(pathname, location, fsloc);
++	if (retval != FEDFS_OK)
++		return retval;
++	retval = nfs_parse_location_read(pathname, location, fsloc);
++	if (retval != FEDFS_OK)
++		return retval;
++	retval = nfs_parse_location_write(pathname, location, fsloc);
++	if (retval != FEDFS_OK)
++		return retval;
++	retval = nfs_parse_location_flags(pathname, location, fsloc);
++	if (retval != FEDFS_OK)
++		return retval;
++	return nfs_parse_location_validfor(pathname, location, fsloc);
++}
++
++/**
++ * Parse NFS location element in an NFS junction
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param location XML parse tree containing fileset location element
++ * @param fsloc OUT: a single NFS location item
++ * @return a FedFsStatus code
++ *
++ * If nfs_parse_location() returns FEDFS_OK, caller must free the returned
++ * location with nfs_free_location().
++ */
++static FedFsStatus
++nfs_parse_node(const char *pathname, xmlNodePtr location,
++		struct nfs_fsloc **fsloc)
++{
++	struct nfs_fsloc *tmp;
++	FedFsStatus retval;
++
++	tmp = nfs_new_location();
++	if (tmp == NULL)
++		return FEDFS_ERR_SVRFAULT;
++
++	retval = nfs_parse_location_children(pathname, location, tmp);
++	if (retval != FEDFS_OK)
++		nfs_free_location(tmp);
++	else
++		*fsloc = tmp;
++	return retval;
++}
++
++/**
++ * Build list of NFS locations from a nodeset
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param nodeset XML nodeset containing "location" elements
++ * @param fslocs OUT: pointer to a list of NFS locations
++ * @return a FedFsStatus code
++ *
++ * If nfs_parse_nodeset() returns FEDFS_OK, caller must free the returned
++ * list of locations with nfs_free_locations().
++ */
++static FedFsStatus
++nfs_parse_nodeset(const char *pathname, xmlNodeSetPtr nodeset,
++		struct nfs_fsloc **fslocs)
++{
++	struct nfs_fsloc *location, *result = NULL;
++	FedFsStatus retval;
++	int i;
++
++	if (xmlXPathNodeSetIsEmpty(nodeset)) {
++		xlog(D_GENERAL, "%s: No fileset locations found in %s",
++			__func__, pathname);
++		return FEDFS_ERR_NOTJUNCT;
++	}
++
++	for (i = 0; i < nodeset->nodeNr; i++) {
++		xmlNodePtr node = nodeset->nodeTab[i];
++
++		retval = nfs_parse_node(pathname, node, &location);
++		if (retval != FEDFS_OK) {
++			nfs_free_locations(result);
++			return retval;
++		}
++
++		if (result == NULL)
++			result = location;
++		else
++			result->nfl_next = location;
++	}
++
++	*fslocs = result;
++	return FEDFS_OK;
++}
++
++/**
++ * Parse fileset location information from junction XML
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param context XML path context containing junction XML
++ * @param fslocs OUT: pointer to a list of NFS locations
++ * @return a FedFsStatus code
++ *
++ * If nfs_parse_context() returns FEDFS_OK, caller must free the returned
++ * list of locations with nfs_free_locations().
++ */
++static FedFsStatus
++nfs_parse_context(const char *pathname, xmlXPathContextPtr context,
++		struct nfs_fsloc **fslocs)
++{
++	xmlXPathObjectPtr object;
++	FedFsStatus retval;
++
++	object = xmlXPathEvalExpression(NFS_XML_LOCATION_XPATH, context);
++	if (object == NULL) {
++		xlog(D_GENERAL, "%s: Failed to evaluate XML in %s",
++			__func__, pathname);
++		return FEDFS_ERR_NOTJUNCT;
++	}
++
++	retval = nfs_parse_nodeset(pathname, object->nodesetval, fslocs);
++
++	xmlXPathFreeObject(object);
++	return retval;
++}
++
++/**
++ * Parse NFS locations information from junction XML
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param doc XML parse tree containing junction XML document
++ * @param fslocs OUT: pointer to a list of NFS locations
++ * @return a FedFsStatus code
++ *
++ * If nfs_parse_xml() returns FEDFS_OK, caller must free the returned
++ * list of locations with nfs_free_locations().
++ */
++static FedFsStatus
++nfs_parse_xml(const char *pathname, xmlDocPtr doc, struct nfs_fsloc **fslocs)
++{
++	xmlXPathContextPtr context;
++	FedFsStatus retval;
++
++	context = xmlXPathNewContext(doc);
++	if (context == NULL) {
++		xlog(D_GENERAL, "%s: Failed to create XPath context from %s",
++			__func__, pathname);
++		return FEDFS_ERR_SVRFAULT;
++	}
++
++	retval = nfs_parse_context(pathname, context, fslocs);
++
++	xmlXPathFreeContext(context);
++	return retval;
++}
++
++/**
++ * Retrieve list of NFS locations from an NFS junction
++ *
++ * @param pathname NUL-terminated C string containing pathname of a junction
++ * @param fslocs OUT: pointer to a list of NFS locations
++ * @return a FedFsStatus code
++ *
++ * If nfs_get_locations() returns FEDFS_OK, caller must free the returned
++ * list of locations with nfs_free_locations().
++ */
++FedFsStatus
++nfs_get_locations(const char *pathname, struct nfs_fsloc **fslocs)
++{
++	FedFsStatus retval;
++	xmlDocPtr doc;
++
++	if (fslocs == NULL)
++		return FEDFS_ERR_INVAL;
++
++	retval = junction_xml_parse(pathname, JUNCTION_XATTR_NAME_NFS, &doc);
++	if (retval != FEDFS_OK)
++		return retval;
++
++	retval = nfs_parse_xml(pathname, doc, fslocs);
++
++	xmlFreeDoc(doc);
++	return retval;
++}
++
++/**
++ * Predicate: does "pathname" refer to an object that can become an NFS junction?
++ *
++ * @param pathname NUL-terminated C string containing pathname of a directory
++ * @return a FedFsStatus code
++ *
++ * Return values:
++ *	FEDFS_ERR_NOTJUNCT:	"pathname" refers to an object that can be
++ *				made into a NFS junction
++ *	FEDFS_ERR_EXIST:	"pathname" refers to something that is
++ *				already a junction
++ *	FEDFS_ERR_INVAL:	"pathname" does not exist
++ *	Other:			Some error occurred, "pathname" not
++ *				investigated
++ */
++FedFsStatus
++nfs_is_prejunction(const char *pathname)
++{
++	FedFsStatus retval;
++	int fd;
++
++	retval = junction_open_path(pathname, &fd);
++	if (retval != FEDFS_OK)
++		return retval;
++
++	retval = junction_is_directory(fd, pathname);
++	if (retval != FEDFS_OK)
++		goto out_close;
++
++	retval = junction_is_sticky_bit_set(fd, pathname);
++	switch (retval) {
++	case FEDFS_ERR_NOTJUNCT:
++		break;
++	case FEDFS_OK:
++		goto out_exist;
++	default:
++		goto out_close;
++	}
++
++	retval = junction_is_xattr_present(fd, pathname, JUNCTION_XATTR_NAME_NFS);
++	switch (retval) {
++	case FEDFS_ERR_NOTJUNCT:
++		break;
++	case FEDFS_OK:
++		goto out_exist;
++	default:
++		goto out_close;
++	}
++
++out_close:
++	(void)close(fd);
++	return retval;
++out_exist:
++	retval = FEDFS_ERR_EXIST;
++	goto out_close;
++}
++
++/**
++ * Verify that junction contains NFS junction XML
++ *
++ * @param pathname NUL-terminated C string containing pathname of a directory
++ * @return a FedFsStatus code
++ *
++ * Return values:
++ *	FEDFS_OK:		"pathname" refers to an NFS junction
++ *	FEDFS_ERR_NOTJUNCT:	"pathname" refers to something that is
++ *				not an NFS junction
++ *	FEDFS_ERR_INVAL:	"pathname" does not exist
++ *	Other:			Some error occurred, "pathname" not
++ *				investigated
++ *
++ * NB: This is an expensive test.  However, it is only done if the object
++ * actually has a junction extended attribute, meaning it should be done
++ * rarely.  If this is really a problem, we can make the XML test cheaper.
++ */
++static FedFsStatus
++nfs_is_junction_xml(const char *pathname)
++{
++	struct nfs_fsloc *fslocs = NULL;
++	FedFsStatus retval;
++	xmlDocPtr doc;
++
++	retval = junction_xml_parse(pathname, JUNCTION_XATTR_NAME_NFS, &doc);
++	if (retval != FEDFS_OK)
++		return retval;
++
++	retval = nfs_parse_xml(pathname, doc, &fslocs);
++	nfs_free_locations(fslocs);
++
++	xmlFreeDoc(doc);
++	return retval;
++}
++
++/**
++ * Predicate: does "pathname" refer to an NFS junction?
++ *
++ * @param pathname NUL-terminated C string containing pathname of a directory
++ * @return a FedFsStatus code
++ *
++ * Return values:
++ *	FEDFS_OK:		"pathname" refers to an NFS junction
++ *	FEDFS_ERR_NOTJUNCT:	"pathname" refers to an object that is
++ *				not a junction
++ *	FEDFS_ERR_INVAL:	"pathname" does not exist
++ *	Other:			Some error occurred, "pathname" not
++ *				investigated
++ */
++FedFsStatus
++nfs_is_junction(const char *pathname)
++{
++	FedFsStatus retval;
++	int fd;
++
++	retval = junction_open_path(pathname, &fd);
++	if (retval != FEDFS_OK)
++		return retval;
++
++	retval = junction_is_directory(fd, pathname);
++	if (retval != FEDFS_OK)
++		goto out_close;
++
++	retval = junction_is_sticky_bit_set(fd, pathname);
++	if (retval != FEDFS_OK)
++		goto out_close;
++
++	retval = junction_is_xattr_present(fd, pathname, JUNCTION_XATTR_NAME_NFS);
++	if (retval != FEDFS_OK)
++		goto out_close;
++
++	(void)close(fd);
++
++	return nfs_is_junction_xml(pathname);
++
++out_close:
++	(void)close(fd);
++	return retval;
++}
+diff --git a/support/junction/path.c b/support/junction/path.c
+new file mode 100644
+index 0000000..68a1d13
+--- /dev/null
++++ b/support/junction/path.c
+@@ -0,0 +1,346 @@
++/**
++ * @file support/junction/path.c
++ * @brief Encode and decode FedFS pathnames
++ */
++
++/*
++ * Copyright 2010, 2011, 2018 Oracle.  All rights reserved.
++ *
++ * This file is part of nfs-utils.
++ *
++ * nfs-utils is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2.0 as
++ * published by the Free Software Foundation.
++ *
++ * nfs-utils is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License version 2.0 for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * version 2.0 along with nfs-utils.  If not, see:
++ *
++ *	http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
++ */
++
++#include <sys/types.h>
++#include <sys/stat.h>
++
++#include <stdbool.h>
++#include <unistd.h>
++#include <stdint.h>
++#include <stdlib.h>
++#include <stdio.h>
++#include <string.h>
++#include <errno.h>
++#include <dirent.h>
++
++#include <netinet/in.h>
++
++#include "junction.h"
++#include "xlog.h"
++
++#define STRLEN_SLASH	((size_t)1)	/* strlen("/") */
++
++#define XDR_UINT_BYTES	(sizeof(uint32_t))
++
++/**
++ * Compute count of XDR 4-octet units from byte count
++ *
++ * @param bytes number of bytes to convert
++ * @return equivalent number of XDR 4-octet units
++ */
++static inline size_t
++nsdb_quadlen(size_t bytes)
++{
++	return (bytes + 3) >> 2;
++}
++
++/**
++ * Free array of NUL-terminated C strings
++ *
++ * @param strings array of char * to be released
++ */
++void
++nsdb_free_string_array(char **strings)
++{
++	int i;
++
++	if (strings == NULL)
++		return;
++	for (i = 0; strings[i] != NULL; i++)
++		free(strings[i]);
++	free(strings);
++}
++
++static FedFsStatus
++nsdb_alloc_zero_component_pathname(char ***path_array)
++{
++	char **result;
++
++	xlog(D_GENERAL, "%s: Zero-component pathname", __func__);
++
++	result = (char **)calloc(1, sizeof(char *));
++	if (result == NULL)
++		return FEDFS_ERR_SVRFAULT;
++	result[0] = NULL;
++	*path_array = result;
++	return FEDFS_OK;
++}
++
++/**
++ * Sanitize an incoming POSIX path
++ *
++ * @param pathname NUL-terminated C string containing a POSIX pathname
++ * @return NUL-terminated C string containing sanitized path
++ *
++ * Caller must free the returned pathname with free(3).
++ *
++ * Remove multiple sequential slashes and any trailing slashes,
++ * but leave "/" by itself alone.
++ */
++static __attribute_malloc__ char *
++nsdb_normalize_path(const char *pathname)
++{
++	size_t i, j, len;
++	char *result;
++
++	len = strlen(pathname);
++	if (len == 0) {
++		xlog(D_CALL, "%s: NULL pathname", __func__);
++		return NULL;
++	}
++
++	result = malloc(len + 1);
++	if (result == NULL)
++		return NULL;
++
++	for (i = 0, j = 0; i < len; i++) {
++		if (pathname[i] == '/' && pathname[i + 1] == '/')
++			continue;
++		result[j++] = pathname[i];
++	}
++	result[j] = '\0';
++
++	if (j > 1 && result[j - 1] == '/')
++		result[j - 1] = '\0';
++
++	xlog(D_CALL, "%s: result = '%s'", __func__, result);
++	return result;
++}
++
++/**
++ * Count the number of components in a POSIX pathname
++ *
++ * @param pathname NUL-terminated C string containing a POSIX pathname
++ * @param len OUT: number of bytes the encoded XDR stream will consume
++ * @param cnt OUT: component count
++ * @return true when successful
++ */
++static _Bool
++nsdb_count_components(const char *pathname, size_t *len,
++		unsigned int *cnt)
++{
++	char *start, *component;
++	unsigned int count;
++	size_t length;
++
++	/* strtok(3) will tromp on the string */
++	start = strdup(pathname);
++	if (start == NULL)
++		return false;
++
++	length = XDR_UINT_BYTES;
++	count = 0;
++	component = start;
++	for ( ;; ) {
++		char *next;
++		size_t tmp;
++
++		if (*component == '/')
++			component++;
++		if (*component == '\0')
++			break;
++		next = strchrnul(component, '/');
++		tmp = (size_t)(next - component);
++		if (tmp > 255)
++			return false;
++		length += XDR_UINT_BYTES + (nsdb_quadlen(tmp) << 2);
++		count++;
++
++		if (*next == '\0')
++			break;
++		component = next;
++	}
++
++	free(start);
++
++	xlog(D_CALL, "%s: length = %zu, count = %u, path = '%s'",
++		__func__, length, count, pathname);
++	*len = length;
++	*cnt = count;
++	return true;
++}
++
++/**
++ * Predicate: is input character set for a POSIX pathname valid UTF-8?
++ *
++ * @param pathname NUL-terminated C string containing a POSIX path
++ * @return true if the string is valid UTF-8
++ *
++ * XXX: implement this
++ */
++static _Bool
++nsdb_pathname_is_utf8(__attribute__((unused)) const char *pathname)
++{
++	return true;
++}
++
++/**
++ * Construct a local POSIX-style pathname from an array of component strings
++ *
++ * @param path_array array of pointers to NUL-terminated C strings
++ * @param pathname OUT: pointer to NUL-terminated UTF-8 C string containing a POSIX-style path
++ * @return a FedFsStatus code
++ *
++ * Caller must free the returned pathname with free(3).
++ */
++FedFsStatus
++nsdb_path_array_to_posix(char * const *path_array, char **pathname)
++{
++	char *component, *result;
++	unsigned int i, count;
++	size_t length, len;
++
++	if (path_array == NULL || pathname == NULL)
++		return FEDFS_ERR_INVAL;
++
++	if (path_array[0] == NULL) {
++		xlog(D_GENERAL, "%s: Zero-component pathname", __func__);
++		result = strdup("/");
++		if (result == NULL)
++			return FEDFS_ERR_SVRFAULT;
++		*pathname = result;
++		return FEDFS_OK;
++	}
++
++	for (length = 0, count = 0;
++	     path_array[count] != NULL;
++	     count++) {
++		component = path_array[count];
++		len = strlen(component);
++
++		if (len == 0) {
++			xlog(D_GENERAL, "%s: Zero-length component", __func__);
++			return FEDFS_ERR_BADNAME;
++		}
++		if (len > NAME_MAX) {
++			xlog(D_GENERAL, "%s: Component length too long", __func__);
++			return FEDFS_ERR_NAMETOOLONG;
++		}
++		if (strchr(component, '/') != NULL) {
++			xlog(D_GENERAL, "%s: Local separator character "
++					"found in component", __func__);
++			return FEDFS_ERR_BADNAME;
++		}
++		if (!nsdb_pathname_is_utf8(component)) {
++			xlog(D_GENERAL, "%s: Bad character in component",
++				__func__);
++			return FEDFS_ERR_BADCHAR;
++		}
++
++		length += STRLEN_SLASH + len;
++
++		if (length > PATH_MAX) {
++			xlog(D_GENERAL, "%s: Pathname too long", __func__);
++			return FEDFS_ERR_NAMETOOLONG;
++		}
++	}
++
++	result = calloc(1, length + 1);
++	if (result == NULL)
++		return FEDFS_ERR_SVRFAULT;
++
++	for (i = 0; i < count; i++) {
++		strcat(result, "/");
++		strcat(result, path_array[i]);
++	}
++	*pathname = nsdb_normalize_path(result);
++	free(result);
++	if (*pathname == NULL)
++		return FEDFS_ERR_SVRFAULT;
++	return FEDFS_OK;
++}
++
++/**
++ * Construct an array of component strings from a local POSIX-style pathname
++ *
++ * @param pathname NUL-terminated C string containing a POSIX-style pathname
++ * @param path_array OUT: pointer to array of pointers to NUL-terminated C strings
++ * @return a FedFsStatus code
++ *
++ * Caller must free "path_array" with nsdb_free_string_array().
++ */
++FedFsStatus
++nsdb_posix_to_path_array(const char *pathname, char ***path_array)
++{
++	char *normalized, *component, **result;
++	unsigned int i, count;
++	size_t length;
++
++	if (pathname == NULL || path_array == NULL)
++		return FEDFS_ERR_INVAL;
++
++	if (!nsdb_pathname_is_utf8(pathname)) {
++		xlog(D_GENERAL, "%s: Bad character in pathname", __func__);
++		return FEDFS_ERR_BADCHAR;
++	}
++
++	normalized = nsdb_normalize_path(pathname);
++	if (normalized == NULL)
++		return FEDFS_ERR_SVRFAULT;
++
++	if (!nsdb_count_components(normalized, &length, &count)) {
++		free(normalized);
++		return FEDFS_ERR_BADNAME;
++	}
++
++	if (count == 0) {
++		free(normalized);
++		return nsdb_alloc_zero_component_pathname(path_array);
++	}
++
++	result = (char **)calloc(count + 1, sizeof(char *));
++	if (result == NULL) {
++		free(normalized);
++		return FEDFS_ERR_SVRFAULT;
++	}
++
++	component = normalized;
++	for (i = 0; ; i++) {
++		char *next;
++
++		if (*component == '/')
++			component++;
++		if (*component == '\0')
++			break;
++		next = strchrnul(component, '/');
++		length = (size_t)(next - component);
++		if (length > 255)
++			return FEDFS_ERR_SVRFAULT;
++
++		result[i] = strndup(component, length);
++		if (result[i] == NULL) {
++			nsdb_free_string_array(result);
++			return FEDFS_ERR_SVRFAULT;
++		}
++
++		if (*next == '\0')
++			break;
++		component = next;
++	}
++
++	*path_array = result;
++	free(normalized);
++	return FEDFS_OK;
++}
+diff --git a/support/junction/xml.c b/support/junction/xml.c
+new file mode 100644
+index 0000000..79b0770
+--- /dev/null
++++ b/support/junction/xml.c
+@@ -0,0 +1,401 @@
++/**
++ * @file support/junction/xml.c
++ * @brief Common utilities for managing junction XML
++ */
++
++/*
++ * Copyright 2011, 2018 Oracle.  All rights reserved.
++ *
++ * This file is part of nfs-utils.
++ *
++ * nfs-utils is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2.0 as
++ * published by the Free Software Foundation.
++ *
++ * nfs-utils is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License version 2.0 for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * version 2.0 along with nfs-utils.  If not, see:
++ *
++ *	http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
++ */
++
++#include <sys/types.h>
++#include <sys/stat.h>
++
++#include <stdbool.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++#include <errno.h>
++
++#include "junction.h"
++#include "junction-internal.h"
++#include "xlog.h"
++
++/**
++ * Predicate: is element content empty?
++ *
++ * @param content element content to test
++ * @return true if content is empty
++ */
++_Bool
++junction_xml_is_empty(const xmlChar *content)
++{
++	return content == NULL || *content == '\0';
++}
++
++/**
++ * Match an XML parse tree node by its name
++ *
++ * @param node pointer to a node in an XML parse tree
++ * @param name NUL-terminated C string containing name to match
++ * @return true if "node" is named "name"
++ */
++_Bool
++junction_xml_match_node_name(xmlNodePtr node, const xmlChar *name)
++{
++	return (node->type == XML_ELEMENT_NODE) &&
++		(xmlStrcmp(node->name, name) == 0);
++}
++
++/**
++ * Find a first-level child of "parent" named "name"
++ *
++ * @param parent pointer to node whose children are to be searched
++ * @param name NUL-terminated C string containing name to match
++ * @return pointer to child of "parent" whose name is "name"
++ */
++xmlNodePtr
++junction_xml_find_child_by_name(xmlNodePtr parent, const xmlChar *name)
++{
++	xmlNodePtr node;
++
++	for (node = parent->children; node != NULL; node = node->next)
++		if (junction_xml_match_node_name(node, name))
++			return node;
++	return NULL;
++}
++
++/**
++ * Read attribute into a boolean
++ *
++ * @param node pointer to a node in an XML parse tree
++ * @param attrname NUL-terminated C string containing attribute name
++ * @param value OUT: attribute's value converted to an integer
++ * @return true if attribute "attrname" has a valid boolean value
++ */
++_Bool
++junction_xml_get_bool_attribute(xmlNodePtr node, const xmlChar *attrname,
++		_Bool *value)
++{
++	xmlChar *prop;
++	_Bool retval;
++
++	retval = false;
++	prop = xmlGetProp(node, attrname);
++	if (prop == NULL)
++		goto out;
++
++	if (xmlStrcmp(prop, (const xmlChar *)"true") == 0) {
++		*value = true;
++		retval = true;
++		goto out;
++	}
++
++	if (xmlStrcmp(prop, (const xmlChar *)"false") == 0) {
++		*value = false;
++		retval = true;
++		goto out;
++	}
++
++out:
++	xmlFree(prop);
++	return retval;
++}
++
++/**
++ * Set attribute to a boolean
++ *
++ * @param node pointer to a node in an XML parse tree
++ * @param attrname NUL-terminated C string containing attribute name
++ * @param value boolean value to set
++ */
++void
++junction_xml_set_bool_attribute(xmlNodePtr node, const xmlChar *attrname,
++					_Bool value)
++{
++	xmlSetProp(node, attrname, (const xmlChar *)(value ? "true" : "false"));
++}
++
++/**
++ * Read attribute into an uint8_t
++ *
++ * @param node pointer to a node in an XML parse tree
++ * @param attrname NUL-terminated C string containing attribute name
++ * @param value OUT: attribute's value converted to an uint8_t
++ * @return true if attribute "attrname" has a valid uint8_t value
++ */
++_Bool
++junction_xml_get_u8_attribute(xmlNodePtr node, const xmlChar *attrname,
++		uint8_t *value)
++{
++	char *endptr;
++	_Bool retval;
++	char *prop;
++	long tmp;
++
++	retval = false;
++	prop = (char *)xmlGetProp(node, attrname);
++	if (prop == NULL)
++		goto out;
++
++	errno = 0;
++	tmp = strtol(prop, &endptr, 10);
++	if (errno != 0 || *endptr != '\0' || tmp > 255 || tmp < 0)
++		goto out;
++
++	*value = (uint8_t)tmp;
++	retval = true;
++
++out:
++	xmlFree(prop);
++	return retval;
++}
++
++/**
++ * Read attribute into an integer
++ *
++ * @param node pointer to a node in an XML parse tree
++ * @param attrname NUL-terminated C string containing attribute name
++ * @param value OUT: attribute's value converted to an integer
++ * @return true if attribute "attrname" has a valid integer value
++ */
++_Bool
++junction_xml_get_int_attribute(xmlNodePtr node, const xmlChar *attrname,
++		int *value)
++{
++	char *endptr;
++	_Bool retval;
++	char *prop;
++	long tmp;
++
++	retval = false;
++	prop = (char *)xmlGetProp(node, attrname);
++	if (prop == NULL)
++		goto out;
++
++	errno = 0;
++	tmp = strtol(prop, &endptr, 10);
++	if (errno != 0 || *endptr != '\0' || tmp > INT32_MAX || tmp < INT32_MIN)
++		goto out;
++
++	*value = (int)tmp;
++	retval = true;
++
++out:
++	xmlFree(prop);
++	return retval;
++}
++
++/**
++ * Set attribute to an integer
++ *
++ * @param node pointer to a node in an XML parse tree
++ * @param attrname NUL-terminated C string containing attribute name
++ * @param value integer value to set
++ */
++void
++junction_xml_set_int_attribute(xmlNodePtr node, const xmlChar *attrname,
++		int value)
++{
++	char buf[16];
++
++	snprintf(buf, sizeof(buf), "%d", value);
++	xmlSetProp(node, attrname, (const xmlChar *)buf);
++}
++
++/**
++ * Read node content into an integer
++ *
++ * @param node pointer to a node in an XML parse tree
++ * @param value OUT: node's content converted to an integer
++ * @return true if "node" has valid integer content
++ */
++_Bool
++junction_xml_get_int_content(xmlNodePtr node, int *value)
++{
++	xmlChar *content;
++	char *endptr;
++	_Bool retval;
++	long tmp;
++
++	retval = false;
++	content = xmlNodeGetContent(node);
++	if (content == NULL)
++		goto out;
++
++	errno = 0;
++	tmp = strtol((const char *)content, &endptr, 10);
++	if (errno != 0 || *endptr != '\0' || tmp > INT32_MAX || tmp < INT32_MIN)
++		goto out;
++
++	*value = (int)tmp;
++	retval = true;
++
++out:
++	xmlFree(content);
++	return retval;
++}
++
++/**
++ * Add a child node with integer content
++ *
++ * @param parent  pointer to a node in an XML parse tree
++ * @param name NUL-terminated C string containing name of child to add
++ * @param value set node content to this value
++ * @return pointer to new child node
++ */
++xmlNodePtr
++junction_xml_set_int_content(xmlNodePtr parent, const xmlChar *name, int value)
++{
++	char buf[16];
++
++	snprintf(buf, sizeof(buf), "%d", value);
++	return xmlNewTextChild(parent, NULL, name, (const xmlChar *)buf);
++}
++
++/**
++ * Parse XML document in a buffer into an XML document tree
++ *
++ * @param pathname NUL-terminated C string containing pathname of a directory
++ * @param name NUL-terminated C string containing name of xattr to replace
++ * @param buf opaque byte array containing XML to parse
++ * @param len size of "buf" in bytes
++ * @param doc OUT: an XML parse tree containing junction XML
++ * @return a FedFsStatus code
++ *
++ * If junction_parse_xml_buf() returns success, caller must free "*doc"
++ * using xmlFreeDoc(3).
++ *
++ * @note Access to trusted attributes requires CAP_SYS_ADMIN.
++ */
++static FedFsStatus
++junction_parse_xml_buf(const char *pathname, const char *name,
++		void *buf, size_t len, xmlDocPtr *doc)
++{
++	xmlDocPtr tmp;
++
++	tmp = xmlParseMemory(buf, (int)len);
++	if (tmp == NULL) {
++		xlog(D_GENERAL, "Failed to parse XML in %s(%s)\n",
++			pathname, name);
++		return FEDFS_ERR_SVRFAULT;
++	}
++
++	*doc = tmp;
++	return FEDFS_OK;
++}
++
++/**
++ * Read an XML document from an extended attribute into an XML document tree
++ *
++ * @param pathname NUL-terminated C string containing pathname of a directory
++ * @param fd an open file descriptor
++ * @param name NUL-terminated C string containing name of xattr to replace
++ * @param doc OUT: an XML parse tree containing junction XML
++ * @return a FedFsStatus code
++ *
++ * If junction_parse_xml_read() returns success, caller must free "*doc"
++ * using xmlFreeDoc(3).
++ *
++ * @note Access to trusted attributes requires CAP_SYS_ADMIN.
++ */
++static FedFsStatus
++junction_parse_xml_read(const char *pathname, int fd, const char *name,
++		xmlDocPtr *doc)
++{
++	FedFsStatus retval;
++	void *buf = NULL;
++	size_t len;
++
++	retval = junction_get_xattr(fd, pathname, name, &buf, &len);
++	if (retval != FEDFS_OK)
++		return retval;
++
++	xlog(D_CALL, "%s: XML document contained in junction:\n%.*s",
++		__func__, len, buf);
++
++	retval = junction_parse_xml_buf(pathname, name, buf, len, doc);
++
++	free(buf);
++	return retval;
++}
++
++/**
++ * Read an XML document from an extended attribute into an XML document tree
++ *
++ * @param pathname NUL-terminated C string containing pathname of a directory
++ * @param name NUL-terminated C string containing name of xattr to replace
++ * @param doc OUT: an XML parse tree containing junction XML
++ * @return a FedFsStatus code
++ *
++ * If junction_parse_xml() returns success, caller must free "*doc"
++ * using xmlFreeDoc(3).
++ *
++ * @note Access to trusted attributes requires CAP_SYS_ADMIN.
++ */
++FedFsStatus
++junction_xml_parse(const char *pathname, const char *name, xmlDocPtr *doc)
++{
++	FedFsStatus retval;
++	int fd;
++
++	retval = junction_open_path(pathname, &fd);
++	if (retval != FEDFS_OK)
++		return retval;
++
++	retval = junction_parse_xml_read(pathname, fd, name, doc);
++
++	(void)close(fd);
++	return retval;
++}
++
++/**
++ * Write an XML document into an extended attribute
++ *
++ * @param pathname NUL-terminated C string containing pathname of a directory
++ * @param name NUL-terminated C string containing name of xattr to replace
++ * @param doc an XML parse tree containing junction XML
++ * @return a FedFsStatus code
++ *
++ * @note Access to trusted attributes requires CAP_SYS_ADMIN.
++ */
++FedFsStatus
++junction_xml_write(const char *pathname, const char *name, xmlDocPtr doc)
++{
++	xmlChar *buf = NULL;
++	FedFsStatus retval;
++	int fd, len;
++
++	retval = junction_open_path(pathname, &fd);
++	if (retval != FEDFS_OK)
++		return retval;
++
++	retval = FEDFS_ERR_SVRFAULT;
++	xmlIndentTreeOutput = 1;
++	xmlDocDumpFormatMemoryEnc(doc, &buf, &len, "UTF-8", 1);
++	if (len < 0)
++		goto out;
++
++	retval = junction_set_xattr(fd, pathname, name, buf, (size_t)len);
++
++out:
++	xmlFree(buf);
++	(void)close(fd);
++	return retval;
++}
+diff --git a/support/misc/mountpoint.c b/support/misc/mountpoint.c
+index a72fb92..9f9ce44 100644
+--- a/support/misc/mountpoint.c
++++ b/support/misc/mountpoint.c
+@@ -6,6 +6,7 @@
+ #include <string.h>
+ #include "xcommon.h"
+ #include <sys/stat.h>
++#include "misc.h"
+ 
+ int
+ is_mountpoint(char *path)
+diff --git a/support/nfs/atomicio.c b/support/nfs/atomicio.c
+index aa819ca..0e81838 100644
+--- a/support/nfs/atomicio.c
++++ b/support/nfs/atomicio.c
+@@ -28,6 +28,8 @@
+ #include <unistd.h>
+ #include <errno.h>
+ 
++#include "nfslib.h"
++
+ /*
+  * ensure all of data on socket comes through. f==read || f==write
+  */
+diff --git a/support/nfs/cacheio.c b/support/nfs/cacheio.c
+index 9912afa..9dc4cf1 100644
+--- a/support/nfs/cacheio.c
++++ b/support/nfs/cacheio.c
+@@ -212,7 +212,7 @@ cache_flush(int force)
+ {
+ 	struct stat stb;
+ 	int c;
+-	char stime[20];
++	char stime[32];
+ 	char path[200];
+ 	time_t now;
+ 	/* Note: the order of these caches is important.
+diff --git a/support/nfs/closeall.c b/support/nfs/closeall.c
+index a69bf35..e07253e 100644
+--- a/support/nfs/closeall.c
++++ b/support/nfs/closeall.c
+@@ -9,6 +9,8 @@
+ #include <dirent.h>
+ #include <errno.h>
+ 
++#include "nfslib.h"
++
+ void
+ closeall(int min)
+ {
+diff --git a/support/nfs/exports.c b/support/nfs/exports.c
+index 92bd6e6..b59d187 100644
+--- a/support/nfs/exports.c
++++ b/support/nfs/exports.c
+@@ -197,6 +197,7 @@ static const struct secinfo_flag_displaymap {
+ 	const char *set;
+ 	const char *unset;
+ } secinfo_flag_displaymap[] = {
++	{ NFSEXP_READONLY, "ro", "rw" },
+ 	{ NFSEXP_INSECURE_PORT, "insecure", "secure" },
+ 	{ NFSEXP_ROOTSQUASH, "root_squash", "no_root_squash" },
+ 	{ NFSEXP_ALLSQUASH, "all_squash", "no_all_squash" },
+diff --git a/support/nfs/nfs_mntent.c b/support/nfs/nfs_mntent.c
+index a2118a2..05a4c68 100644
+--- a/support/nfs/nfs_mntent.c
++++ b/support/nfs/nfs_mntent.c
+@@ -13,6 +13,7 @@
+ #include <ctype.h>		/* for isdigit */
+ #include <sys/stat.h>		/* for umask */
+ #include <unistd.h>		/* for ftruncate */
++#include <errno.h>		/* for errno */
+ 
+ #include "nfs_mntent.h"
+ #include "nls.h"
+@@ -148,9 +149,12 @@ nfs_addmntent (mntFILE *mfp, struct mntent *mnt) {
+ 	free(m4);
+ 	if (res >= 0) {
+ 		res = fflush(mfp->mntent_fp);
+-		if (res < 0)
++		if (res < 0) {
++			nfs_error("Cant't flush out mtab: %s", strerror(errno));
+ 			/* Avoid leaving a corrupt mtab file */
+-			ftruncate(fileno(mfp->mntent_fp), length);
++			if (ftruncate(fileno(mfp->mntent_fp), length))
++				{/* Ignore this failure; Why confuse things */}
++		}
+ 	}
+ 	return (res < 0) ? 1 : 0;
+ }
+diff --git a/support/nfs/rpcmisc.c b/support/nfs/rpcmisc.c
+index ae2c0a6..abe89ba 100644
+--- a/support/nfs/rpcmisc.c
++++ b/support/nfs/rpcmisc.c
+@@ -32,6 +32,7 @@
+ #include <unistd.h>
+ #include <time.h>
+ #include "nfslib.h"
++#include "rpcmisc.h"
+ 
+ #if SIZEOF_SOCKLEN_T - 0 == 0
+ #define socklen_t int
+diff --git a/support/nfs/strlcat.c b/support/nfs/strlcat.c
+index daedd7a..0edee14 100644
+--- a/support/nfs/strlcat.c
++++ b/support/nfs/strlcat.c
+@@ -38,6 +38,8 @@ static char *rcsid = "$OpenBSD: strlcat.c,v 1.8 2001/05/13 15:40:15 deraadt Exp
+ #include "config.h"
+ #endif /* HAVE_CONFIG_H */
+ 
++#include "nfslib.h"
++
+ /*
+  * Appends src to string dst of size siz (unlike strncat, siz is the
+  * full size of dst, not space left).  At most siz-1 characters
+diff --git a/support/nfs/strlcpy.c b/support/nfs/strlcpy.c
+index a2653ee..23e3ae9 100644
+--- a/support/nfs/strlcpy.c
++++ b/support/nfs/strlcpy.c
+@@ -38,6 +38,8 @@ static char *rcsid = "$OpenBSD: strlcpy.c,v 1.5 2001/05/13 15:40:16 deraadt Exp
+ #include "config.h"
+ #endif /* HAVE_CONFIG_H */
+ 
++#include "nfslib.h"
++
+ /*
+  * Copy src to string dst of size siz.  At most siz-1 characters
+  * will be copied.  Always NUL terminates (unless siz == 0).
+diff --git a/support/nfs/svc_socket.c b/support/nfs/svc_socket.c
+index 1fa0d15..1239712 100644
+--- a/support/nfs/svc_socket.c
++++ b/support/nfs/svc_socket.c
+@@ -25,6 +25,8 @@
+ #include <sys/fcntl.h>
+ #include <errno.h>
+ #include "xlog.h"
++#include "rpcmisc.h"
++#include "nfslib.h"
+ 
+ #include "config.h"
+ 
+diff --git a/support/nfs/wildmat.c b/support/nfs/wildmat.c
+index c5b4c78..437b2d1 100644
+--- a/support/nfs/wildmat.c
++++ b/support/nfs/wildmat.c
+@@ -41,9 +41,16 @@
+ #endif
+ 
+ #include <ctype.h>
++#include "nfslib.h"
+ 
++#ifndef TRUE
+ #define TRUE			1
++#endif
++
++#ifndef FALSE
+ #define FALSE			0
++#endif
++
+ #define ABORT			-1
+ 
+ 
+diff --git a/support/nfsidmap/Makefile.am b/support/nfsidmap/Makefile.am
+index 9466f92..8b5dfe4 100644
+--- a/support/nfsidmap/Makefile.am
++++ b/support/nfsidmap/Makefile.am
+@@ -25,7 +25,7 @@ pkgplugin_LTLIBRARIES = nsswitch.la static.la $(UMICH_LDAP_LIB) $(GUMS_MAPPING_L
+ #  <age> 	The number of previous additional interfaces supported
+ #  		by this library.
+ 
+-libnfsidmap_la_SOURCES = libnfsidmap.c nfsidmap_internal.h nfsidmap_common.c
++libnfsidmap_la_SOURCES = libnfsidmap.c nfsidmap_common.c
+ libnfsidmap_la_LDFLAGS = -version-info 1:0:0
+ libnfsidmap_la_LIBADD = -ldl ../../support/nfs/libnfsconf.la
+ 
+diff --git a/support/nfsidmap/libnfsidmap.c b/support/nfsidmap/libnfsidmap.c
+index 3b44da6..35ddf01 100644
+--- a/support/nfsidmap/libnfsidmap.c
++++ b/support/nfsidmap/libnfsidmap.c
+@@ -64,6 +64,7 @@
+ 
+ #pragma GCC visibility push(hidden)
+ 
++void nfs4_cleanup_name_mapping(void);
+ static char *default_domain;
+ static struct mapping_plugin **nfs4_plugins = NULL;
+ static struct mapping_plugin **gss_plugins = NULL;
+@@ -103,14 +104,6 @@ nfs4_idmap_log_function_t idmap_log_func = default_logger;
+ int idmap_verbosity = 2;
+ #pragma GCC visibility push(hidden)
+ 
+-static char * toupper_str(char *s)
+-{
+-	size_t i;
+-	for (i=0; i < strlen(s); i++)
+-		s[i] = toupper(s[i]);
+-	return s;
+-}
+-
+ static int id_as_chars(char *name, uid_t *id)
+ {
+ 	long int value;
+@@ -327,7 +320,7 @@ out:
+ 	return ret;
+ }
+ 
+-char * get_default_domain(void)
++static char *get_default_domain(void)
+ {
+ 	int ret;
+ 
+@@ -353,24 +346,22 @@ void nfs4_cleanup_name_mapping(void)
+ 
+ #pragma GCC visibility pop
+ 
++const char * nfsidmap_conf_path = PATH_IDMAPDCONF;
++
+ int nfs4_init_name_mapping(char *conffile)
+ {
+ 	int ret = -ENOENT;
+ 	int dflt = 0;
+ 	struct conf_list *nfs4_methods, *gss_methods;
+ 	char *nobody_user, *nobody_group;
+-	char *nostrip;
+-	char *reformatgroup;
+-	char *conf_path;
+ 
+ 	/* XXX: need to be able to reload configurations... */
+ 	if (nfs4_plugins) /* already succesfully initialized */
+ 		return 0;
+ 	if (conffile)
+-		conf_path = conffile;
+-	else
+-		conf_path = PATH_IDMAPDCONF;
+-	conf_init_file(conf_path);
++		nfsidmap_conf_path = conffile;
++	conf_init_file(nfsidmap_conf_path);
++
+ 	default_domain = conf_get_str("General", "Domain");
+ 	if (default_domain == NULL) {
+ 		dflt = 1;
+@@ -387,30 +378,8 @@ int nfs4_init_name_mapping(char *conffile)
+ 	IDMAP_LOG(1, ("libnfsidmap: using%s domain: %s",
+ 		(dflt ? " (default)" : ""), default_domain));
+ 
+-	/* Get list of "local equivalent" realms.  Meaning the list of realms
+-	 * where john@REALM.A is considered the same user as john@REALM.B
+-	 * If not specified, default to upper-case of local domain name */
+-	local_realms = conf_get_list("General", "Local-Realms");
+-	if (local_realms == NULL) {
+-		struct conf_list_node *node;
+-
+-		local_realms = malloc(sizeof *local_realms);
+-		if (local_realms == NULL)
+-			return -ENOMEM;
+-		local_realms->cnt = 0;
+-		TAILQ_INIT(&local_realms->fields);
+-
+-		node = calloc(1, sizeof *node);
+-		if (node == NULL)
+-			return -ENOMEM;
+-		node->field = strdup(get_default_domain());
+-		if (node->field == NULL)
+-			return -ENOMEM;
+-		toupper_str(node->field);
+-
+-		TAILQ_INSERT_TAIL(&local_realms->fields, node, link);
+-		local_realms->cnt++;
+-	}
++	struct conf_list *local_realms = get_local_realms();
++	if (local_realms == NULL) return -ENOMEM;
+ 
+ 	if (idmap_verbosity >= 1) {
+ 		struct conf_list_node *r;
+@@ -434,26 +403,6 @@ int nfs4_init_name_mapping(char *conffile)
+ 			IDMAP_LOG(1, ("libnfsidmap: Realms list: <NULL> "));
+ 	}
+ 
+-	nostrip = conf_get_str_with_def("General", "No-Strip", "none");
+-	if (strcasecmp(nostrip, "both") == 0)
+-		no_strip = IDTYPE_USER|IDTYPE_GROUP;
+-	else if (strcasecmp(nostrip, "group") == 0)
+-		no_strip = IDTYPE_GROUP;
+-	else if (strcasecmp(nostrip, "user") == 0)
+-		no_strip = IDTYPE_USER;
+-	else
+-		no_strip = 0;
+-
+-	if (no_strip & IDTYPE_GROUP) {
+-		reformatgroup = conf_get_str_with_def("General", "Reformat-Group", "false");
+-		if ((strcasecmp(reformatgroup, "true") == 0) ||
+-		    (strcasecmp(reformatgroup, "on") == 0) ||
+-		    (strcasecmp(reformatgroup, "yes") == 0))
+-			reformat_group = 1;
+-		else
+-			reformat_group = 0;
+-	}
+-
+ 	nfs4_methods = conf_get_list("Translation", "Method");
+ 	if (nfs4_methods) {
+ 		IDMAP_LOG(1, ("libnfsidmap: processing 'Method' list"));
+diff --git a/support/nfsidmap/nfsidmap_common.c b/support/nfsidmap/nfsidmap_common.c
+index 891c855..5242c7e 100644
+--- a/support/nfsidmap/nfsidmap_common.c
++++ b/support/nfsidmap/nfsidmap_common.c
+@@ -6,6 +6,9 @@
+  *
+  *  Code common to libnfsidmap and some of its bundled plugins
+  *
++ *  If you make use of these functions you must initialise your own
++ *  copy of the config file data using: conf_init_file(nfsidmap_conf_path)
++ *  failure to do so will appear as if the config was empty
+  */
+ 
+ #include "config.h"
+@@ -13,6 +16,8 @@
+ #include <sys/types.h>
+ #include <unistd.h>
+ #include <stdlib.h>
++#include <errno.h>
++#include <string.h>
+ 
+ #include "nfsidmap.h"
+ #include "nfsidmap_private.h"
+@@ -21,13 +26,82 @@
+ 
+ #pragma GCC visibility push(hidden)
+ 
+-int reformat_group = 0;
+-int no_strip = 0;
+-
+-struct conf_list *local_realms;
++static char * toupper_str(char *s)
++{
++        size_t i;
++        for (i=0; i < strlen(s); i++)
++                s[i] = toupper(s[i]);
++        return s;
++}
+ 
++/* Get list of "local equivalent" realms.  Meaning the list of realms
++ * where john@REALM.A is considered the same user as john@REALM.B
++ * If not specified, default to upper-case of local domain name */
+ struct conf_list *get_local_realms(void)
+ {
++	static struct conf_list *local_realms = NULL;
++	if (local_realms) return local_realms;
++
++	local_realms = conf_get_list("General", "Local-Realms");
++	if (local_realms == NULL) {
++		struct conf_list_node *node;
++
++		local_realms = malloc(sizeof *local_realms);
++		if (local_realms == NULL)
++			return NULL;
++		local_realms->cnt = 0;
++		TAILQ_INIT(&local_realms->fields);
++
++		node = calloc(1, sizeof *node);
++		if (node == NULL)
++			return NULL;
++
++		node->field = calloc(1, NFS4_MAX_DOMAIN_LEN);
++		if (node->field == NULL)
++			return NULL;
++
++		nfs4_get_default_domain(NULL, node->field, NFS4_MAX_DOMAIN_LEN);
++		toupper_str(node->field);
++
++		TAILQ_INSERT_TAIL(&local_realms->fields, node, link);
++		local_realms->cnt++;
++	}
+ 	return local_realms;
+ }
+ 
++static int no_strip = -1;
++static int reformat_group = 0;
++
++int get_nostrip(void)
++{
++	if (no_strip != -1) return no_strip;
++
++	char * nostrip = conf_get_str_with_def("General", "No-Strip", "none");
++	if (strcasecmp(nostrip, "both") == 0)
++		no_strip = IDTYPE_USER|IDTYPE_GROUP;
++	else if (strcasecmp(nostrip, "group") == 0)
++		no_strip = IDTYPE_GROUP;
++	else if (strcasecmp(nostrip, "user") == 0)
++		no_strip = IDTYPE_USER;
++	else
++		no_strip = 0;
++
++	if (no_strip & IDTYPE_GROUP) {
++		char * reformatgroup = conf_get_str_with_def("General", "Reformat-Group", "false");
++		if ((strcasecmp(reformatgroup, "true") == 0) ||
++		    (strcasecmp(reformatgroup, "on") == 0) ||
++		    (strcasecmp(reformatgroup, "yes") == 0))
++			reformat_group = 1;
++		else
++			reformat_group = 0;
++	}
++
++	return no_strip;
++}
++
++int get_reformat_group(void)
++{
++	if (no_strip != -1) return reformat_group;
++
++	return reformat_group;
++}
+diff --git a/support/nfsidmap/nfsidmap_plugin.h b/support/nfsidmap/nfsidmap_plugin.h
+index e19efe5..66fcdaa 100644
+--- a/support/nfsidmap/nfsidmap_plugin.h
++++ b/support/nfsidmap/nfsidmap_plugin.h
+@@ -51,6 +51,7 @@ struct trans_func {
+ 
+ extern int idmap_verbosity;
+ extern nfs4_idmap_log_function_t idmap_log_func;
++struct trans_func *libnfsidmap_plugin_init(void);
+ 
+ /* Level zero always prints, others print depending on verbosity level */
+ #define IDMAP_LOG(LVL, MSG) \
+@@ -64,5 +65,6 @@ extern nfs4_idmap_log_function_t idmap_log_func;
+ #endif
+ #endif
+ 
++extern const char *nfsidmap_conf_path;
+ extern const char *nfsidmap_config_get(const char *section, const char *tag);
+ 
+diff --git a/support/nfsidmap/nfsidmap_private.h b/support/nfsidmap/nfsidmap_private.h
+index 2cc309e..f1af55f 100644
+--- a/support/nfsidmap/nfsidmap_private.h
++++ b/support/nfsidmap/nfsidmap_private.h
+@@ -37,16 +37,14 @@
+ #include "conffile.h"
+ 
+ struct conf_list *get_local_realms(void);
++int get_nostrip(void);
++int get_reformat_group(void);
+ 
+ typedef enum {
+ 	IDTYPE_USER = 1,
+ 	IDTYPE_GROUP = 2
+ } idtypes;
+ 
+-extern int no_strip;
+-extern int reformat_group;
+-extern struct conf_list *local_realms;
+-
+ typedef struct trans_func * (*libnfsidmap_plugin_init_t)(void);
+ 
+ struct mapping_plugin {
+diff --git a/support/nfsidmap/nss.c b/support/nfsidmap/nss.c
+index 6f024dc..9d46499 100644
+--- a/support/nfsidmap/nss.c
++++ b/support/nfsidmap/nss.c
+@@ -38,6 +38,7 @@
+ #include <errno.h>
+ #include <unistd.h>
+ #include <stdlib.h>
++#include <stdio.h>
+ #include <string.h>
+ #include <pwd.h>
+ #include <grp.h>
+@@ -103,7 +104,7 @@ static int nss_uid_to_name(uid_t uid, char *domain, char *name, size_t len)
+ 		err = -ENOENT;
+ 	if (err)
+ 		goto out_buf;
+-	if (no_strip & IDTYPE_USER)
++	if (get_nostrip() & IDTYPE_USER)
+ 		err = write_name(name, pw->pw_name, domain, len, 0);
+ 	else
+ 		err = write_name(name, pw->pw_name, domain, len, 1);
+@@ -140,7 +141,7 @@ static int nss_gid_to_name(gid_t gid, char *domain, char *name, size_t len)
+ 
+ 	if (err)
+ 		goto out_buf;
+-	if (no_strip & IDTYPE_GROUP)
++	if (get_nostrip() & IDTYPE_GROUP)
+ 		err = write_name(name, gr->gr_name, domain, len, 0);
+ 	else
+ 		err = write_name(name, gr->gr_name, domain, len, 1);
+@@ -247,7 +248,7 @@ static int nss_name_to_uid(char *name, uid_t *uid)
+ 	int err = -ENOENT;
+ 
+ 	domain = get_default_domain();
+-	if (no_strip & IDTYPE_USER) {
++	if (get_nostrip() & IDTYPE_USER) {
+ 		pw = nss_getpwnam(name, domain, &err, 0);
+ 		if (pw != NULL)
+ 			goto out_uid;
+@@ -315,7 +316,7 @@ static int _nss_name_to_gid(char *name, gid_t *gid, int dostrip)
+ 				  "into domain '%s'", name, domain));
+ 			goto out;
+ 		}
+-	} else if (reformat_group) {
++	} else if (get_reformat_group()) {
+ 		ref_name = reformat_name(name);
+ 		if (ref_name == NULL) {
+ 			IDMAP_LOG(1, ("nss_name_to_gid: failed to reformat name '%s'",
+@@ -335,7 +336,7 @@ static int _nss_name_to_gid(char *name, gid_t *gid, int dostrip)
+ 			goto out_name;
+ 		if (dostrip)
+ 			err = -getgrnam_r(localname, &grbuf, buf, buflen, &gr);
+-		else if (reformat_group)
++		else if (get_reformat_group())
+ 			err = -getgrnam_r(ref_name, &grbuf, buf, buflen, &gr);
+ 		else
+ 			err = -getgrnam_r(name, &grbuf, buf, buflen, &gr);
+@@ -343,7 +344,7 @@ static int _nss_name_to_gid(char *name, gid_t *gid, int dostrip)
+ 			if (dostrip)
+ 				IDMAP_LOG(1, ("nss_name_to_gid: name '%s' not found "
+ 					  "in domain '%s'", localname, domain));
+-			else if (reformat_group)
++			else if (get_reformat_group())
+ 				IDMAP_LOG(1, ("nss_name_to_gid: name '%s' not found "
+ 					  "(reformatted)", ref_name));
+ 			else
+@@ -366,7 +367,7 @@ out_buf:
+ out_name:
+ 	if (dostrip)
+ 		free(localname);
+-	if (reformat_group)
++	if (get_reformat_group())
+ 		free(ref_name);
+ out:
+ 	return err;
+@@ -376,7 +377,7 @@ static int nss_name_to_gid(char *name, gid_t *gid)
+ {
+ 	int err = 0;
+ 
+-	if (no_strip & IDTYPE_GROUP) {
++	if (get_nostrip() & IDTYPE_GROUP) {
+ 		err = _nss_name_to_gid(name, gid, 0);
+ 		if (!err)
+ 			goto out;
+@@ -436,7 +437,7 @@ out:
+ 	return err;
+ }
+ 
+-int nss_gss_princ_to_grouplist(char *secname, char *princ,
++static int nss_gss_princ_to_grouplist(char *secname, char *princ,
+ 			       gid_t *groups, int *ngroups,
+ 			       extra_mapping_params **UNUSED(ex))
+ {
+@@ -459,10 +460,17 @@ out:
+ 	return ret;
+ }
+ 
++static int nss_plugin_init(void)
++{
++	if (nfsidmap_conf_path)
++		conf_init_file(nfsidmap_conf_path);
++	return 0;
++}
++
+ 
+ struct trans_func nss_trans = {
+ 	.name		= "nsswitch",
+-	.init		= NULL,
++	.init		= nss_plugin_init,
+ 	.princ_to_ids	= nss_gss_princ_to_ids,
+ 	.name_to_uid	= nss_name_to_uid,
+ 	.name_to_gid	= nss_name_to_gid,
+diff --git a/support/nfsidmap/static.c b/support/nfsidmap/static.c
+index 0b1173f..f7b8a67 100644
+--- a/support/nfsidmap/static.c
++++ b/support/nfsidmap/static.c
+@@ -317,6 +317,9 @@ static int static_init(void) {
+ 	for (i = 0; i < sizeof uid_mappings / sizeof uid_mappings[0]; i++)
+ 		LIST_INIT (&uid_mappings[i]);
+ 
++	if (nfsidmap_conf_path)
++		conf_init_file(nfsidmap_conf_path);
++
+ 	//get all principals for which we have mappings
+ 	princ_list = conf_get_tag_list("Static", NULL);
+ 
+diff --git a/support/nfsidmap/umich_ldap.c b/support/nfsidmap/umich_ldap.c
+index e82828c..0e31b1c 100644
+--- a/support/nfsidmap/umich_ldap.c
++++ b/support/nfsidmap/umich_ldap.c
+@@ -1101,6 +1101,9 @@ umichldap_init(void)
+ 	char missing_msg[128] = "";
+ 	char *server_in, *canon_name;
+ 
++	if (nfsidmap_conf_path)
++		conf_init_file(nfsidmap_conf_path);
++
+ 	server_in = conf_get_str(LDAP_SECTION, "LDAP_server");
+ 	ldap_info.base = conf_get_str(LDAP_SECTION, "LDAP_base");
+ 	ldap_info.people_tree = conf_get_str(LDAP_SECTION, "LDAP_people_base");
+diff --git a/support/nsm/Makefile.am b/support/nsm/Makefile.am
+index 2038e68..8f5874e 100644
+--- a/support/nsm/Makefile.am
++++ b/support/nsm/Makefile.am
+@@ -32,11 +32,12 @@ $(GENFILES_SVC): %_svc.c: %.x $(RPCGEN)
+ 
+ $(GENFILES_XDR): %_xdr.c: %.x $(RPCGEN)
+ 	test -f $@ && rm -rf $@ || true
+-	$(RPCGEN) -c -o $@ $<
++	$(RPCGEN) -c -i 0 -o $@ $<
+ 
+ $(GENFILES_H): %.h: %.x $(RPCGEN)
+ 	test -f $@ && rm -rf $@ || true
+ 	$(RPCGEN) -h -o $@ $<
++	echo "void sm_prog_1(struct svc_req *, SVCXPRT *);" >> $@
+ 	rm -f $(top_builddir)/support/include/sm_inter.h
+ 	$(LN_S) ../nsm/sm_inter.h $(top_builddir)/support/include/sm_inter.h
+ 
+diff --git a/systemd/systemd.c b/systemd/systemd.c
+index 17820d4..c7bdb4d 100644
+--- a/systemd/systemd.c
++++ b/systemd/systemd.c
+@@ -8,6 +8,7 @@
+ #include <stdlib.h>
+ #include <ctype.h>
+ #include <string.h>
++#include "systemd.h"
+ 
+ static const char hex[16] =
+ {
+diff --git a/tools/locktest/testlk.c b/tools/locktest/testlk.c
+index 82ed765..b392f71 100644
+--- a/tools/locktest/testlk.c
++++ b/tools/locktest/testlk.c
+@@ -81,7 +81,7 @@ main(int argc, char **argv)
+ 		if (fl.l_type == F_UNLCK) {
+ 			printf("%s: no conflicting lock\n", fname);
+ 		} else {
+-			printf("%s: conflicting lock by %d on (%lld;%lld)\n",
++			printf("%s: conflicting lock by %d on (%ld;%ld)\n",
+ 				fname, fl.l_pid, fl.l_start, fl.l_len);
+ 		}
+ 		return 0;
+diff --git a/utils/Makefile.am b/utils/Makefile.am
+index c75a5a0..d361aea 100644
+--- a/utils/Makefile.am
++++ b/utils/Makefile.am
+@@ -23,6 +23,10 @@ if CONFIG_NFSDCLTRACK
+ OPTDIRS += nfsdcltrack
+ endif
+ 
++if CONFIG_JUNCTION
++OPTDIRS += nfsref
++endif
++
+ SUBDIRS = \
+ 	exportfs \
+ 	mountd \
+diff --git a/utils/blkmapd/device-discovery.c b/utils/blkmapd/device-discovery.c
+index cae8c8d..3a202e0 100644
+--- a/utils/blkmapd/device-discovery.c
++++ b/utils/blkmapd/device-discovery.c
+@@ -81,7 +81,7 @@ int    bl_watch_fd, bl_pipe_fd, nfs_pipedir_wfd, rpc_pipedir_wfd;
+ int    pidfd = -1;
+ 
+ 
+-struct bl_disk_path *bl_get_path(const char *filepath,
++static struct bl_disk_path *bl_get_path(const char *filepath,
+ 				 struct bl_disk_path *paths)
+ {
+ 	struct bl_disk_path *tmp = paths;
+@@ -103,7 +103,7 @@ struct bl_disk_path *bl_get_path(const char *filepath,
+  * exist for each multipath device. If not, active device path will be
+  * chosen for device creation.
+  */
+-int bl_update_path(enum bl_path_state_e state, struct bl_disk *disk)
++static int bl_update_path(enum bl_path_state_e state, struct bl_disk *disk)
+ {
+ 	struct bl_disk_path *valid_path = disk->valid_path;
+ 
+@@ -112,7 +112,7 @@ int bl_update_path(enum bl_path_state_e state, struct bl_disk *disk)
+ 	return 1;
+ }
+ 
+-void bl_release_disk(void)
++static void bl_release_disk(void)
+ {
+ 	struct bl_disk *disk;
+ 	struct bl_disk_path *path = NULL;
+@@ -133,7 +133,7 @@ void bl_release_disk(void)
+ 	}
+ }
+ 
+-void bl_add_disk(char *filepath)
++static void bl_add_disk(char *filepath)
+ {
+ 	struct bl_disk *disk = NULL;
+ 	int fd = 0;
+@@ -239,7 +239,7 @@ int bl_discover_devices(void)
+ {
+ 	FILE *f;
+ 	int n;
+-	char buf[PATH_MAX], devname[PATH_MAX], fulldevname[PATH_MAX];
++	char buf[PATH_MAX], devname[PATH_MAX], fulldevname[PATH_MAX+NAME_MAX];
+ 
+ 	/* release previous list */
+ 	bl_release_disk();
+@@ -435,7 +435,7 @@ static int bl_event_helper(void)
+ 	return ret;
+ }
+ 
+-void sig_die(int signal)
++static void sig_die(int signal)
+ {
+ 	if (pidfd >= 0) {
+ 		close(pidfd);
+@@ -504,9 +504,11 @@ int main(int argc, char **argv)
+ 			close(pidfd);
+ 			exit(1);
+ 		}
+-		ftruncate(pidfd, 0);
++		if (ftruncate(pidfd, 0) < 0)
++			BL_LOG_WARNING("ftruncate on %s failed: m\n", PID_FILE);
+ 		sprintf(pidbuf, "%d\n", getpid());
+-		write(pidfd, pidbuf, strlen(pidbuf));
++		if (write(pidfd, pidbuf, strlen(pidbuf)) != (ssize_t)strlen(pidbuf))
++			BL_LOG_WARNING("write on %s failed: m\n", PID_FILE);
+ 	}
+ 
+ 	signal(SIGINT, sig_die);
+diff --git a/utils/blkmapd/dm-device.c b/utils/blkmapd/dm-device.c
+index 24ffcbf..f2d4de4 100644
+--- a/utils/blkmapd/dm-device.c
++++ b/utils/blkmapd/dm-device.c
+@@ -210,7 +210,7 @@ static int dm_device_remove_byname(const char *dev_name)
+ 	return ret;
+ }
+ 
+-int dm_device_remove(uint64_t dev)
++static int dm_device_remove(uint64_t dev)
+ {
+ 	struct dm_task *dmt;
+ 	struct dm_names *dmnames;
+diff --git a/utils/exportfs/exportfs.c b/utils/exportfs/exportfs.c
+index 448f195..cd3c979 100644
+--- a/utils/exportfs/exportfs.c
++++ b/utils/exportfs/exportfs.c
+@@ -695,10 +695,6 @@ dump(int verbose, int export_format)
+ 				continue;
+ 			}
+ 			c = '(';
+-			if (ep->e_flags & NFSEXP_READONLY)
+-				c = dumpopt(c, "ro");
+-			else
+-				c = dumpopt(c, "rw");
+ 			if (ep->e_flags & NFSEXP_ASYNC)
+ 				c = dumpopt(c, "async");
+ 			else
+diff --git a/utils/gssd/Makefile.am b/utils/gssd/Makefile.am
+index beb3e8e..321046b 100644
+--- a/utils/gssd/Makefile.am
++++ b/utils/gssd/Makefile.am
+@@ -5,6 +5,8 @@ if CONFIG_SVCGSS
+ man8_MANS	+= svcgssd.man
+ endif
+ 
++AM_CPPFLAGS += -I ../../support/nfsidmap
++
+ RPCPREFIX	= rpc.
+ KPREFIX		= @kprefix@
+ sbin_PREFIXED	= gssd
+diff --git a/utils/gssd/err_util.c b/utils/gssd/err_util.c
+index fe09eda..2b1132a 100644
+--- a/utils/gssd/err_util.c
++++ b/utils/gssd/err_util.c
+@@ -36,6 +36,7 @@
+ #include <stdarg.h>
+ #include <string.h>
+ #include "xlog.h"
++#include "err_util.h"
+ 
+ static int verbosity = 0;
+ static int fg = 0;
+diff --git a/utils/gssd/gss_names.c b/utils/gssd/gss_names.c
+index 047069d..2a7f3a1 100644
+--- a/utils/gssd/gss_names.c
++++ b/utils/gssd/gss_names.c
+@@ -51,6 +51,7 @@
+ 
+ #include "svcgssd.h"
+ #include "gss_util.h"
++#include "gss_names.h"
+ #include "err_util.h"
+ #include "context.h"
+ #include "misc.h"
+diff --git a/utils/gssd/gssd_proc.c b/utils/gssd/gssd_proc.c
+index 4fc81c3..ce73777 100644
+--- a/utils/gssd/gssd_proc.c
++++ b/utils/gssd/gssd_proc.c
+@@ -473,7 +473,7 @@ change_identity(uid_t uid)
+ 	return 0;
+ }
+ 
+-AUTH *
++static AUTH *
+ krb5_not_machine_creds(struct clnt_info *clp, uid_t uid, char *tgtname,
+ 			int *downcall_err, int *chg_err, CLIENT **rpc_clnt)
+ {
+@@ -519,7 +519,7 @@ out:
+ 	return auth;
+ }
+ 
+-AUTH *
++static AUTH *
+ krb5_use_machine_creds(struct clnt_info *clp, uid_t uid, char *tgtname,
+ 		    char *service, CLIENT **rpc_clnt)
+ {
+diff --git a/utils/gssd/krb5_util.c b/utils/gssd/krb5_util.c
+index b64818a..b342b06 100644
+--- a/utils/gssd/krb5_util.c
++++ b/utils/gssd/krb5_util.c
+@@ -188,7 +188,7 @@ gssd_find_existing_krb5_ccache(uid_t uid, char *dirname,
+ 	int found = 0;
+ 	struct dirent *best_match_dir = NULL;
+ 	struct stat best_match_stat, tmp_stat;
+-	char buf[1030];
++	char buf[PATH_MAX+4+2+256];
+ 	char *princname = NULL;
+ 	char *realm = NULL;
+ 	int score, best_match_score = 0, err = -EACCES;
+@@ -202,39 +202,35 @@ gssd_find_existing_krb5_ccache(uid_t uid, char *dirname,
+ 			dirname, strerror(errno));
+ 	}
+ 	else if (n > 0) {
+-		char statname[1024];
+ 		for (i = 0; i < n; i++) {
+-			snprintf(statname, sizeof(statname),
++			snprintf(buf, sizeof(buf),
+ 				 "%s/%s", dirname, namelist[i]->d_name);
+ 			printerr(3, "CC '%s' being considered, "
+ 				 "with preferred realm '%s'\n",
+-				 statname, preferred_realm ?
++				 buf, preferred_realm ?
+ 					preferred_realm : "<none selected>");
+-			if (lstat(statname, &tmp_stat)) {
+-				printerr(0, "Error doing stat on '%s'\n",
+-					 statname);
++			if (lstat(buf, &tmp_stat)) {
++				printerr(0, "Error doing stat on '%s'\n", buf);
+ 				free(namelist[i]);
+ 				continue;
+ 			}
+ 			/* Only pick caches owned by the user (uid) */
+ 			if (tmp_stat.st_uid != uid) {
+ 				printerr(3, "CC '%s' owned by %u, not %u\n",
+-					 statname, tmp_stat.st_uid, uid);
++					 buf, tmp_stat.st_uid, uid);
+ 				free(namelist[i]);
+ 				continue;
+ 			}
+ 			if (!S_ISREG(tmp_stat.st_mode) &&
+ 			    !S_ISDIR(tmp_stat.st_mode)) {
+ 				printerr(3, "CC '%s' is not a regular "
+-					 "file or directory\n",
+-					 statname);
++					 "file or directory\n", buf);
+ 				free(namelist[i]);
+ 				continue;
+ 			}
+ 			if (uid == 0 && !root_uses_machine_creds && 
+ 				strstr(namelist[i]->d_name, "machine_")) {
+-				printerr(3, "CC '%s' not available to root\n",
+-					 statname);
++				printerr(3, "CC '%s' not available to root\n", buf);
+ 				free(namelist[i]);
+ 				continue;
+ 			}
+@@ -333,7 +329,7 @@ gssd_get_single_krb5_cred(krb5_context context,
+ 			  struct gssd_k5_kt_princ *ple,
+ 			  int nocache)
+ {
+-#if HAVE_KRB5_GET_INIT_CREDS_OPT_SET_ADDRESSLESS
++#ifdef HAVE_KRB5_GET_INIT_CREDS_OPT_SET_ADDRESSLESS
+ 	krb5_get_init_creds_opt *init_opts = NULL;
+ #else
+ 	krb5_get_init_creds_opt options;
+@@ -372,7 +368,7 @@ gssd_get_single_krb5_cred(krb5_context context,
+ 	if ((krb5_unparse_name(context, ple->princ, &pname)))
+ 		pname = NULL;
+ 
+-#if HAVE_KRB5_GET_INIT_CREDS_OPT_SET_ADDRESSLESS
++#ifdef HAVE_KRB5_GET_INIT_CREDS_OPT_SET_ADDRESSLESS
+ 	code = krb5_get_init_creds_opt_alloc(context, &init_opts);
+ 	if (code) {
+ 		k5err = gssd_k5_err_msg(context, code);
+@@ -454,7 +450,7 @@ gssd_get_single_krb5_cred(krb5_context context,
+ 	code = 0;
+ 	printerr(2, "%s: principal '%s' ccache:'%s'\n", __func__, pname, cc_name);
+   out:
+-#if HAVE_KRB5_GET_INIT_CREDS_OPT_SET_ADDRESSLESS
++#ifdef HAVE_KRB5_GET_INIT_CREDS_OPT_SET_ADDRESSLESS
+ 	if (init_opts)
+ 		krb5_get_init_creds_opt_free(context, init_opts);
+ #endif
+@@ -865,7 +861,7 @@ find_keytab_entry(krb5_context context, krb5_keytab kt, const char *tgtname,
+ 		if (strcmp(realm, default_realm) == 0)
+ 			tried_default = 1;
+ 		for (j = 0; svcnames[j] != NULL; j++) {
+-			char spn[300];
++			char spn[NI_MAXHOST+2];
+ 
+ 			/*
+ 			 * The special svcname "$" means 'try the active
+@@ -1059,7 +1055,7 @@ err_cache:
+ int
+ gssd_setup_krb5_user_gss_ccache(uid_t uid, char *servername, char *dirpattern)
+ {
+-	char			buf[MAX_NETOBJ_SZ], dirname[PATH_MAX];
++	char			buf[PATH_MAX+2+256], dirname[PATH_MAX];
+ 	const char		*cctype;
+ 	struct dirent		*d;
+ 	int			err, i, j;
+diff --git a/utils/gssd/svcgssd.c b/utils/gssd/svcgssd.c
+index 3514ae1..8e918cc 100644
+--- a/utils/gssd/svcgssd.c
++++ b/utils/gssd/svcgssd.c
+@@ -63,7 +63,9 @@
+ #include "err_util.h"
+ #include "conffile.h"
+ 
+-void
++struct state_paths etab;
++
++static void
+ sig_die(int signal)
+ {
+ 	/* destroy krb5 machine creds */
+@@ -71,7 +73,7 @@ sig_die(int signal)
+ 	exit(0);
+ }
+ 
+-void
++static void
+ sig_hup(int signal)
+ {
+ 	/* don't exit on SIGHUP */
+@@ -101,7 +103,7 @@ main(int argc, char *argv[])
+ 	char *principal = NULL;
+ 	char *s;
+ 
+-	conf_init(NFS_CONFFILE); 
++	conf_init_file(NFS_CONFFILE);
+ 
+ 	s = conf_get_str("svcgssd", "principal");
+ 	if (!s)
+diff --git a/utils/gssd/svcgssd_mech2file.c b/utils/gssd/svcgssd_mech2file.c
+index ecd908b..c26b435 100644
+--- a/utils/gssd/svcgssd_mech2file.c
++++ b/utils/gssd/svcgssd_mech2file.c
+@@ -41,6 +41,7 @@
+ #include <gssapi/gssapi.h>
+ #include <string.h>
+ 
++char * mech2file(gss_OID mech);
+ 
+ #define g_OID_equal(o1,o2) \
+    (((o1)->length == (o2)->length) && \
+diff --git a/utils/idmapd/Makefile.am b/utils/idmapd/Makefile.am
+index d768eec..e09e8c5 100644
+--- a/utils/idmapd/Makefile.am
++++ b/utils/idmapd/Makefile.am
+@@ -2,6 +2,8 @@
+ 
+ man8_MANS	= idmapd.man
+ 
++AM_CPPFLAGS += -I ../../support/nfsidmap
++
+ RPCPREFIX	= rpc.
+ KPREFIX		= @kprefix@
+ sbin_PROGRAMS	= idmapd
+diff --git a/utils/idmapd/idmapd.c b/utils/idmapd/idmapd.c
+index 2b9ecea..b87c4dd 100644
+--- a/utils/idmapd/idmapd.c
++++ b/utils/idmapd/idmapd.c
+@@ -169,7 +169,7 @@ static int
+ flush_nfsd_cache(char *path, time_t now)
+ {
+ 	int fd;
+-	char stime[20];
++	char stime[32];
+ 
+ 	sprintf(stime, "%ld\n", now);
+ 	fd = open(path, O_RDWR);
+@@ -196,7 +196,7 @@ flush_nfsd_idmap_cache(void)
+ 	return ret;
+ }
+ 
+-void usage(char *progname)
++static void usage(char *progname)
+ {
+ 	fprintf(stderr, "Usage: %s [-hfvCS] [-p path] [-c path]\n",
+ 		basename(progname));
+@@ -420,7 +420,7 @@ dirscancb(int UNUSED(fd), short UNUSED(which), void *data)
+ 	int nent, i;
+ 	struct dirent **ents;
+ 	struct idmap_client *ic, *nextic;
+-	char path[PATH_MAX];
++	char path[PATH_MAX+256]; /* + sizeof(d_name) */
+ 	struct idmap_clientq *icq = data;
+ 
+ 	nent = scandir(pipefsdir, &ents, NULL, alphasort);
+diff --git a/utils/mount/configfile.c b/utils/mount/configfile.c
+index 64688bf..b48b25e 100644
+--- a/utils/mount/configfile.c
++++ b/utils/mount/configfile.c
+@@ -35,6 +35,10 @@
+ #include "network.h"
+ #include "conffile.h"
+ 
++char *mountopts_convert(char *value);
++char *is_alias(char *opt);
++char *conf_get_mntopts(char *spec, char *mount_point, char *mount_opts);
++
+ #define KBYTES(x)     ((x) * (1024))
+ #define MEGABYTES(x)  ((x) * (1048576))
+ #define GIGABYTES(x)  ((x) * (1073741824))
+diff --git a/utils/mount/mount_libmount.c b/utils/mount/mount_libmount.c
+index 2d40657..aa4ac5c 100644
+--- a/utils/mount/mount_libmount.c
++++ b/utils/mount/mount_libmount.c
+@@ -45,6 +45,8 @@
+ #include "error.h"
+ #include "utils.h"
+ 
++char *retrieve_mount_options(struct libmnt_fs *fs);
++
+ char *progname;
+ int nfs_mount_data_version;
+ int verbose;
+diff --git a/utils/mount/network.c b/utils/mount/network.c
+index 8ab5be8..9a2c878 100644
+--- a/utils/mount/network.c
++++ b/utils/mount/network.c
+@@ -811,8 +811,12 @@ int start_statd(void)
+ 			switch (pid) {
+ 			case 0: /* child */
+ 				setgroups(0, NULL);
+-				setgid(0);
+-				setuid(0);
++				if (setgid(0) < 0)
++					nfs_error(_("%s: setgid(0) failed: %s"),
++						progname, strerror(errno));
++				if (setuid(0) < 0)
++					nfs_error(_("%s: setuid(0) failed: %s"),
++						progname, strerror(errno));
+ 				execle(START_STATD, START_STATD, NULL, envp);
+ 				exit(1);
+ 			case -1: /* error */
+@@ -1275,8 +1279,8 @@ nfs_nfs_version(char *type, struct mount_options *options, struct nfs_version *v
+ 		}
+ 	}
+ 
+-	if (!found && strcmp(type, "nfs4") == 0)
+-		version_val = type + 3;
++	if (!found && strncmp(type, "nfs", 3) == 0)
++		version_val = "4";
+ 	else if (!found)
+ 		return 1;
+ 	else if (i <= 2 ) {
+@@ -1308,9 +1312,14 @@ nfs_nfs_version(char *type, struct mount_options *options, struct nfs_version *v
+ 		if (!(version->minor = strtol(version_val, &cptr, 10)) && cptr == version_val)
+ 			goto ret_error;
+ 		version->v_mode = V_SPECIFIC;
+-	} else if (version->major > 3 && *cptr == '\0')
+-		version->v_mode = V_GENERAL;
+-
++	} else if (version->major > 3 && *cptr == '\0') {
++		version_val = po_get(options, "minorversion");
++		if (version_val != NULL) {
++			version->minor = strtol(version_val, &cptr, 10);
++			version->v_mode = V_SPECIFIC;
++		} else 
++			version->v_mode = V_GENERAL;
++	}
+ 	if (*cptr != '\0')
+ 		goto ret_error;
+ 
+diff --git a/utils/mount/stropts.c b/utils/mount/stropts.c
+index 1217823..d1b0708 100644
+--- a/utils/mount/stropts.c
++++ b/utils/mount/stropts.c
+@@ -761,9 +761,26 @@ static int nfs_do_mount_v4(struct nfsmount_info *mi,
+ 			fmt = "vers=%lu.%lu";
+ 			break;
+ 		}
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+ 		snprintf(version_opt, sizeof(version_opt) - 1,
+ 			fmt, mi->version.major,
+ 			mi->version.minor);
++#pragma GCC diagnostic warning "-Wformat-nonliteral"
++
++		if (po_append(options, version_opt) == PO_FAILED) {
++			errno = EINVAL;
++			goto out_fail;
++		}
++	} else if (po_get(options, "minorversion") &&
++		linux_version_code() > MAKE_VERSION(3, 4, 0)) {
++		/*
++	 	 * convert minorversion= into vers=4.x
++	 	 */
++		po_remove_all(options, "minorversion");
++
++		snprintf(version_opt, sizeof(version_opt) - 1,
++			"vers=%lu.%lu", mi->version.major,
++			mi->version.minor);
+ 
+ 		if (po_append(options, version_opt) == PO_FAILED) {
+ 			errno = EINVAL;
+diff --git a/utils/mountd/Makefile.am b/utils/mountd/Makefile.am
+index 153a90a..73eeb3f 100644
+--- a/utils/mountd/Makefile.am
++++ b/utils/mountd/Makefile.am
+@@ -1,5 +1,10 @@
+ ## Process this file with automake to produce Makefile.in
+ 
++OPTLIBS		=
++if CONFIG_JUNCTION
++OPTLIBS		+= ../../support/junction/libjunction.la $(LIBXML2)
++endif
++
+ man8_MANS	= mountd.man
+ EXTRA_DIST	= $(man8_MANS)
+ 
+@@ -13,7 +18,8 @@ mountd_SOURCES = mountd.c mount_dispatch.c auth.c rmtab.c cache.c \
+ mountd_LDADD = ../../support/export/libexport.a \
+ 	       ../../support/nfs/libnfs.la \
+ 	       ../../support/misc/libmisc.a \
+-	       $(LIBBSD) $(LIBWRAP) $(LIBNSL) $(LIBBLKID) $(LIBDL) $(LIBTIRPC)
++	       $(OPTLIBS) \
++	       $(LIBBSD) $(LIBWRAP) $(LIBNSL) $(LIBBLKID) $(LIBTIRPC)
+ mountd_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) \
+ 		  -I$(top_builddir)/support/include \
+ 		  -I$(top_srcdir)/support/export
+diff --git a/utils/mountd/cache.c b/utils/mountd/cache.c
+index e49300d..6f42512 100644
+--- a/utils/mountd/cache.c
++++ b/utils/mountd/cache.c
+@@ -976,10 +976,15 @@ lookup_export(char *dom, char *path, struct addrinfo *ai)
+ 	return found;
+ }
+ 
+-#ifdef HAVE_NFS_PLUGIN_H
+-#include <dlfcn.h>
+-#include <link.h>
+-#include <nfs-plugin.h>
++#ifdef CONFIG_JUNCTION
++
++#include "junction.h"
++
++struct nfs_fsloc_set {
++	int			 ns_ttl;
++	struct nfs_fsloc	*ns_current;
++	struct nfs_fsloc	*ns_list;
++};
+ 
+ /*
+  * Find the export entry for the parent of "pathname".
+@@ -1035,13 +1040,39 @@ out_default:
+ 	return mkexportent("*", "/", "insecure");
+ }
+ 
++static int get_next_location(struct nfs_fsloc_set *locset,
++		char **hostname, char **export_path, int *ttl)
++{
++	char *hostname_tmp, *export_path_tmp;
++	struct nfs_fsloc *fsloc;
++
++	if (locset->ns_current == NULL)
++		return ENOENT;
++	fsloc = locset->ns_current;
++
++	hostname_tmp = strdup(fsloc->nfl_hostname);
++	if (hostname_tmp == NULL)
++		return ENOMEM;
++
++	if (nsdb_path_array_to_posix(fsloc->nfl_rootpath,
++					&export_path_tmp)) {
++		free(hostname_tmp);
++		return EINVAL;
++	}
++
++	*hostname = hostname_tmp;
++	*export_path = export_path_tmp;
++	*ttl = locset->ns_ttl;
++	locset->ns_current = locset->ns_current->nfl_next;
++	return 0;
++}
++
+ /*
+  * Walk through a set of FS locations and build an e_fslocdata string.
+  * Returns true if all went to plan; otherwise, false.
+  */
+-static bool locations_to_fslocdata(struct jp_ops *ops,
+-		nfs_fsloc_set_t locations, char *fslocdata,
+-		size_t remaining, int *ttl)
++static bool locations_to_fslocdata(struct nfs_fsloc_set *locations,
++		char *fslocdata, size_t remaining, int *ttl)
+ {
+ 	char *server, *last_path, *rootpath, *ptr;
+ 	_Bool seen = false;
+@@ -1056,13 +1087,13 @@ static bool locations_to_fslocdata(struct jp_ops *ops,
+ 		enum jp_status status;
+ 		int len;
+ 
+-		status = ops->jp_get_next_location(locations, &server,
++		status = get_next_location(locations, &server,
+ 							&rootpath, ttl);
+-		if (status == JP_EMPTY)
++		if (status == ENOENT)
+ 			break;
+-		if (status != JP_OK) {
++		if (status) {
+ 			xlog(D_GENERAL, "%s: failed to parse location: %s",
+-				__func__, ops->jp_error(status));
++				__func__, strerror(status));
+ 			goto out_false;
+ 		}
+ 		xlog(D_GENERAL, "%s: Location: %s:%s",
+@@ -1159,116 +1190,73 @@ out_nomem:
+  * Walk through the set of FS locations and build an exportent.
+  * Returns pointer to an exportent if "junction" refers to a junction.
+  */
+-static struct exportent *locations_to_export(struct jp_ops *ops,
+-		nfs_fsloc_set_t locations, const char *junction,
+-		struct exportent *parent)
++static struct exportent *locations_to_export(struct nfs_fsloc_set *locations,
++		const char *junction, struct exportent *parent)
+ {
+ 	static char fslocdata[BUFSIZ];
+ 	int ttl;
+ 
+ 	fslocdata[0] = '\0';
+-	if (!locations_to_fslocdata(ops, locations,
+-					fslocdata, sizeof(fslocdata), &ttl))
++	if (!locations_to_fslocdata(locations, fslocdata, sizeof(fslocdata), &ttl))
+ 		return NULL;
+ 	return create_junction_exportent(parent, junction, fslocdata, ttl);
+ }
+ 
+-/*
+- * Retrieve locations information in "junction" and dump it to the
+- * kernel.  Returns pointer to an exportent if "junction" refers
+- * to a junction.
+- */
+-static struct exportent *invoke_junction_ops(void *handle, char *dom,
+-		const char *junction, struct addrinfo *ai)
++static int
++nfs_get_basic_junction(const char *junct_path, struct nfs_fsloc_set **locset)
+ {
+-	struct exportent *parent, *exp = NULL;
+-	nfs_fsloc_set_t locations;
+-	enum jp_status status;
+-	struct jp_ops *ops;
+-	char *error;
+-
+-	ops = (struct jp_ops *)dlsym(handle, "nfs_junction_ops");
+-	error = dlerror();
+-	if (error != NULL) {
+-		xlog(D_GENERAL, "%s: dlsym(jp_junction_ops): %s",
+-			__func__, error);
+-		return NULL;
+-	}
+-#ifdef JP_API_VERSION
+-	if (ops->jp_api_version != JP_API_VERSION) {
+-		xlog(D_GENERAL, "%s: unrecognized junction API version: %u",
+-			__func__, ops->jp_api_version);
+-		return NULL;
+-	}
+-#endif
+-	status = ops->jp_init(false);
+-	if (status != JP_OK) {
+-		xlog(D_GENERAL, "%s: failed to resolve %s: %s",
+-			__func__, junction, ops->jp_error(status));
+-		return NULL;
++	struct nfs_fsloc_set *new;
++	FedFsStatus retval;
++
++	new = calloc(1, sizeof(struct nfs_fsloc_set));
++	if (new == NULL)
++		return ENOMEM;
++
++	retval = nfs_get_locations(junct_path, &new->ns_list);
++	if (retval) {
++		nfs_free_locations(new->ns_list);
++		free(new);
++		return EINVAL;
+ 	}
+ 
+-	status = ops->jp_get_locations(junction, &locations);
+-	switch (status) {
+-	case JP_OK:
+-		break;
+-	case JP_NOTJUNCTION:
++	locset->ns_current = locset->ns_list;
++	new->ns_ttl = 300;
++	*locset = new;
++	return 0;
++}
++
++static struct exportent *lookup_junction(char *dom, const char *pathname,
++		struct addrinfo *ai)
++{
++	struct exportent *parent, *exp = NULL;
++	struct nfs_fsloc_set *locations;
++	int status;
++
++	xmlInitParser();
++
++	if (nfs_is_junction(pathname)) {
+ 		xlog(D_GENERAL, "%s: %s is not a junction",
+-			__func__, junction);
++			__func__, pathname);
+ 		goto out;
+-	default:
++	}
++	status = nfs_get_basic_junction(pathname, &locations);
++	switch (status) {
+ 		xlog(L_WARNING, "Dangling junction %s: %s",
+-			junction, ops->jp_error(status));
++			pathname, strerro(status));
+ 		goto out;
+ 	}
+ 
+-	parent = lookup_parent_export(dom, junction, ai);
++	parent = lookup_parent_export(dom, pathname, ai);
+ 	if (parent == NULL)
+ 		goto out;
+ 
+-	exp = locations_to_export(ops, locations, junction, parent);
++	exp = locations_to_export(locations, pathname, parent);
+ 
+-	ops->jp_put_locations(locations);
++	nfs_free_locations(locset->ns_list);
++	free(locset);
+ 
+ out:
+-	ops->jp_done();
+-	return exp;
+-}
+-
+-/*
+- * Load the junction plug-in, then try to resolve "pathname".
+- * Returns pointer to an initialized exportent if "junction"
+- * refers to a junction, or NULL if not.
+- */
+-static struct exportent *lookup_junction(char *dom, const char *pathname,
+-		struct addrinfo *ai)
+-{
+-	struct exportent *exp;
+-	struct link_map *map;
+-	void *handle;
+-
+-#ifdef JP_NFSPLUGIN_SONAME
+-	handle = dlopen(JP_NFSPLUGIN_SONAME, RTLD_NOW);
+-#else
+-	handle = dlopen("libnfsjunct.so.0", RTLD_NOW);
+-#endif
+-	if (handle == NULL) {
+-		xlog(D_GENERAL, "%s: dlopen: %s", __func__, dlerror());
+-		return NULL;
+-	}
+-
+-	if (dlinfo(handle, RTLD_DI_LINKMAP, &map) == 0)
+-		xlog(D_GENERAL, "%s: loaded plug-in %s",
+-			__func__, map->l_name);
+-
+-	(void)dlerror();	/* Clear any error */
+-
+-	exp = invoke_junction_ops(handle, dom, pathname, ai);
+-
+-	/* We could leave it loaded to make junction resolution
+-	 * faster next time.  However, if we want to replace the
+-	 * library, that would require restarting mountd. */
+-	(void)dlclose(handle);
++	xmlCleanupParser();
+ 	return exp;
+ }
+ 
+@@ -1284,13 +1272,16 @@ static void lookup_nonexport(int f, char *buf, int buflen, char *dom, char *path
+ 	exportent_release(eep);
+ 	free(eep);
+ }
+-#else	/* !HAVE_NFS_PLUGIN_H */
++
++#else	/* !CONFIG_JUNCTION */
++
+ static void lookup_nonexport(int f, char *buf, int buflen, char *dom, char *path,
+ 		struct addrinfo *UNUSED(ai))
+ {
+ 	dump_to_cache(f, buf, buflen, dom, path, NULL, 0);
+ }
+-#endif	/* !HAVE_NFS_PLUGIN_H */
++
++#endif	/* !CONFIG_JUNCTION */
+ 
+ static void nfsd_export(int f)
+ {
+diff --git a/utils/mountd/svc_run.c b/utils/mountd/svc_run.c
+index a572441..41b96d7 100644
+--- a/utils/mountd/svc_run.c
++++ b/utils/mountd/svc_run.c
+@@ -57,6 +57,7 @@
+ #include <rpc/rpc_com.h>
+ #endif
+ 
++void my_svc_run(void);
+ void cache_set_fds(fd_set *fdset);
+ int cache_process_req(fd_set *readfds);
+ 
+diff --git a/utils/nfsd/nfssvc.c b/utils/nfsd/nfssvc.c
+index fc36792..7923f5d 100644
+--- a/utils/nfsd/nfssvc.c
++++ b/utils/nfsd/nfssvc.c
+@@ -68,7 +68,7 @@ nfssvc_mount_nfsdfs(char *progname)
+ 	 * mount nfsdfs when nfsd.ko is plugged in. So, ignore the return
+ 	 * code from it and just check for the "threads" file afterward.
+ 	 */
+-	system("/bin/mount -t nfsd nfsd " NFSD_FS_DIR " >/dev/null 2>&1");
++	err = system("/bin/mount -t nfsd nfsd " NFSD_FS_DIR " >/dev/null 2>&1");
+ 
+ 	err = stat(NFSD_THREAD_FILE, &statbuf);
+ 	if (err == 0)
+@@ -325,7 +325,8 @@ nfssvc_set_time(const char *type, const int seconds)
+ 		/* set same value for lockd */
+ 		fd = open("/proc/sys/fs/nfs/nlm_grace_period", O_WRONLY);
+ 		if (fd >= 0) {
+-			write(fd, nbuf, strlen(nbuf));
++			if (write(fd, nbuf, strlen(nbuf)) != (ssize_t)strlen(nbuf))
++				xlog(L_ERROR, "Unable to write nlm_grace_period : %m");
+ 			close(fd);
+ 		}
+ 	}
+diff --git a/utils/nfsdcltrack/sqlite.c b/utils/nfsdcltrack/sqlite.c
+index 1552eba..c59f777 100644
+--- a/utils/nfsdcltrack/sqlite.c
++++ b/utils/nfsdcltrack/sqlite.c
+@@ -51,6 +51,7 @@
+ #include <linux/limits.h>
+ 
+ #include "xlog.h"
++#include "sqlite.h"
+ 
+ #define CLTRACK_SQLITE_LATEST_SCHEMA_VERSION 2
+ 
+@@ -203,7 +204,7 @@ rollback:
+  * then insert schema version into the parameters table and commit the
+  * transaction. On any error, rollback the transaction.
+  */
+-int
++static int
+ sqlite_maindb_init_v2(void)
+ {
+ 	int ret, ret2;
+diff --git a/utils/nfsidmap/Makefile.am b/utils/nfsidmap/Makefile.am
+index 49158df..e5d7d04 100644
+--- a/utils/nfsidmap/Makefile.am
++++ b/utils/nfsidmap/Makefile.am
+@@ -3,6 +3,8 @@
+ man8_MANS = nfsidmap.man
+ sbin_PROGRAMS	= nfsidmap
+ 
++AM_CPPFLAGS += -I ../../support/nfsidmap
++
+ nfsidmap_SOURCES = nfsidmap.c
+ nfsidmap_LDADD = -lkeyutils \
+ 		 ../../support/nfs/libnfs.la \
+diff --git a/utils/nfsref/Makefile.am b/utils/nfsref/Makefile.am
+new file mode 100644
+index 0000000..2b2bb53
+--- /dev/null
++++ b/utils/nfsref/Makefile.am
+@@ -0,0 +1,39 @@
++##
++## @file utils/nfsref/Makefile.am
++## @brief Process this file with automake to produce utils/nfsref/Makefile.in
++##
++
++##
++## Copyright 2011, 2018 Oracle.  All rights reserved.
++##
++## This file is part of nfs-utils.
++##
++## nfs-utils is free software; you can redistribute it and/or modify
++## it under the terms of the GNU General Public License version 2.0 as
++## published by the Free Software Foundation.
++##
++## nfs-utils is distributed in the hope that it will be useful, but
++## WITHOUT ANY WARRANTY; without even the implied warranty of
++## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++## GNU General Public License version 2.0 for more details.
++##
++## You should have received a copy of the GNU General Public License
++## version 2.0 along with nfs-utils.  If not, see:
++##
++##	http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
++##
++
++noinst_HEADERS		= nfsref.h
++
++sbin_PROGRAMS		= nfsref
++nfsref_SOURCES		= add.c lookup.c nfsref.c remove.c
++LDADD			= $(LIBXML2) $(LIBCAP) \
++			  ../../support/nfs/libnfs.la \
++			  ../../support/junction/libjunction.la
++
++man8_MANS		= nfsref.man
++
++MAINTAINERCLEANFILES	= Makefile.in
++
++AM_CPPFLAGS		= -I. -I../../support/include
++##AM_LDFLAGS		= -Wl,--as-needed
+diff --git a/utils/nfsref/add.c b/utils/nfsref/add.c
+new file mode 100644
+index 0000000..781aeee
+--- /dev/null
++++ b/utils/nfsref/add.c
+@@ -0,0 +1,272 @@
++/**
++ * @file utils/nfsref/add.c
++ * @brief Add junction metadata to a local file system object
++ */
++
++/*
++ * Copyright 2011, 2018 Oracle.  All rights reserved.
++ *
++ * This file is part of nfs-utils.
++ *
++ * nfs-utils is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2.0 as
++ * published by the Free Software Foundation.
++ *
++ * nfs-utils is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License version 2.0 for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * version 2.0 along with nfs-utils.  If not, see:
++ *
++ *	http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
++ */
++
++#include <sys/stat.h>
++#include <sys/types.h>
++
++#include <stdbool.h>
++#include <stdint.h>
++#include <stdlib.h>
++#include <string.h>
++#include <stdio.h>
++#include <unistd.h>
++#include <errno.h>
++
++#include <uuid/uuid.h>
++
++#include "junction.h"
++#include "xlog.h"
++#include "nfsref.h"
++
++/**
++ * Default cache expiration for FSN information
++ */
++#define FSN_DEFAULT_TTL		(300)
++
++/**
++ * Display help message for "add" subcommand
++ *
++ * @param progname NUL-terminated C string containing name of program
++ * @return program exit status
++ */
++int
++nfsref_add_help(const char *progname)
++{
++	fprintf(stderr, " \n");
++
++	fprintf(stderr, "Usage: %s [ -t type ] add <junction path> "
++			"<server> <export> [ <server> <export> ... ]\n\n",
++		progname);
++
++	fprintf(stderr, "Add a new junction containing the specified list "
++			"of fileset locations.\n");
++	fprintf(stderr, "<junction path> is the filename of the new junction.  "
++			"<server> is the hostname\n");
++	fprintf(stderr, "or IP address of an NFS server where the fileset is "
++			"located.  <export> is the\n");
++	fprintf(stderr, "export pathname of the fileset on that server.\n\n");
++
++	fprintf(stderr, "For NFS basic junctions, the location list is stored "
++			"locally in the junction.\n");
++	fprintf(stderr, "For FedFS junctions, the location list is stored "
++			"as new FSN and FSL records\n");
++	fprintf(stderr, "on an NSDB.\n");
++
++	return EXIT_SUCCESS;
++}
++
++/**
++ * Fill in default settings for NFSv4.0 fs_locations4
++ *
++ * @param new NFS location structure to fill in
++ *
++ * See section 5.1.3.2 of the NSDB protocol draft.
++ */
++static void
++nfsref_add_fsloc_defaults(struct nfs_fsloc *new)
++{
++	new->nfl_hostport = 0;
++	new->nfl_flags.nfl_varsub = false;
++	new->nfl_currency = -1;
++	new->nfl_validfor = 0;
++	new->nfl_genflags.nfl_writable = false;
++	new->nfl_genflags.nfl_going = false;
++	new->nfl_genflags.nfl_split = true;
++	new->nfl_transflags.nfl_rdma = true;
++	new->nfl_info.nfl_simul = 0;
++	new->nfl_info.nfl_handle = 0;
++	new->nfl_info.nfl_fileid = 0;
++	new->nfl_info.nfl_writever = 0;
++	new->nfl_info.nfl_change = 0;
++	new->nfl_info.nfl_readdir = 0;
++	new->nfl_info.nfl_readrank = 0;
++	new->nfl_info.nfl_readorder = 0;
++	new->nfl_info.nfl_writerank = 0;
++	new->nfl_info.nfl_writeorder = 0;
++}
++
++/**
++ * Convert a pair of command line arguments to one nfs_fsloc structure
++ *
++ * @param server NUL-terminated C string containing file server hostname
++ * @param rootpath NUL-terminated C string containing POSIX-style export path
++ * @param fsloc OUT: NFS location structure
++ * @return a FedFsStatus code
++ *
++ * If nfsref_add_build_fsloc() returns FEDFS_OK, caller must free the
++ * returned fsloc with nfs_free_location().
++ */
++static FedFsStatus
++nfsref_add_build_fsloc(const char *server, const char *rootpath,
++		struct nfs_fsloc **fsloc)
++{
++	struct nfs_fsloc *new;
++	FedFsStatus retval;
++
++	if (server == NULL || rootpath == NULL)
++		return FEDFS_ERR_INVAL;
++
++	xlog(D_GENERAL, "%s: Building fsloc for %s:%s",
++		__func__, server, rootpath);
++
++	new = nfs_new_location();
++	if (new == NULL) {
++		xlog(D_GENERAL, "%s: No memory", __func__);
++		return FEDFS_ERR_SVRFAULT;
++	}
++
++	new->nfl_hostname = strdup(server);
++	if (new->nfl_hostname == NULL) {
++		nfs_free_location(new);
++		xlog(D_GENERAL, "%s: No memory", __func__);
++		return FEDFS_ERR_SVRFAULT;
++	}
++
++	retval = nsdb_posix_to_path_array(rootpath, &new->nfl_rootpath);
++	if (retval != FEDFS_OK) {
++		nfs_free_location(new);
++		return retval;
++	}
++
++	nfsref_add_fsloc_defaults(new);
++	*fsloc = new;
++	return FEDFS_OK;
++}
++
++/**
++ * Convert array of command line arguments to list of nfs_fsloc structures
++ *
++ * @param argv array of pointers to NUL-terminated C strings contains arguments
++ * @param optind index of "argv" where "add" subcommand arguments start
++ * @param fslocs OUT: list of NFS locations
++ * @return a FedFsStatus code
++ *
++ * If nfsref_add_build_fsloc_list() returns FEDFS_OK, caller must free the
++ * returned list of fslocs with nfs_free_locations().
++ */
++static FedFsStatus
++nfsref_add_build_fsloc_list(char **argv, int optind, struct nfs_fsloc **fslocs)
++{
++	struct nfs_fsloc *fsloc, *result = NULL;
++	FedFsStatus retval;
++	int i;
++
++	for (i = optind + 2; argv[i] != NULL; i += 2) {
++		retval = nfsref_add_build_fsloc(argv[i], argv[i + 1], &fsloc);
++		if (retval != FEDFS_OK) {
++			nfs_free_locations(result);
++			return retval;
++		}
++		if (result == NULL)
++			result = fsloc;
++		else
++			result->nfl_next = fsloc;
++	}
++	if (result == NULL)
++		return FEDFS_ERR_INVAL;
++
++	*fslocs = result;
++	return FEDFS_OK;
++}
++
++/**
++ * Add NFS locations to a junction
++ *
++ * @param junct_path NUL-terminated C string containing pathname of junction
++ * @param argv array of pointers to NUL-terminated C strings contains arguments
++ * @param optind index of "argv" where "add" subcommand arguments start
++ * @return program exit status
++ */
++static int
++nfsref_add_nfs_basic(const char *junct_path, char **argv, int optind)
++{
++	struct nfs_fsloc *fslocs = NULL;
++	FedFsStatus retval;
++
++	xlog(D_GENERAL, "%s: Adding basic junction to %s",
++		__func__, junct_path);
++
++	retval = nfsref_add_build_fsloc_list(argv, optind, &fslocs);
++	switch (retval) {
++	case FEDFS_OK:
++		break;
++	case FEDFS_ERR_INVAL:
++		xlog(L_ERROR, "Missing arguments");
++		return EXIT_FAILURE;
++	case FEDFS_ERR_SVRFAULT:
++		xlog(L_ERROR, "No memory");
++		return EXIT_FAILURE;
++	default:
++		xlog(L_ERROR, "Failed to add NFS location metadata to %s: %s",
++			junct_path, nsdb_display_fedfsstatus(retval));
++		return EXIT_FAILURE;
++	}
++
++	retval = nfs_add_junction(junct_path, fslocs);
++	nfs_free_locations(fslocs);
++	switch (retval) {
++	case FEDFS_OK:
++		break;
++	case FEDFS_ERR_EXIST:
++		xlog(L_ERROR, "%s already contains junction metadata",
++			junct_path);
++		return EXIT_FAILURE;
++	default:
++		xlog(L_ERROR, "Failed to add NFS location metadata to %s: %s",
++			junct_path, nsdb_display_fedfsstatus(retval));
++		return EXIT_FAILURE;
++	}
++
++	printf("Created junction %s\n", junct_path);
++	return EXIT_SUCCESS;
++}
++
++/**
++ * Add locations to a junction
++ *
++ * @param type type of junction to add
++ * @param junct_path NUL-terminated C string containing pathname of junction
++ * @param argv array of pointers to NUL-terminated C strings contains arguments
++ * @param optind index of "argv" where "add" subcommand arguments start
++ * @return program exit status
++ */
++int
++nfsref_add(enum nfsref_type type, const char *junct_path, char **argv, int optind)
++{
++	if (mkdir(junct_path, 0755) == -1)
++		if (errno != EEXIST) {
++			xlog(L_ERROR, "Failed to create junction object: %m");
++			return EXIT_FAILURE;
++		}
++
++	switch (type) {
++	case NFSREF_TYPE_UNSPECIFIED:
++	case NFSREF_TYPE_NFS_BASIC:
++		return nfsref_add_nfs_basic(junct_path, argv, optind);
++	default:
++		xlog(L_ERROR, "Unrecognized junction type");
++	}
++	return EXIT_FAILURE;
++}
+diff --git a/utils/nfsref/lookup.c b/utils/nfsref/lookup.c
+new file mode 100644
+index 0000000..16fca2e
+--- /dev/null
++++ b/utils/nfsref/lookup.c
+@@ -0,0 +1,211 @@
++/**
++ * @file utils/nfsref/lookup.c
++ * @brief Examine junction metadata from a local file system object
++ */
++
++/*
++ * Copyright 2011, 2018 Oracle.  All rights reserved.
++ *
++ * This file is part of nfs-utils.
++ *
++ * nfs-utils is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2.0 as
++ * published by the Free Software Foundation.
++ *
++ * nfs-utils is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License version 2.0 for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * version 2.0 along with nfs-utils.  If not, see:
++ *
++ *	http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
++ */
++
++#include <stdint.h>
++#include <stdbool.h>
++#include <stdlib.h>
++#include <stdio.h>
++
++#include <rpcsvc/nfs_prot.h>
++
++#include "junction.h"
++#include "xlog.h"
++#include "nfsref.h"
++
++/**
++ * Display help message for "lookup" subcommand
++ *
++ * @param progname NUL-terminated C string containing name of program
++ * @return program exit status
++ */
++int
++nfsref_lookup_help(const char *progname)
++{
++	fprintf(stderr, " \n");
++
++	fprintf(stderr, "Usage: %s [ -t type ] lookup <junction path>\n\n",
++		progname);
++
++	fprintf(stderr, "Display the contents of the junction at "
++			"<junction path>.  For NFS basic\n");
++	fprintf(stderr, "junctions, the local contents of the junction "
++			"are displayed.  For FedFS\n");
++	fprintf(stderr, "junctions, FSL records are retrieved from the "
++			"NSDB and displayed.\n");
++
++	return EXIT_SUCCESS;
++}
++
++/**
++ * Convert a boolean value into a displayable string constant
++ *
++ * @param value boolean value
++ * @return NUL-terminated static constant C string
++ */
++static const char *
++nfsref_lookup_display_boolean(_Bool value)
++{
++	return value ? "true" : "false";
++}
++
++/**
++ * Display a single NFS location
++ *
++ * @param fsloc pointer to an NFS location structure
++ */
++static void
++nfsref_lookup_display_nfs_location(struct nfs_fsloc *fsloc)
++{
++	char *rootpath;
++
++	if (nsdb_path_array_to_posix(fsloc->nfl_rootpath, &rootpath) == FEDFS_OK) {
++		printf("%s:%s\n", fsloc->nfl_hostname, rootpath);
++		free(rootpath);
++	} else
++		printf("%s: - Invalid root path -\n", fsloc->nfl_hostname);
++	printf("\n");
++
++	printf("\tNFS port:\t%u\n", fsloc->nfl_hostport);
++	printf("\tValid for:\t%d\n", fsloc->nfl_validfor);
++	printf("\tCurrency:\t%d\n", fsloc->nfl_currency);
++	printf("\tFlags:\t\tvarsub(%s)\n",
++		nfsref_lookup_display_boolean(fsloc->nfl_flags.nfl_varsub));
++
++	printf("\tGenFlags:\twritable(%s), going(%s), split(%s)\n",
++		nfsref_lookup_display_boolean(fsloc->nfl_genflags.nfl_writable),
++		nfsref_lookup_display_boolean(fsloc->nfl_genflags.nfl_going),
++		nfsref_lookup_display_boolean(fsloc->nfl_genflags.nfl_split));
++	printf("\tTransFlags:\trdma(%s)\n",
++		nfsref_lookup_display_boolean(fsloc->nfl_transflags.nfl_rdma));
++
++	printf("\tClass:\t\tsimul(%u), handle(%u), fileid(%u)\n",
++		fsloc->nfl_info.nfl_simul,
++		fsloc->nfl_info.nfl_handle,
++		fsloc->nfl_info.nfl_fileid);
++	printf("\tClass:\t\twritever(%u), change(%u), readdir(%u)\n",
++		fsloc->nfl_info.nfl_writever,
++		fsloc->nfl_info.nfl_change,
++		fsloc->nfl_info.nfl_readdir);
++	printf("\tRead:\t\trank(%u), order(%u)\n",
++		fsloc->nfl_info.nfl_readrank, fsloc->nfl_info.nfl_readorder);
++	printf("\tWrite:\t\trank(%u), order(%u)\n",
++		fsloc->nfl_info.nfl_writerank, fsloc->nfl_info.nfl_writeorder);
++
++	printf("\n");
++}
++
++/**
++ * Display a list of NFS locations
++ *
++ * @param fslocs list of NFS locations to display
++ */
++static void
++nfsref_lookup_display_nfs_locations(struct nfs_fsloc *fslocs)
++{
++	struct nfs_fsloc *fsloc;
++
++	for (fsloc = fslocs; fsloc != NULL; fsloc = fsloc->nfl_next)
++		nfsref_lookup_display_nfs_location(fsloc);
++}
++
++/**
++ * List NFS locations in an nfs-basic junction
++ *
++ * @param junct_path NUL-terminated C string containing pathname of junction
++ * @return program exit status
++ */
++static int
++nfsref_lookup_nfs_basic(const char *junct_path)
++{
++	struct nfs_fsloc *fslocs = NULL;
++	FedFsStatus retval;
++
++	xlog(D_GENERAL, "%s: Looking up basic junction in %s",
++		__func__, junct_path);
++
++	retval = nfs_is_junction(junct_path);
++	switch (retval) {
++	case FEDFS_OK:
++		break;
++	case FEDFS_ERR_NOTJUNCT:
++		xlog(L_ERROR, "%s is not an nfs-basic junction", junct_path);
++		return EXIT_FAILURE;
++	default:
++		xlog(L_ERROR, "Failed to access %s: %s",
++			junct_path, nsdb_display_fedfsstatus(retval));
++		return EXIT_FAILURE;
++	}
++
++	retval = nfs_get_locations(junct_path, &fslocs);
++	if (retval != FEDFS_OK) {
++		xlog(L_ERROR, "Failed to access %s: %s",
++			junct_path, nsdb_display_fedfsstatus(retval));
++		return EXIT_FAILURE;
++	}
++
++	nfsref_lookup_display_nfs_locations(fslocs);
++
++	nfs_free_locations(fslocs);
++	return EXIT_SUCCESS;
++}
++
++/**
++ * Resolve either a FedFS or NFS basic junction
++ *
++ * @param junct_path NUL-terminated C string containing pathname of junction
++ * @return program exit status
++ */
++static int
++nfsref_lookup_unspecified(const char *junct_path)
++{
++	FedFsStatus retval;
++
++	retval = nfs_is_junction(junct_path);
++	if (retval == FEDFS_OK)
++		return nfsref_lookup_nfs_basic(junct_path);
++	xlog(L_ERROR, "%s is not a junction", junct_path);
++	return EXIT_FAILURE;
++}
++
++/**
++ * Enumerate metadata of a junction
++ *
++ * @param type type of junction to add
++ * @param junct_path NUL-terminated C string containing pathname of junction
++ * @return program exit status
++ */
++int
++nfsref_lookup(enum nfsref_type type, const char *junct_path)
++{
++	switch (type) {
++	case NFSREF_TYPE_UNSPECIFIED:
++		return nfsref_lookup_unspecified(junct_path);
++	case NFSREF_TYPE_NFS_BASIC:
++		return nfsref_lookup_nfs_basic(junct_path);
++	default:
++		xlog(L_ERROR, "Unrecognized junction type");
++	}
++	return EXIT_FAILURE;
++}
+diff --git a/utils/nfsref/nfsref.c b/utils/nfsref/nfsref.c
+new file mode 100644
+index 0000000..7f97d01
+--- /dev/null
++++ b/utils/nfsref/nfsref.c
+@@ -0,0 +1,189 @@
++/**
++ * @file utils/nfsref/nfsref.c
++ * @brief Manage NFS referrals
++ */
++
++/*
++ * Copyright 2011, 2018 Oracle.  All rights reserved.
++ *
++ * This file is part of nfs-utils.
++ *
++ * nfs-utils is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2.0 as
++ * published by the Free Software Foundation.
++ *
++ * nfs-utils is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License version 2.0 for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * version 2.0 along with nfs-utils.  If not, see:
++ *
++ *	http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
++ */
++
++#include <sys/types.h>
++#include <sys/capability.h>
++#include <sys/prctl.h>
++#include <sys/stat.h>
++
++#include <stdbool.h>
++#include <stdint.h>
++#include <stdlib.h>
++#include <stdio.h>
++#include <unistd.h>
++#include <string.h>
++#include <fcntl.h>
++#include <getopt.h>
++#include <time.h>
++
++#include <locale.h>
++#include <langinfo.h>
++
++#include "junction.h"
++#include "xlog.h"
++#include "nfsref.h"
++
++/**
++ * Short form command line options
++ */
++static const char nfsref_opts[] = "?dt:";
++
++/**
++ * Long form command line options
++ */
++static const struct option nfsref_longopts[] = {
++	{ "debug", 0, NULL, 'd', },
++	{ "help", 0, NULL, '?', },
++	{ "type", 1, NULL, 't', },
++	{ NULL, 0, NULL, 0, },
++};
++
++/**
++ * Display program synopsis
++ *
++ * @param progname NUL-terminated C string containing name of program
++ */
++static void
++nfsref_usage(const char *progname)
++{
++	fprintf(stderr, "Usage: %s [ -t type ] SUBCOMMAND [ ARGUMENTS ]\n\n",
++		progname);
++
++	fprintf(stderr, "SUBCOMMAND is one of:\n");
++	fprintf(stderr, "\tadd        Add a new junction\n");
++	fprintf(stderr, "\tremove     Remove an existing junction\n");
++	fprintf(stderr, "\tlookup     Enumerate a junction\n");
++
++	fprintf(stderr, "\nUse \"%s SUBCOMMAND -?\" for details.\n", progname);
++}
++
++/**
++ * Program entry point
++ *
++ * @param argc count of command line arguments
++ * @param argv array of NUL-terminated C strings containing command line arguments
++ * @return program exit status
++ */
++int
++main(int argc, char **argv)
++{
++	char *progname, *subcommand, *junct_path;
++	enum nfsref_type type;
++	int arg, exit_status;
++	_Bool help;
++
++	(void)setlocale(LC_ALL, "");
++	(void)umask(S_IWGRP | S_IWOTH);
++
++	exit_status = EXIT_FAILURE;
++
++	/* Set the basename */
++	if ((progname = strrchr(argv[0], '/')) != NULL)
++		progname++;
++	else
++		progname = argv[0];
++
++	xlog_stderr(1);
++	xlog_syslog(0);
++	xlog_open(progname);
++
++	if (argc < 2) {
++		nfsref_usage(progname);
++		goto out;
++	}
++
++	help = false;
++	type = NFSREF_TYPE_UNSPECIFIED;
++	while ((arg = getopt_long(argc, argv, nfsref_opts,
++			nfsref_longopts, NULL)) != -1) {
++		switch (arg) {
++		case 'd':
++			xlog_config(D_ALL, 1);
++			break;
++		case 't':
++			if (strcmp(optarg, "nfs-basic") == 0)
++				type = NFSREF_TYPE_NFS_BASIC;
++			else if (strcmp(optarg, "nfs-fedfs") == 0)
++				type = NFSREF_TYPE_NFS_FEDFS;
++			else {
++				xlog(L_ERROR,
++					"Unrecognized junction type: %s",
++					optarg);
++				exit(EXIT_FAILURE);
++			}
++			break;
++		case '?':
++			help = true;
++		}
++	}
++
++	if (argc < optind + 1) {
++		nfsref_usage(progname);
++		goto out;
++	}
++
++	if (!help && geteuid() != 0) {
++		xlog(L_ERROR, "Root permission is required");
++		goto out;
++	}
++
++	subcommand = argv[optind];
++	junct_path = argv[optind + 1];
++
++	if (strcasecmp(subcommand, "add") == 0) {
++		if (help) {
++			exit_status = nfsref_add_help(progname);
++			goto out;
++		}
++		if (argc < optind + 3) {
++			xlog(L_ERROR, "Not enough positional parameters");
++			nfsref_usage(progname);
++			goto out;
++		}
++		exit_status = nfsref_add(type, junct_path, argv, optind);
++		if (exit_status == EXIT_SUCCESS)
++			(void)junction_flush_exports_cache();
++	} else if (strcasecmp(subcommand, "remove") == 0) {
++		if (help) {
++			exit_status = nfsref_remove_help(progname);
++			goto out;
++		}
++		exit_status = nfsref_remove(type, junct_path);
++		if (exit_status == EXIT_SUCCESS)
++			(void)junction_flush_exports_cache();
++	} else if (strcasecmp(subcommand, "lookup") == 0) {
++		if (help) {
++			exit_status = nfsref_lookup_help(progname);
++			goto out;
++		}
++		exit_status = nfsref_lookup(type, junct_path);
++	} else {
++		xlog(L_ERROR, "Unrecognized subcommand: %s", subcommand);
++		nfsref_usage(progname);
++	}
++
++out:
++	exit(exit_status);
++}
+diff --git a/utils/nfsref/nfsref.h b/utils/nfsref/nfsref.h
+new file mode 100644
+index 0000000..bf0e70e
+--- /dev/null
++++ b/utils/nfsref/nfsref.h
+@@ -0,0 +1,47 @@
++/**
++ * @file support/nfsref/nfsref.h
++ * @brief Declarations and definitions for nfsref command line tool
++ */
++
++/*
++ * Copyright 2011, 2018 Oracle.  All rights reserved.
++ *
++ * This file is part of nfs-utils.
++ *
++ * nfs-utils is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2.0 as
++ * published by the Free Software Foundation.
++ *
++ * nfs-utils is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License version 2.0 for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * version 2.0 along with nfs-utils.  If not, see:
++ *
++ *	http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
++ */
++
++#ifndef UTILS_NFSREF_H
++#define UTILS_NFSREF_H
++
++/**
++ * Junction types supported by the "nfsref" command
++ */
++enum nfsref_type {
++	NFSREF_TYPE_UNSPECIFIED = 1,
++	NFSREF_TYPE_NFS_BASIC,
++	NFSREF_TYPE_NFS_FEDFS
++};
++
++int	 nfsref_add(enum nfsref_type type, const char *junct_path, char **argv,
++				int optind);
++int	 nfsref_remove(enum nfsref_type type, const char *junct_path);
++int	 nfsref_lookup(enum nfsref_type type, const char *junct_path);
++
++int	 nfsref_add_help(const char *progname);
++int	 nfsref_remove_help(const char *progname);
++int	 nfsref_lookup_help(const char *progname);
++
++#endif	/* !UTILS_NFSREF_H */
+diff --git a/utils/nfsref/nfsref.man b/utils/nfsref/nfsref.man
+new file mode 100644
+index 0000000..1261549
+--- /dev/null
++++ b/utils/nfsref/nfsref.man
+@@ -0,0 +1,180 @@
++.\"@(#)nfsref.8"
++.\"
++.\" @file utils/nfsref/nfsref.man
++.\" @brief man page for nfsref command
++.\"
++
++.\"
++.\" Copyright 2011, 2018 Oracle.  All rights reserved.
++.\"
++.\" This file is part of nfs-utils.
++.\"
++.\" nfs-utils is free software; you can redistribute it and/or modify
++.\" it under the terms of the GNU General Public License version 2.0 as
++.\" published by the Free Software Foundation.
++.\"
++.\" nfs-utils is distributed in the hope that it will be useful, but
++.\" WITHOUT ANY WARRANTY; without even the implied warranty of
++.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++.\" GNU General Public License version 2.0 for more details.
++.\"
++.\" You should have received a copy of the GNU General Public License
++.\" version 2.0 along with nfs-utils.  If not, see:
++.\"
++.\"	http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
++.\"
++.TH NFSREF 8 "9 Jan 2018"
++.SH NAME
++nfsref \- manage NFS referrals
++.SH SYNOPSIS
++.B nfsref
++.RB [ \-?d ]
++.RB [ \-t
++.IB type ]
++.B add
++.I pathname server export
++.RI [ " server"
++.IR export " ... ]"
++.P
++.B nfsref
++.RB [ \-?d ]
++.RB [ \-t
++.IB type ]
++.B remove
++.I pathname
++.P
++.B nfsref
++.RB [ \-?d ]
++.RB [ \-t
++.IB type ]
++.B lookup
++.I pathname
++.SH INTRODUCTION
++NFS version 4 introduces the concept of
++.I file system referrals
++to NFS.
++A file system referral is like a symbolic link on a file server
++to another file system share, possibly on another file server.
++On an NFS client, a referral behaves like an automounted directory.
++The client, under the server's direction, mounts a new NFS export
++automatically when an application first accesses that directory.
++.P
++Referrals are typically used to construct a single file name space
++across multiple file servers.
++Because file servers control the shape of the name space,
++no client configuration is required,
++and all clients see the same referral information.
++.P
++The Linux NFS server supports NFS version 4 referrals.
++Administrators can specify the
++.B refer=
++export option in
++.I /etc/exports
++to configure a list of exports from which the client can choose.
++See
++.BR exports (5)
++for details.
++.P
++.SH DESCRIPTION
++The
++.BR nfsref (8)
++command is a simple way to get started managing junction metadata.
++Other administrative commands provide richer access to junction information.
++.SS Subcommands
++Valid
++.BR nfsref (8)
++subcommands are:
++.IP "\fBadd\fP"
++Adds junction information to the directory named by
++.IR pathname .
++The named directory must already exist,
++and must not already contain junction information.
++Regular directory contents are obscured to NFS clients by this operation.
++.IP
++A list of one or more file server and export path pairs
++is also specified on the command line.
++When creating an NFS basic junction, this list is
++stored in an extended attribute of the directory.
++.IP
++If junction creation is successful, the
++.BR nfsref (8)
++command flushes the kernel's export cache
++to remove previously cached junction information.
++.IP "\fBremove\fP"
++Removes junction information from the directory named by
++.IR pathname .
++The named directory must exist,
++and must contain junction information.
++Regular directory contents are made visible to NFS clients again by this operation.
++.IP
++If junction deletion is successful, the
++.BR nfsref (8)
++command flushes the kernel's export cache
++to remove previously cached junction information.
++.IP "\fBlookup\fP"
++Displays junction information stored in the directory named by
++.IR pathname .
++The named directory must exist,
++and must contain junction information.
++.IP
++When looking up an NFS basic junction, the junction information
++in the directory is listed on
++.IR stdout .
++.SS Command line options
++.IP "\fB\-d, \-\-debug"
++Enables debugging messages during operation.
++.IP "\fB\-t, \-\-type=\fIjunction-type\fP"
++Specifies the junction type for the operation.  Valid values for
++.I junction-type
++are
++.B nfs-basic
++or
++.BR nfs-fedfs .
++.IP
++For the
++.B add
++subcommand, the default value if this option is not specified is
++.BR nfs-basic .
++For the
++.B remove
++and
++.B lookup
++subcommands, the
++.B \-\-type
++option is not required.  The
++.BR nfsref (8)
++command operates on whatever junction contents are available.
++.SH EXAMPLES
++Suppose you have two file servers,
++.I top.example.net
++and
++.IR home.example.net .
++You want all your clients to mount
++.I top.example.net:/
++and then see the files under
++.I home.example.net:/
++automatically in
++.IR top:/home .
++.P
++On
++.IR top.example.net ,
++you might issue this command as root:
++.RS
++.sp
++# mkdir /home
++.br
++# nfsref --type=nfs-basic add /home home.example.net /
++.br
++Created junction /home.
++.sp
++.RE
++.SH FILES
++.TP
++.I /etc/exports
++NFS server export table
++.SH "SEE ALSO"
++.BR exports (5)
++.sp
++RFC 5661 for a description of NFS version 4 referrals
++.SH "AUTHOR"
++Chuck Lever <chuck.lever@oracle.com>
+diff --git a/utils/nfsref/remove.c b/utils/nfsref/remove.c
+new file mode 100644
+index 0000000..1a4e371
+--- /dev/null
++++ b/utils/nfsref/remove.c
+@@ -0,0 +1,145 @@
++/**
++ * @file utils/nfsref/remove.c
++ * @brief Remove junction metadata from a local file system object
++ */
++
++/*
++ * Copyright 2011, 2018 Oracle.  All rights reserved.
++ *
++ * This file is part of nfs-utils.
++ *
++ * nfs-utils is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2.0 as
++ * published by the Free Software Foundation.
++ *
++ * nfs-utils is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License version 2.0 for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * version 2.0 along with nfs-utils.  If not, see:
++ *
++ *	http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
++ */
++
++#include <stdbool.h>
++#include <stdint.h>
++#include <stdlib.h>
++#include <stdio.h>
++
++#include <unistd.h>
++#include <errno.h>
++
++#include "junction.h"
++#include "xlog.h"
++#include "nfsref.h"
++
++/**
++ * Display help message for "remove" subcommand
++ *
++ * @param progname NUL-terminated C string containing name of program
++ * @return program exit status
++ */
++int
++nfsref_remove_help(const char *progname)
++{
++	fprintf(stderr, " \n");
++
++	fprintf(stderr, "Usage: %s [ -t type ] remove <junction path>\n\n",
++		progname);
++
++	fprintf(stderr, "Remove the junction at <junction path>.  For FedFS "
++			"junctions, FSL and FSN\n");
++	fprintf(stderr, "records are removed from the NSDB.\n");
++
++	return EXIT_SUCCESS;
++}
++
++/**
++ * Remove an NFS locations-style junction
++ *
++ * @param junct_path NUL-terminated C string containing pathname of junction
++ * @return program exit status
++ */
++static int
++nfsref_remove_nfs_basic(const char *junct_path)
++{
++	int status = EXIT_FAILURE;
++	FedFsStatus retval;
++
++	xlog(D_GENERAL, "%s: Removing FedFS junction from %s",
++		__func__, junct_path);
++
++	retval = nfs_delete_junction(junct_path);
++	switch (retval) {
++	case FEDFS_OK:
++		printf("Removed nfs-basic junction from %s\n", junct_path);
++		status = EXIT_SUCCESS;
++		break;
++	case FEDFS_ERR_NOTJUNCT:
++		xlog(L_ERROR, "%s is not an nfs-basic junction", junct_path);
++		break;
++	default:
++		xlog(L_ERROR, "Failed to delete %s: %s",
++			junct_path, nsdb_display_fedfsstatus(retval));
++	}
++
++	return status;
++}
++
++/**
++ * Remove any NFS junction information
++ *
++ * @param junct_path NUL-terminated C string containing pathname of junction
++ * @return program exit status
++ */
++static int
++nfsref_remove_unspecified(const char *junct_path)
++{
++	FedFsStatus retval;
++
++	xlog(D_GENERAL, "%s: Removing junction from %s",
++		__func__, junct_path);
++
++	retval = nfs_delete_junction(junct_path);
++	if (retval != FEDFS_OK) {
++		if (retval != FEDFS_ERR_NOTJUNCT)
++			goto out_err;
++	}
++
++	printf("Removed junction from %s\n", junct_path);
++	return EXIT_SUCCESS;
++
++out_err:
++	switch (retval) {
++	case FEDFS_ERR_NOTJUNCT:
++		xlog(L_ERROR, "No junction information found in %s", junct_path);
++		break;
++	default:
++		xlog(L_ERROR, "Failed to delete %s: %s",
++			junct_path, nsdb_display_fedfsstatus(retval));
++	}
++	return EXIT_FAILURE;
++}
++
++/**
++ * Remove an NFS junction
++ *
++ * @param type type of junction to add
++ * @param junct_path NUL-terminated C string containing pathname of junction
++ * @return program exit status
++ */
++int
++nfsref_remove(enum nfsref_type type, const char *junct_path)
++{
++	switch (type) {
++	case NFSREF_TYPE_UNSPECIFIED:
++		return nfsref_remove_unspecified(junct_path);
++	case NFSREF_TYPE_NFS_BASIC:
++		return nfsref_remove_nfs_basic(junct_path);
++	default:
++		xlog(L_ERROR, "Unrecognized junction type");
++	}
++	return EXIT_FAILURE;
++}
+diff --git a/utils/nfsstat/nfsstat.c b/utils/nfsstat/nfsstat.c
+index eddbe9a..c779053 100644
+--- a/utils/nfsstat/nfsstat.c
++++ b/utils/nfsstat/nfsstat.c
+@@ -300,7 +300,7 @@ int versions[] = {
+ 	PRNT_V4
+ };
+ 
+-void usage(char *name)
++static void usage(char *name)
+ {
+ 	printf("Usage: %s [OPTION]...\n\
+ \n\
+@@ -980,8 +980,10 @@ more_stats:
+ 			}
+ 			bufp = buf;
+ 			for (; curindex < numvals; curindex++) {
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+ 				n = sscanf(bufp, fmt, &ip->valptr[curindex],
+ 						&numconsumed);
++#pragma GCC diagnostic warning "-Wformat-nonliteral"
+ 				if (n != 1)
+ 					break;
+ 				if (is_proc) {
+diff --git a/utils/statd/statd.c b/utils/statd/statd.c
+index 197d853..563a272 100644
+--- a/utils/statd/statd.c
++++ b/utils/statd/statd.c
+@@ -225,7 +225,8 @@ static void set_nlm_port(char *type, int port)
+ 	fd = open(pathbuf, O_WRONLY);
+ 	if (fd < 0 && errno == ENOENT) {
+ 		/* probably module not loaded */
+-		system("modprobe lockd");
++		if (system("modprobe lockd"))
++			{/* ignore return value */};
+ 		fd = open(pathbuf, O_WRONLY);
+ 	}
+ 	if (fd >= 0) {
+diff --git a/utils/statd/svc_run.c b/utils/statd/svc_run.c
+index 28c1ad6..d1dbd74 100644
+--- a/utils/statd/svc_run.c
++++ b/utils/statd/svc_run.c
+@@ -56,6 +56,7 @@
+ #include "statd.h"
+ #include "notlist.h"
+ 
++void my_svc_exit(void);
+ static int	svc_stop = 0;
+ 
+ /*
