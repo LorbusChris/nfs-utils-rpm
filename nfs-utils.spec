@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.1
-Release: 5.rc1%{?dist}
+Release: 6.rc1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -258,7 +258,7 @@ fi
 /bin/systemctl --system daemon-reload >/dev/null 2>&1 || :
 
 %triggerin -- nfs-utils > 1:2.1.1-3
-/bin/systemctl try-restart gssproxy
+/bin/systemctl try-restart gssproxy || :
 
 %files
 %config(noreplace) /etc/sysconfig/nfs
@@ -321,6 +321,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Fri Apr  6 2018 Steve Dickson <steved@redhat.com> 2.3.1-6.rc1
+- Stop failing when systemctl try-restart gssproxy fails (bz 1552976)
+
 * Fri Mar  2 2018 Steve Dickson <steved@redhat.com> 2.3.1-5.rc1
 - Updated to latest upstream RC release: nfs-utils-2-3-2-rc1
 
