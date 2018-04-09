@@ -105,23 +105,11 @@ find . -name "*.orig" | xargs rm -f
 find -name \*.py -exec sed -r -i '1s|^#!\s*/usr/bin.*python.*|#!%{__python3}|' {} \;
 
 %build
-
-%ifarch s390 s390x sparcv9 sparc64
-PIE="-fPIE"
-%else
-PIE="-fpie"
-%endif
-export PIE
-
 sh -x autogen.sh
-
-CFLAGS="`echo $RPM_OPT_FLAGS $ARCH_OPT_FLAGS $PIE -D_FILE_OFFSET_BITS=64`"
-
 %define _statdpath /var/lib/nfs/statd
 %configure \
-    CFLAGS="$CFLAGS" \
-    CPPFLAGS="$DEFINES" \
-    LDFLAGS="-pie" \
+    CFLAGS="%{build_cflags} -D_FILE_OFFSET_BITS=64" \
+    LDFLAGS="%{build_ldflags}" \
     --enable-mountconfig \
     --enable-ipv6 \
 	--with-statdpath=%{_statdpath} \
@@ -321,8 +309,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
-* Fri Apr  6 2018 Steve Dickson <steved@redhat.com> 2.3.1-6.rc1
+* Mon Apr  9 2018 Steve Dickson <steved@redhat.com> 2.3.1-6.rc1
 - Stop failing when systemctl try-restart gssproxy fails (bz 1552976)
+- Use Fedora build flags (bz 1548679)
 
 * Fri Mar  2 2018 Steve Dickson <steved@redhat.com> 2.3.1-5.rc1
 - Updated to latest upstream RC release: nfs-utils-2-3-2-rc1
