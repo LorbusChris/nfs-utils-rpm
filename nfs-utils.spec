@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.1
-Release: 6.rc1%{?dist}
+Release: 7.rc1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -16,6 +16,7 @@ Source4: lockd.conf
 Source5: 24-nfs-server.conf
 
 Patch001: nfs-utils-2.3.2-rc1.patch
+Patch002: nfs-utils-2.3.1-mount-auto-v3.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -309,6 +310,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Wed Apr 11 2018 Steve Dickson <steved@redhat.com> 2.3.1-7.rc1
+- mount.nfs: Fix auto protocol negotiation (bz 1565310)
+
 * Mon Apr  9 2018 Steve Dickson <steved@redhat.com> 2.3.1-6.rc1
 - Stop failing when systemctl try-restart gssproxy fails (bz 1552976)
 - Use Fedora build flags (bz 1548679)
