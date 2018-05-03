@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.1
-Release: 7.rc1%{?dist}
+Release: 8.rc1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -17,6 +17,7 @@ Source5: 24-nfs-server.conf
 
 Patch001: nfs-utils-2.3.2-rc1.patch
 Patch002: nfs-utils-2.3.1-mount-auto-v3.patch
+Patch003: nfs-utils-2.3.1-mount-setdefault-minor.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -310,6 +311,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Thu May  3 2018 Steve Dickson <steved@redhat.com> 2.3.1-8.rc1
+- nfsd: Set default minor versions (bz 1570066)
+
 * Wed Apr 11 2018 Steve Dickson <steved@redhat.com> 2.3.1-7.rc1
 - mount.nfs: Fix auto protocol negotiation (bz 1565310)
 
