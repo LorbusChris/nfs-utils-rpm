@@ -2,11 +2,11 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.1
-Release: 8.rc1%{?dist}
+Release: 9.rc1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
-%define all_32bit_archs i386 i486 i586 i686 athlon ppc sparcv9
+%global all_32bit_archs i386 i486 i586 i686 athlon ppc sparcv9
 
 Source0: https://www.kernel.org/pub/linux/utils/nfs-utils/%{version}/%{name}-%{version}.tar.xz
 Source1: id_resolver.conf
@@ -52,7 +52,7 @@ BuildRequires: krb5-devel, libmount-devel
 BuildRequires: sqlite-devel
 BuildRequires: python3-devel
 BuildRequires: systemd
-BuildRequires: rpcgen
+#BuildRequires: rpcgen
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): util-linux
 Requires(pre): coreutils
@@ -108,7 +108,7 @@ find -name \*.py -exec sed -r -i '1s|^#!\s*/usr/bin.*python.*|#!%{__python3}|' {
 
 %build
 sh -x autogen.sh
-%define _statdpath /var/lib/nfs/statd
+%global _statdpath /var/lib/nfs/statd
 %configure \
     CFLAGS="%{build_cflags} -D_FILE_OFFSET_BITS=64" \
     LDFLAGS="%{build_ldflags}" \
@@ -123,7 +123,7 @@ sh -x autogen.sh
 %make_build all
 
 %install
-%define _pkgdir %{_prefix}/lib/systemd
+%global _pkgdir %{_prefix}/lib/systemd
 
 rm -rf $RPM_BUILD_ROOT/*
 
@@ -184,7 +184,7 @@ for x in gssd idmapd ; do
     fi
 done
 
-%define rpcuser_uid 29
+%global rpcuser_uid 29
 # Create rpcuser gid as long as it does not already exist
 cat /etc/group | cut -d':' -f 1 | grep --quiet rpcuser 2>/dev/null
 if [ "$?" -eq 1 ]; then
@@ -203,24 +203,23 @@ else
 fi 
 
 # Using the 16-bit value of -2 for the nfsnobody uid and gid
-%define nfsnobody_uid	65534
+%global nfsnobody_uid	65534
+
+# Nowadays 'nobody/65534' user/group are included in setup rpm. But on
+# systems installed previously, nobody/99 might be present, with user
+# 65534 missing. Let's create nfsnobody/65534 in that case.
 
 # Create nfsnobody gid as long as it does not already exist
-cat /etc/group | cut -d':' -f 1 | grep --quiet nfsnobody 2>/dev/null
+cat /etc/group | cut -d':' -f 3 | grep --quiet %{nfsnobody_uid} 2>/dev/null
 if [ "$?" -eq 1 ]; then
     /usr/sbin/groupadd -g %{nfsnobody_uid} nfsnobody >/dev/null 2>&1 || :
-else
-    /usr/sbin/groupmod -g %{nfsnobody_uid} nfsnobody >/dev/null 2>&1 || :
 fi
 
 # Create nfsnobody uid as long as it does not already exist.
-cat /etc/passwd | cut -d':' -f 1 | grep --quiet nfsnobody 2>/dev/null
+cat /etc/passwd | cut -d':' -f 3 | grep --quiet %{nfsnobody_uid} 2>/dev/null
 if [ $? -eq 1 ]; then
     /usr/sbin/useradd -l -c "Anonymous NFS User" -r -g %{nfsnobody_uid} \
 		-s /sbin/nologin -u %{nfsnobody_uid} -d /var/lib/nfs nfsnobody >/dev/null 2>&1 || :
-else
-
-   /usr/sbin/usermod -u %{nfsnobody_uid} -g %{nfsnobody_uid} nfsnobody >/dev/null 2>&1 || :
 fi
 
 %post
@@ -311,6 +310,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Tue May 15 2018 Zbigniew Jedrzejewski-Szmek <zbyszek@in.waw.pl> 2.3.1-9.rc1
+- Only try to create nfsnobody if the uid/gid are not found (bz 1488897)
+
 * Thu May  3 2018 Steve Dickson <steved@redhat.com> 2.3.1-8.rc1
 - nfsd: Set default minor versions (bz 1570066)
 
