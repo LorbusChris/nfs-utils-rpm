@@ -24,6 +24,7 @@ Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
 Patch102: nfs-utils-1.2.5-idmap-errmsg.patch
 Patch103: nfs-utils-2.1.1-nfs-config.patch
 Patch104: nfs-utils-2.3.1-systemd-gssproxy-restart.patch
+Patch105: nfs-utils-2.3.1-no-rpcgen.patch
 
 Provides: exportfs    = %{epoch}:%{version}-%{release}
 Provides: nfsstat     = %{epoch}:%{version}-%{release}
@@ -312,6 +313,7 @@ fi
 %changelog
 * Tue May 15 2018 Zbigniew Jedrzejewski-Szmek <zbyszek@in.waw.pl> 2.3.1-9.rc1
 - Only try to create nfsnobody if the uid/gid are not found (bz 1488897)
+- Turn off the building of rpcgen
 
 * Thu May  3 2018 Steve Dickson <steved@redhat.com> 2.3.1-8.rc1
 - nfsd: Set default minor versions (bz 1570066)
