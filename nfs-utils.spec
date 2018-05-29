@@ -1,8 +1,8 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://linux-nfs.org/
-Version: 2.3.1
-Release: 9.rc1%{?dist}
+Version: 2.3.2
+Release: 0%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -14,10 +14,6 @@ Source2: nfs.sysconfig
 Source3: nfs-utils_env.sh
 Source4: lockd.conf
 Source5: 24-nfs-server.conf
-
-Patch001: nfs-utils-2.3.2-rc1.patch
-Patch002: nfs-utils-2.3.1-mount-auto-v3.patch
-Patch003: nfs-utils-2.3.1-mount-setdefault-minor.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -53,7 +49,7 @@ BuildRequires: krb5-devel, libmount-devel
 BuildRequires: sqlite-devel
 BuildRequires: python3-devel
 BuildRequires: systemd
-#BuildRequires: rpcgen
+BuildRequires: rpcgen
 Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): util-linux
 Requires(pre): coreutils
@@ -287,6 +283,7 @@ fi
 %{_sbindir}/nfsiostat
 %{_sbindir}/nfsidmap
 %{_sbindir}/blkmapd
+%{_sbindir}/nfsconf
 %{_mandir}/*/*
 %{_pkgdir}/*/*
 %attr(755,root,root) %{_libexecdir}/nfs-utils/nfs-utils_env.sh
@@ -311,6 +308,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Thu May 24 2018 Steve Dickson <steved@redhat.com> 2.3.2-0
+- Updated to latest upstream release: 2.3.2 (bz 1582341)
+
 * Tue May 15 2018 Zbigniew Jedrzejewski-Szmek <zbyszek@in.waw.pl> 2.3.1-9.rc1
 - Only try to create nfsnobody if the uid/gid are not found (bz 1488897)
 - Turn off the building of rpcgen
