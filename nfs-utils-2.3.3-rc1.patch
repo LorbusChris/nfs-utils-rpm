@@ -1,0 +1,444 @@
+diff --git a/configure.ac b/configure.ac
+index 276dec3..4b698dd 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -157,7 +157,7 @@ AC_ARG_WITH(rpcgen,
+ 	    RPCGEN_PATH=$rpcgen_path
+ 	fi
+ 	AC_SUBST(RPCGEN_PATH)
+-	AM_CONDITIONAL(CONFIG_RPCGEN, [test "$RPCGEN_PATH" = ""])
++	AM_CONDITIONAL(CONFIG_RPCGEN, [test "$RPCGEN_PATH" = "internal"])
+ AC_ARG_ENABLE(uuid,
+ 	[AC_HELP_STRING([--disable-uuid], 
+ 		[Exclude uuid support to avoid buggy libblkid. @<:@default=no@:>@])],
+diff --git a/support/export/client.c b/support/export/client.c
+index 2346f99..baf59c8 100644
+--- a/support/export/client.c
++++ b/support/export/client.c
+@@ -482,8 +482,9 @@ add_name(char *old, const char *add)
+ 		else
+ 			cp = cp + strlen(cp);
+ 	}
+-	if (old) {
+-		strncpy(new, old, cp-old);
++	len = cp-old;
++	if (old && len > 0) {
++		strncpy(new, old, len);
+ 		new[cp-old] = 0;
+ 	} else {
+ 		new[0] = 0;
+diff --git a/support/include/exportfs.h b/support/include/exportfs.h
+index 8af47a8..4e0d9d1 100644
+--- a/support/include/exportfs.h
++++ b/support/include/exportfs.h
+@@ -97,7 +97,7 @@ typedef struct mexport {
+ 	struct mclient *	m_client;
+ 	struct exportent	m_export;
+ 	int			m_exported;	/* known to knfsd. */
+-	int			m_xtabent  : 1,	/* xtab entry exists */
++	unsigned int		m_xtabent  : 1,	/* xtab entry exists */
+ 				m_mayexport: 1,	/* derived from xtabbed */
+ 				m_changed  : 1, /* options (may) have changed */
+ 				m_warned   : 1; /* warned about multiple exports
+diff --git a/support/misc/file.c b/support/misc/file.c
+index 63597df..4065376 100644
+--- a/support/misc/file.c
++++ b/support/misc/file.c
+@@ -96,7 +96,7 @@ generic_setup_basedir(const char *progname, const char *parentdir, char *base,
+ 	}
+ 
+ 	/* Ensure we have a clean directory pathname */
+-	strncpy(buf, parentdir, sizeof(buf));
++	strncpy(buf, parentdir, sizeof(buf)-1);
+ 	path = dirname(buf);
+ 	if (*path == '.') {
+ 		(void)fprintf(stderr, "%s: Unusable directory %s",
+diff --git a/support/nfsidmap/umich_ldap.c b/support/nfsidmap/umich_ldap.c
+index 0e31b1c..b661110 100644
+--- a/support/nfsidmap/umich_ldap.c
++++ b/support/nfsidmap/umich_ldap.c
+@@ -1125,9 +1125,9 @@ umichldap_init(void)
+ 
+ 	/* Verify required information is supplied */
+ 	if (server_in == NULL || strlen(server_in) == 0)
+-		strncat(missing_msg, "LDAP_server ", sizeof(missing_msg));
++		strncat(missing_msg, "LDAP_server ", sizeof(missing_msg)-1);
+ 	if (ldap_info.base == NULL || strlen(ldap_info.base) == 0)
+-		strncat(missing_msg, "LDAP_base ", sizeof(missing_msg));
++		strncat(missing_msg, "LDAP_base ", sizeof(missing_msg)-1);
+ 	if (strlen(missing_msg) != 0) {
+ 		IDMAP_LOG(0, ("umichldap_init: Missing required information: "
+ 			  "%s", missing_msg));
+diff --git a/utils/gssd/gssd.c b/utils/gssd/gssd.c
+index 2c14e5f..7b21ee2 100644
+--- a/utils/gssd/gssd.c
++++ b/utils/gssd/gssd.c
+@@ -279,16 +279,16 @@ gssd_read_service_info(int dirfd, struct clnt_info *clp)
+ 	 * (commit bf19aacecbeebccb2c3d150a8bd9416b7dba81fe)
+ 	 */
+ 	numfields = fscanf(info,
+-			   "RPC server: %ms\n"
+-			   "service: %ms (%d) version %d\n"
+-			   "address: %ms\n"
+-			   "protocol: %ms\n"
+-			   "port: %ms\n",
+-			   &server,
+-			   &service, &program, &version,
+-			   &address,
+-			   &protoname,
+-			   &port);
++			   "RPC server: %s\n"
++			   "service: %s (%d) version %d\n"
++			   "address: %s\n"
++			   "protocol: %s\n"
++			   "port: %s\n",
++			   (char *)&server,
++			   (char *)&service, &program, &version,
++			   (char *)&address,
++			   (char *)&protoname,
++			   (char *)&port);
+ 
+ 
+ 	switch (numfields) {
+diff --git a/utils/gssd/gssd_proc.c b/utils/gssd/gssd_proc.c
+index ce73777..8767e26 100644
+--- a/utils/gssd/gssd_proc.c
++++ b/utils/gssd/gssd_proc.c
+@@ -520,8 +520,9 @@ out:
+ }
+ 
+ static AUTH *
+-krb5_use_machine_creds(struct clnt_info *clp, uid_t uid, char *tgtname,
+-		    char *service, CLIENT **rpc_clnt)
++krb5_use_machine_creds(struct clnt_info *clp, uid_t uid,
++		       char *srchost, char *tgtname, char *service,
++		       CLIENT **rpc_clnt)
+ {
+ 	AUTH	*auth = NULL;
+ 	char	**credlist = NULL;
+@@ -534,7 +535,7 @@ krb5_use_machine_creds(struct clnt_info *clp, uid_t uid, char *tgtname,
+ 
+ 	do {
+ 		gssd_refresh_krb5_machine_credential(clp->servername, NULL,
+-						service);
++						     service, srchost);
+ 	/*
+ 	 * Get a list of credential cache names and try each
+ 	 * of them until one works or we've tried them all
+@@ -594,8 +595,8 @@ out:
+  * context on behalf of the kernel
+  */
+ static void
+-process_krb5_upcall(struct clnt_info *clp, uid_t uid, int fd, char *tgtname,
+-		    char *service)
++process_krb5_upcall(struct clnt_info *clp, uid_t uid, int fd, char *srchost,
++		    char *tgtname, char *service)
+ {
+ 	CLIENT			*rpc_clnt = NULL;
+ 	AUTH			*auth = NULL;
+@@ -643,7 +644,7 @@ process_krb5_upcall(struct clnt_info *clp, uid_t uid, int fd, char *tgtname,
+ 	if (auth == NULL) {
+ 		if (uid == 0 && (root_uses_machine_creds == 1 ||
+ 				service != NULL)) {
+-			auth =	krb5_use_machine_creds(clp, uid, tgtname,
++			auth =	krb5_use_machine_creds(clp, uid, srchost, tgtname,
+ 							service, &rpc_clnt);
+ 			if (auth == NULL)
+ 				goto out_return_error;
+@@ -714,7 +715,7 @@ handle_krb5_upcall(struct clnt_upcall_info *info)
+ 
+ 	printerr(2, "\n%s: uid %d (%s)\n", __func__, info->uid, clp->relpath);
+ 
+-	process_krb5_upcall(clp, info->uid, clp->krb5_fd, NULL, NULL);
++	process_krb5_upcall(clp, info->uid, clp->krb5_fd, NULL, NULL, NULL);
+ 	free(info);
+ }
+ 
+@@ -728,11 +729,12 @@ handle_gssd_upcall(struct clnt_upcall_info *info)
+ 	char			*uidstr = NULL;
+ 	char			*target = NULL;
+ 	char			*service = NULL;
++	char			*srchost = NULL;
+ 	char			*enctypes = NULL;
+ 	char			*upcall_str;
+ 	char			*pbuf = info->lbuf;
+ 
+-	printerr(2, "\n%s: '%s' (%s)\n", __func__, info->lbuf, clp->relpath);
++	printerr(2, "%s: '%s' (%s)\n", __func__, info->lbuf, clp->relpath);
+ 
+ 	upcall_str = strdup(info->lbuf);
+ 	if (upcall_str == NULL) {
+@@ -751,6 +753,8 @@ handle_gssd_upcall(struct clnt_upcall_info *info)
+ 			target = p + strlen("target=");
+ 		else if (!strncmp(p, "service=", strlen("service=")))
+ 			service = p + strlen("service=");
++		else if (!strncmp(p, "srchost=", strlen("srchost=")))
++			srchost = p + strlen("srchost=");
+ 	}
+ 
+ 	if (!mech || strlen(mech) < 1) {
+@@ -802,7 +806,7 @@ handle_gssd_upcall(struct clnt_upcall_info *info)
+ 	}
+ 
+ 	if (strcmp(mech, "krb5") == 0 && clp->servername)
+-		process_krb5_upcall(clp, uid, clp->gssd_fd, target, service);
++		process_krb5_upcall(clp, uid, clp->gssd_fd, srchost, target, service);
+ 	else {
+ 		if (clp->servername)
+ 			printerr(0, "WARNING: handle_gssd_upcall: "
+@@ -815,4 +819,3 @@ out_nomem:
+ 	free(info);
+ 	return;
+ }
+-
+diff --git a/utils/gssd/krb5_util.c b/utils/gssd/krb5_util.c
+index b342b06..eba1aac 100644
+--- a/utils/gssd/krb5_util.c
++++ b/utils/gssd/krb5_util.c
+@@ -757,7 +757,8 @@ gssd_search_krb5_keytab(krb5_context context, krb5_keytab kt,
+  * the server hostname.
+  */
+ static int
+-find_keytab_entry(krb5_context context, krb5_keytab kt, const char *tgtname,
++find_keytab_entry(krb5_context context, krb5_keytab kt,
++		  const char *srchost, const char *tgtname,
+ 		  krb5_keytab_entry *kte, const char **svcnames)
+ {
+ 	krb5_error_code code;
+@@ -781,7 +782,9 @@ find_keytab_entry(krb5_context context, krb5_keytab kt, const char *tgtname,
+ 		goto out;
+ 
+ 	/* Get full local hostname */
+-	if (gethostname(myhostname, sizeof(myhostname)) == -1) {
++	if (srchost) {
++		strcpy(myhostname, srchost);
++	} else if (gethostname(myhostname, sizeof(myhostname)) == -1) {
+ 		retval = errno;
+ 		k5err = gssd_k5_err_msg(context, retval);
+ 		printerr(1, "%s while getting local hostname\n", k5err);
+@@ -807,10 +810,12 @@ find_keytab_entry(krb5_context context, krb5_keytab kt, const char *tgtname,
+ 	        myhostad[i+1] = 0;
+ 	}
+ 
+-	retval = get_full_hostname(myhostname, myhostname, sizeof(myhostname));
+-	if (retval) {
+-		/* Don't use myhostname */
+-		myhostname[0] = 0;
++	if (!srchost) {
++		retval = get_full_hostname(myhostname, myhostname, sizeof(myhostname));
++		if (retval) {
++			/* Don't use myhostname */
++			myhostname[0] = 0;
++		}
+ 	}
+ 
+ 	code = krb5_get_default_realm(context, &default_realm);
+@@ -1140,7 +1145,7 @@ gssd_get_krb5_machine_cred_list(char ***list)
+ 		if (ple->ccname) {
+ 			/* Make sure cred is up-to-date before returning it */
+ 			retval = gssd_refresh_krb5_machine_credential(NULL, ple,
+-				NULL);
++								      NULL, NULL);
+ 			if (retval)
+ 				continue;
+ 			if (i + 1 > listsize) {
+@@ -1231,7 +1236,7 @@ gssd_destroy_krb5_machine_creds(void)
+ int
+ gssd_refresh_krb5_machine_credential(char *hostname,
+ 				     struct gssd_k5_kt_princ *ple, 
+-					 char *service)
++				     char *service, char *srchost)
+ {
+ 	krb5_error_code code = 0;
+ 	krb5_context context;
+@@ -1240,6 +1245,9 @@ gssd_refresh_krb5_machine_credential(char *hostname,
+ 	char *k5err = NULL;
+ 	const char *svcnames[] = { "$", "root", "nfs", "host", NULL };
+ 
++	printerr(2, "%s: hostname=%s ple=%p service=%s srchost=%s\n",
++		__func__, hostname, ple, service, srchost);
++
+ 	/*
+ 	 * If a specific service name was specified, use it.
+ 	 * Otherwise, use the default list.
+@@ -1270,7 +1278,8 @@ gssd_refresh_krb5_machine_credential(char *hostname,
+ 	if (ple == NULL) {
+ 		krb5_keytab_entry kte;
+ 
+-		code = find_keytab_entry(context, kt, hostname, &kte, svcnames);
++		code = find_keytab_entry(context, kt, srchost, hostname,
++					 &kte, svcnames);
+ 		if (code) {
+ 			printerr(0, "ERROR: %s: no usable keytab entry found "
+ 				 "in keytab %s for connection with host %s\n",
+diff --git a/utils/gssd/krb5_util.h b/utils/gssd/krb5_util.h
+index e3bbb07..b000b44 100644
+--- a/utils/gssd/krb5_util.h
++++ b/utils/gssd/krb5_util.h
+@@ -30,7 +30,7 @@ void gssd_free_krb5_machine_cred_list(char **list);
+ void gssd_destroy_krb5_machine_creds(void);
+ int  gssd_refresh_krb5_machine_credential(char *hostname,
+ 					  struct gssd_k5_kt_princ *ple, 
+-					  char *service);
++					  char *service, char *srchost);
+ char *gssd_k5_err_msg(krb5_context context, krb5_error_code code);
+ void gssd_k5_get_default_realm(char **def_realm);
+ 
+diff --git a/utils/idmapd/idmapd.c b/utils/idmapd/idmapd.c
+index b87c4dd..4811e0f 100644
+--- a/utils/idmapd/idmapd.c
++++ b/utils/idmapd/idmapd.c
+@@ -310,7 +310,7 @@ main(int argc, char **argv)
+ 	if (!serverstart && !clientstart)
+ 		errx(1, "it is illegal to specify both -C and -S");
+ 
+-	strncat(pipefsdir, "/nfs", sizeof(pipefsdir));
++	strncat(pipefsdir, "/nfs", sizeof(pipefsdir)-1);
+ 
+ 	daemon_init(fg);
+ 
+@@ -923,7 +923,8 @@ static int
+ getfield(char **bpp, char *fld, size_t fldsz)
+ {
+ 	char *bp;
+-	int val, n;
++	unsigned int val; 
++	int n;
+ 
+ 	while ((bp = strsep(bpp, " ")) != NULL && bp[0] == '\0')
+ 		;
+diff --git a/utils/mount/nfs4mount.c b/utils/mount/nfs4mount.c
+index 89629ed..3e4f1e2 100644
+--- a/utils/mount/nfs4mount.c
++++ b/utils/mount/nfs4mount.c
+@@ -218,7 +218,7 @@ int nfs4mount(const char *spec, const char *node, int flags,
+ 		goto fail;
+ 	}
+ 	if (running_bg)
+-		strncpy(new_opts, old_opts, sizeof(new_opts));
++		strncpy(new_opts, old_opts, sizeof(new_opts)-1);
+ 	else
+ 		snprintf(new_opts, sizeof(new_opts), "%s%saddr=%s",
+ 			 old_opts, *old_opts ? "," : "", s);
+diff --git a/utils/mount/nfsmount.c b/utils/mount/nfsmount.c
+index ae4a3da..952a755 100644
+--- a/utils/mount/nfsmount.c
++++ b/utils/mount/nfsmount.c
+@@ -828,7 +828,7 @@ noauth_flavors:
+ 
+ 	data.fd = fsock;
+ 	memcpy((char *) &data.addr, (char *) nfs_saddr, sizeof(data.addr));
+-	strncpy(data.hostname, hostname, sizeof(data.hostname));
++	strncpy(data.hostname, hostname, sizeof(data.hostname)-1);
+ 
+  out_ok:
+ 	/* Ensure we have enough padding for the following strcat()s */
+diff --git a/utils/mountd/mountd.c b/utils/mountd/mountd.c
+index 4c68702..086c39b 100644
+--- a/utils/mountd/mountd.c
++++ b/utils/mountd/mountd.c
+@@ -702,7 +702,7 @@ main(int argc, char **argv)
+ 	else
+ 		NFSCTL_TCPUNSET(_rpcprotobits);
+ 	for (vers = 2; vers <= 4; vers++) {
+-		char tag[10];
++		char tag[20];
+ 		sprintf(tag, "vers%d", vers);
+ 		if (conf_get_bool("nfsd", tag, NFSCTL_VERISSET(nfs_version, vers)))
+ 			NFSCTL_VERSET(nfs_version, vers);
+diff --git a/utils/mountd/v4root.c b/utils/mountd/v4root.c
+index f978f4c..d735dbf 100644
+--- a/utils/mountd/v4root.c
++++ b/utils/mountd/v4root.c
+@@ -92,7 +92,7 @@ v4root_create(char *path, nfs_export *export)
+ 
+ 	dupexportent(&eep, &pseudo_root.m_export);
+ 	eep.e_hostname = curexp->e_hostname;
+-	strncpy(eep.e_path, path, sizeof(eep.e_path));
++	strncpy(eep.e_path, path, sizeof(eep.e_path)-1);
+ 	if (strcmp(path, "/") != 0)
+ 		eep.e_flags &= ~NFSEXP_FSID;
+ 	set_pseudofs_security(&eep, curexp->e_flags);
+diff --git a/utils/nfsd/nfsd.c b/utils/nfsd/nfsd.c
+index 2303a5d..f048631 100644
+--- a/utils/nfsd/nfsd.c
++++ b/utils/nfsd/nfsd.c
+@@ -98,7 +98,7 @@ main(int argc, char **argv)
+ 	else
+ 		NFSCTL_TCPUNSET(protobits);
+ 	for (i = 2; i <= 4; i++) {
+-		char tag[10];
++		char tag[20];
+ 		sprintf(tag, "vers%d", i);
+ 		if (conf_get_bool("nfsd", tag, NFSCTL_VERISSET(versbits, i)))
+ 			NFSCTL_VERSET(versbits, i);
+diff --git a/utils/nfsidmap/nfsidmap.c b/utils/nfsidmap/nfsidmap.c
+index 374bc5d..d3967a3 100644
+--- a/utils/nfsidmap/nfsidmap.c
++++ b/utils/nfsidmap/nfsidmap.c
+@@ -283,7 +283,7 @@ static int key_invalidate(char *keystr, int keymask)
+ {
+ 	FILE *fp;
+ 	char buf[BUFSIZ], *ptr;
+-	key_serial_t key;
++	unsigned int key;
+ 	int mask;
+ 
+ 	xlog_syslog(0);
+diff --git a/utils/nfsstat/nfsstat.c b/utils/nfsstat/nfsstat.c
+index c779053..8fccea7 100644
+--- a/utils/nfsstat/nfsstat.c
++++ b/utils/nfsstat/nfsstat.c
+@@ -1013,7 +1013,7 @@ mounts(const char *name)
+ 	 * be a fatal error -- it usually means the module isn't loaded.
+ 	 */
+ 	if ((fp = fopen(name, "r")) == NULL) {
+-		fprintf(stderr, "Warning: %s: %m\n", name);
++		fprintf(stderr, "Warning: %s: %s\n", name, strerror(errno));
+ 		return 0;
+ 	}
+ 
+@@ -1089,8 +1089,8 @@ out:
+ 		fclose(fp);
+ 	if (err) {
+ 		if (!other_opt) {
+-			fprintf(stderr, "Error: No %s Stats (%s: %m). \n",
+-					label, file);
++			fprintf(stderr, "Error: No %s Stats (%s: %s). \n",
++					label, file, strerror(errno));
+ 			exit(2);
+ 		}
+ 		*opt = 0;
+diff --git a/utils/statd/sm-notify.c b/utils/statd/sm-notify.c
+index 6d19ec1..7a48473 100644
+--- a/utils/statd/sm-notify.c
++++ b/utils/statd/sm-notify.c
+@@ -569,7 +569,7 @@ usage:		fprintf(stderr,
+ 		if (name == NULL)
+ 			exit(1);
+ 
+-		strncpy(nsm_hostname, name, sizeof(nsm_hostname));
++		strncpy(nsm_hostname, name, sizeof(nsm_hostname)-1);
+ 		free(name);
+ 	}
+ 
+diff --git a/utils/statd/statd.c b/utils/statd/statd.c
+index 563a272..2cc6cf3 100644
+--- a/utils/statd/statd.c
++++ b/utils/statd/statd.c
+@@ -231,11 +231,12 @@ static void set_nlm_port(char *type, int port)
+ 	}
+ 	if (fd >= 0) {
+ 		if (write(fd, nbuf, strlen(nbuf)) != (ssize_t)strlen(nbuf))
+-			fprintf(stderr, "%s: fail to set NLM %s port: %m\n",
+-				name_p, type);
++			fprintf(stderr, "%s: fail to set NLM %s port: %s\n",
++				name_p, type, strerror(errno));
+ 		close(fd);
+ 	} else
+-		fprintf(stderr, "%s: failed to open %s: %m\n", name_p, pathbuf);
++		fprintf(stderr, "%s: failed to open %s: %s\n", 
++			name_p, pathbuf, strerror(errno));
+ }
+ 
+ /*

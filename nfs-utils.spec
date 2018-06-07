@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.2
-Release: 0%{?dist}
+Release: 0.rc1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -15,12 +15,13 @@ Source3: nfs-utils_env.sh
 Source4: lockd.conf
 Source5: 24-nfs-server.conf
 
+Patch001: nfs-utils-2.3.3-rc1.patch
+
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
 Patch102: nfs-utils-1.2.5-idmap-errmsg.patch
 Patch103: nfs-utils-2.1.1-nfs-config.patch
 Patch104: nfs-utils-2.3.1-systemd-gssproxy-restart.patch
-Patch105: nfs-utils-2.3.1-no-rpcgen.patch
 
 Provides: exportfs    = %{epoch}:%{version}-%{release}
 Provides: nfsstat     = %{epoch}:%{version}-%{release}
@@ -308,6 +309,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Thu Jun  7 2018 Steve Dickson <steved@redhat.com> 2.3.2-0-rc1
+- Update to latest RC release: nfs-utils-2-3-3-rc1
+
 * Thu May 24 2018 Steve Dickson <steved@redhat.com> 2.3.2-0
 - Updated to latest upstream release: 2.3.2 (bz 1582341)
 
