@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.2
-Release: 0.rc1%{?dist}
+Release: 0.rc1%{?dist}.1
 Epoch: 1
 
 # group all 32bit related archs
@@ -309,6 +309,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Tue Jun 19 2018 Miro Hrončok <mhroncok@redhat.com> - 1:2.3.2-0.rc1.1
+- Rebuilt for Python 3.7
+
 * Thu Jun  7 2018 Steve Dickson <steved@redhat.com> 2.3.2-0-rc1
 - Update to latest RC release: nfs-utils-2-3-3-rc1
 
