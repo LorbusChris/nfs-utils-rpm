@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.2
-Release: 1.rc2%{?dist}.1
+Release: 1.rc2%{?dist}.2
 Epoch: 1
 
 # group all 32bit related archs
@@ -310,6 +310,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Fri Jul 13 2018 Fedora Release Engineering <releng@fedoraproject.org> - 1:2.3.2-1.rc2.2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_29_Mass_Rebuild
+
 * Mon Jul 02 2018 Miro Hrončok <mhroncok@redhat.com> - 1:2.3.2-1.rc2.1
 - Rebuilt for Python 3.7
 
