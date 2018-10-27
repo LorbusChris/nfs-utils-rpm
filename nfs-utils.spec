@@ -22,6 +22,7 @@ Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
 Patch102: nfs-utils-1.2.5-idmap-errmsg.patch
 Patch103: nfs-utils-2.1.1-nfs-config.patch
 Patch104: nfs-utils-2.3.1-systemd-gssproxy-restart.patch
+Patch105: nfs-utils-2.3.3-man-tcpwrappers.patch
 
 Provides: exportfs    = %{epoch}:%{version}-%{release}
 Provides: nfsstat     = %{epoch}:%{version}-%{release}
@@ -310,6 +311,7 @@ fi
 %changelog
 * Sat Oct 27 2018 Steve Dickson <steved@redhat.com> 2.3.3-1.rc1
 - Changed /var/lib/nfs/rpc_pipefs to have 555 permissions
+- Removed tcp wrappers support from man pages
 
 * Sat Oct 27 2018 Steve Dickson <steved@redhat.com> 2.3.3-0.rc1
 - Updated to latest uupstream RC release: nfs-utils-2-3-4-rc1
