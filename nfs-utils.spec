@@ -312,6 +312,7 @@ fi
 * Sat Oct 27 2018 Steve Dickson <steved@redhat.com> 2.3.3-1.rc1
 - Changed /var/lib/nfs/rpc_pipefs to have 555 permissions
 - Removed tcp wrappers support from man pages
+- Reload not restart gssproxy in nfs-server.service
 
 * Sat Oct 27 2018 Steve Dickson <steved@redhat.com> 2.3.3-0.rc1
 - Updated to latest uupstream RC release: nfs-utils-2-3-4-rc1
