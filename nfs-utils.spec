@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.3
-Release: 0.rc1%{?dist}
+Release: 1.rc1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -252,7 +252,7 @@ fi
 %config(noreplace) /etc/nfsmount.conf
 %dir %{_sysconfdir}/exports.d
 %dir %{_sharedstatedir}/nfs/v4recovery
-%dir %{_sharedstatedir}/nfs/rpc_pipefs
+%dir %attr(555, root, root) %{_sharedstatedir}/nfs/rpc_pipefs
 %dir %{_sharedstatedir}/nfs
 %dir %{_libexecdir}/nfs-utils
 %dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd
@@ -308,6 +308,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Sat Oct 27 2018 Steve Dickson <steved@redhat.com> 2.3.3-1.rc1
+- Changed /var/lib/nfs/rpc_pipefs to have 555 permissions
+
 * Sat Oct 27 2018 Steve Dickson <steved@redhat.com> 2.3.3-0.rc1
 - Updated to latest uupstream RC release: nfs-utils-2-3-4-rc1
 
