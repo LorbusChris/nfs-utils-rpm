@@ -1,0 +1,21 @@
+diff -up nfs-utils-2.3.3/nfs.conf.orig nfs-utils-2.3.3/nfs.conf
+--- nfs-utils-2.3.3/nfs.conf.orig	2018-10-31 12:09:28.905622992 -0400
++++ nfs-utils-2.3.3/nfs.conf	2018-10-31 12:13:28.843301421 -0400
+@@ -11,7 +11,7 @@
+ [gssd]
+ # use-memcache=0
+ # use-machine-creds=1
+-# use-gss-proxy=0
++use-gss-proxy=1
+ # avoid-dns=1
+ # limit-to-legacy-enctypes=0
+ # context-timeout=0
+@@ -69,6 +69,5 @@
+ # outgoing-port=
+ # outgoing-addr=
+ # lift-grace=y
+-#
+-[svcgssd]
+-# principal=
++
++#tag1234 - Used for install purposes only 

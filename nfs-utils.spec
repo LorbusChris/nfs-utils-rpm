@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.3
-Release: 1.rc1%{?dist}
+Release: 2.rc1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -11,18 +11,20 @@ Epoch: 1
 Source0: https://www.kernel.org/pub/linux/utils/nfs-utils/%{version}/%{name}-%{version}.tar.xz
 Source1: id_resolver.conf
 Source2: nfs.sysconfig
-Source3: nfs-utils_env.sh
-Source4: lockd.conf
-Source5: 24-nfs-server.conf
+Source3: lockd.conf
+Source4: 24-nfs-server.conf
+Source5: nfsconvert.py
+Source6: nfsconvert.sh
+Source7: nfs-convert.service
 
 Patch001: nfs-utils.2.3.4-rc1.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
 Patch102: nfs-utils-1.2.5-idmap-errmsg.patch
-Patch103: nfs-utils-2.1.1-nfs-config.patch
-Patch104: nfs-utils-2.3.1-systemd-gssproxy-restart.patch
-Patch105: nfs-utils-2.3.3-man-tcpwrappers.patch
+Patch103: nfs-utils-2.3.1-systemd-gssproxy-restart.patch
+Patch104: nfs-utils-2.3.3-man-tcpwrappers.patch
+Patch105: nfs-utils-2.3.3-nfsconf-usegssproxy.patch
 
 Provides: exportfs    = %{epoch}:%{version}-%{release}
 Provides: nfsstat     = %{epoch}:%{version}-%{release}
@@ -147,22 +149,14 @@ install -m 644 %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/request-key.d
 install -m 644 %{SOURCE2} $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/nfs
 
 mkdir -p $RPM_BUILD_ROOT/run/sysconfig
-mkdir -p $RPM_BUILD_ROOT/usr/lib/systemd/scripts
-install -m 755 %{SOURCE3} $RPM_BUILD_ROOT/%{_libexecdir}/nfs-utils/nfs-utils_env.sh
-install -m 644 %{SOURCE4} $RPM_BUILD_ROOT%{_sysconfdir}/modprobe.d/lockd.conf
-install -m 644 %{SOURCE5} $RPM_BUILD_ROOT%{_sysconfdir}/gssproxy
+install -m 644 %{SOURCE3} $RPM_BUILD_ROOT%{_sysconfdir}/modprobe.d/lockd.conf
+install -m 644 %{SOURCE4} $RPM_BUILD_ROOT%{_sysconfdir}/gssproxy
+install -m 755 %{SOURCE5} $RPM_BUILD_ROOT%{_sbindir}/nfsconvert
+install -m 755 %{SOURCE6} $RPM_BUILD_ROOT/%{_libexecdir}/nfs-utils/nfsconvert.sh
+install -m 644 %{SOURCE7} $RPM_BUILD_ROOT%{_pkgdir}/system
 
 rm -rf $RPM_BUILD_ROOT%{_libdir}/*.{a,la}
 rm -rf $RPM_BUILD_ROOT%{_libdir}/libnfsidmap/*.{a,la}
-
-#
-# For backwards compatablity 
-#
-cd $RPM_BUILD_ROOT%{_unitdir}
-ln -s nfs-server.service nfs.service
-ln -s rpc-gssd.service nfs-secure.service
-ln -s nfs-idmapd.service  nfs-idmap.service
-ln -s rpc-statd.service nfs-lock.service
 
 mkdir -p $RPM_BUILD_ROOT%{_sharedstatedir}/nfs/rpc_pipefs
 
@@ -227,7 +221,12 @@ if [ $1 -eq 1 ] ; then
 	/bin/systemctl enable nfs-client.target >/dev/null 2>&1 || :
 	/bin/systemctl start nfs-client.target  >/dev/null 2>&1 || :
 fi
-%systemd_post nfs-config
+
+# Check to see if converting to /etc/nfs.conf is needed
+grep "nfs.conf" /etc/sysconfig/nfs > /dev/null
+if [ $? -eq 1 ]; then
+	/bin/systemctl enable nfs-convert  >/dev/null 2>&1 || :
+fi
 %systemd_post nfs-server
 
 %preun
@@ -247,6 +246,9 @@ fi
 
 %triggerin -- nfs-utils > 1:2.1.1-3
 /bin/systemctl try-restart gssproxy || :
+
+%triggerpostun -- nfs-utils < 1:2.3.3.2
+/usr/bin/chattr -i %{_sysconfdir}/sysconfig/nfs || :
 
 %files
 %config(noreplace) /etc/sysconfig/nfs
@@ -285,11 +287,13 @@ fi
 %{_sbindir}/nfsidmap
 %{_sbindir}/blkmapd
 %{_sbindir}/nfsconf
+%{_sbindir}/nfsconvert
 %{_mandir}/*/*
 %{_pkgdir}/*/*
-%attr(755,root,root) %{_libexecdir}/nfs-utils/nfs-utils_env.sh
 
 %attr(4755,root,root)	/sbin/mount.nfs
+%attr(755,root,root) %{_libexecdir}/nfs-utils/nfsconvert.sh
+
 /sbin/mount.nfs4
 /sbin/umount.nfs
 /sbin/umount.nfs4
@@ -309,6 +313,10 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Mon Nov  5 2018 Steve Dickson <steved@redhat.com> 2.3.3-2.rc1
+- Deprecated /etc/sysconfig/nfs
+- Remove nfs server legacy systemd unit files
+
 * Sat Oct 27 2018 Steve Dickson <steved@redhat.com> 2.3.3-1.rc1
 - Changed /var/lib/nfs/rpc_pipefs to have 555 permissions
 - Removed tcp wrappers support from man pages

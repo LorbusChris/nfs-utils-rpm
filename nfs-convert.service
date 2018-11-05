@@ -1,0 +1,22 @@
+[Unit]
+Description=Preprocess NFS configuration convertion
+DefaultDependencies=no
+
+Before=nfs-server.service nfs-mountd.service nfs-idmapd.service
+Before=nfs-blkmap.service rpc-statd.service rpc-gssd.service
+Before=rpc-statd-notify.service
+
+After=initrd-root-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/nfs-utils/nfsconvert.sh
+
+[Install]
+RequiredBy=nfs-server.service 
+RequiredBy=nfs-mountd.service 
+RequiredBy=nfs-idmapd.service
+RequiredBy=nfs-blkmap.service 
+RequiredBy=rpc-statd.service 
+RequiredBy=rpc-gssd.service
+RequiredBy=rpc-statd-notify.service
