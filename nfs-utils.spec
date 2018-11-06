@@ -314,7 +314,7 @@ fi
 
 %changelog
 * Mon Nov  5 2018 Steve Dickson <steved@redhat.com> 2.3.3-2.rc1
-- Deprecated /etc/sysconfig/nfs
+- Deprecated /etc/sysconfig/nfs (bz 1644049)
 - Remove nfs server legacy systemd unit files
 
 * Sat Oct 27 2018 Steve Dickson <steved@redhat.com> 2.3.3-1.rc1
