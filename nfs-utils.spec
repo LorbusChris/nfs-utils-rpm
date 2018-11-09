@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.3
-Release: 2.rc1%{?dist}
+Release: 3.rc1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -247,7 +247,7 @@ fi
 %triggerin -- nfs-utils > 1:2.1.1-3
 /bin/systemctl try-restart gssproxy || :
 
-%triggerpostun -- nfs-utils < 1:2.3.3.2
+%triggerpostun -- nfs-utils > 1:2.3.3-2
 /usr/bin/chattr -i %{_sysconfdir}/sysconfig/nfs || :
 
 %files
@@ -313,6 +313,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Fri Nov  9 2018 Steve Dickson <steved@redhat.com> 2.3.3-3.rc1
+- Fix typo in the spec file.
+
 * Mon Nov  5 2018 Steve Dickson <steved@redhat.com> 2.3.3-2.rc1
 - Deprecated /etc/sysconfig/nfs (bz 1644049)
 - Remove nfs server legacy systemd unit files
