@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.3
-Release: 3.rc1%{?dist}
+Release: 3.rc2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -17,7 +17,7 @@ Source5: nfsconvert.py
 Source6: nfsconvert.sh
 Source7: nfs-convert.service
 
-Patch001: nfs-utils.2.3.4-rc1.patch
+Patch001: nfs-utils.2.3.4-rc2.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -119,7 +119,8 @@ sh -x autogen.sh
 	--enable-libmount-mount \
 	--with-systemd \
 	--without-tcp-wrappers \
-	--with-pluginpath=%{_libdir}/libnfsidmap
+	--with-pluginpath=%{_libdir}/libnfsidmap \
+	--enable-junction
 
 %make_build all
 
@@ -287,6 +288,7 @@ fi
 %{_sbindir}/nfsidmap
 %{_sbindir}/blkmapd
 %{_sbindir}/nfsconf
+%{_sbindir}/nfsref
 %{_sbindir}/nfsconvert
 %{_mandir}/*/*
 %{_pkgdir}/*/*
@@ -313,6 +315,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Mon Dec 10 2018 Steve Dickson <steved@redhat.com> 2.3.3-3.rc2
+- Updated to latest RC release: nfs-utils-2-3-4-rc2
+
 * Fri Nov  9 2018 Steve Dickson <steved@redhat.com> 2.3.3-3.rc1
 - Fix typo in the spec file.
 

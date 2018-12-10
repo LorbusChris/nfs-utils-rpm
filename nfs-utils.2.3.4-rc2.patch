@@ -1,0 +1,828 @@
+diff --git a/aclocal/libxml2.m4 b/aclocal/libxml2.m4
+index 5c399b2..8231553 100644
+--- a/aclocal/libxml2.m4
++++ b/aclocal/libxml2.m4
+@@ -1,15 +1,17 @@
+ dnl Checks for libxml2.so
+ AC_DEFUN([AC_LIBXML2], [
+ 
+-  if test "$enable_junction" = yes; then
++  PKG_PROG_PKG_CONFIG([0.9.0])
++  AS_IF(
++    [test "$enable_junction" = "yes"],
++    [PKG_CHECK_MODULES([XML2], [libxml-2.0 >= 2.4],
++                       [LIBXML2="${XML2_LIBS}"
++                        AM_CPPFLAGS="${AM_CPPFLAGS} ${XML2_CFLAGS}"
++                        AC_DEFINE([HAVE_LIBXML2], [1],
++                                  [Define to 1 if you have and wish to use libxml2.])],
++                       [AC_MSG_ERROR([libxml2 not found.])])])
+ 
+-    dnl look for the library; do not add to LIBS if found
+-    AC_CHECK_LIB([xml2], [xmlParseFile], [LIBXML2=-lxml2],
+-                 [AC_MSG_ERROR([libxml2 not found.])])
+-    AC_SUBST(LIBXML2)
+-
+-    dnl XXX should also check for presence of xml headers
+-
+-  fi
++  AC_SUBST([AM_CPPFLAGS])
++  AC_SUBST(LIBXML2)
+ 
+ ])dnl
+diff --git a/configure.ac b/configure.ac
+index e82ff14..4bf5aea 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -149,12 +149,16 @@ AC_ARG_WITH(rpcgen,
+ 	[AC_HELP_STRING([--with-rpcgen=internal], [use internal rpcgen instead of system one])],
+ 	rpcgen_path=$withval,
+ 	rpcgen_path=yes )
++	rpcgen_cflags=-Werror=strict-prototypes
+ 	RPCGEN_PATH=
+ 	if test "$rpcgen_path" = "yes"; then
+ 	    for p in /usr/local/bin/rpcgen /usr/bin/rpcgen /bin/rpcgen
+ 	    do if test -f $p ; then RPCGEN_PATH=$p ; break; fi ; done
+ 	elif test "$rpcgen_path" != "internal"; then
+ 	    RPCGEN_PATH=$rpcgen_path
++	else
++	    RPCGEN_PATH=internal
++	    rpcgen_cflags=-Wstrict-prototypes
+ 	fi
+ 	AC_SUBST(RPCGEN_PATH)
+ 	AM_CONDITIONAL(CONFIG_RPCGEN, [test "$RPCGEN_PATH" = "internal"])
+@@ -165,7 +169,7 @@ AC_ARG_ENABLE(uuid,
+ 	choose_blkid=default)
+ AC_ARG_ENABLE(mount,
+ 	[AC_HELP_STRING([--disable-mount],
+-		[Don't build mount.nfs and do use the util-linux mount(8) functionality. @<:@default=no@:>@])],
++		[Do not build mount.nfs and do use the util-linux mount(8) functionality. @<:@default=no@:>@])],
+ 	enable_mount=$enableval,
+ 	enable_mount=yes)
+ 	AM_CONDITIONAL(CONFIG_MOUNT, [test "$enable_mount" = "yes"])
+@@ -185,7 +189,13 @@ AC_ARG_ENABLE(junction,
+ 			[enable support for NFS junctions @<:@default=no@:>@])],
+ 	enable_junction=$enableval,
+ 	enable_junction=no)
+-AM_CONDITIONAL(CONFIG_JUNCTION, [test "$enable_junction" = "yes" ])
++	if test "$enable_junction" = yes; then
++		AC_DEFINE(HAVE_JUNCTION_SUPPORT, 1,
++                          [Define this if you want junction support compiled in])
++	else
++		enable_junction=
++	fi
++	AM_CONDITIONAL(CONFIG_JUNCTION, [test "$enable_junction" = "yes" ])
+ 
+ AC_ARG_ENABLE(tirpc,
+ 	[AC_HELP_STRING([--disable-tirpc],
+@@ -238,13 +248,6 @@ AC_ARG_ENABLE(nfsdcltrack,
+ 	enable_nfsdcltrack=$enableval,
+ 	enable_nfsdcltrack="yes")
+ 
+-AC_ARG_ENABLE(osdlogin,
+-	[AC_HELP_STRING([--enable-osdlogin],
+-			[enable osd_login scripts @<:@default=no@:>@])],
+-	enable_osdlogin=$enableval,
+-	enable_osdlogin="no")
+-	AM_CONDITIONAL(CONFIG_OSD_LOGIN, [test "$enable_osdlogin" = "yes" ])
+-
+ dnl Check for TI-RPC library and headers
+ AC_LIBTIRPC
+ 
+@@ -447,6 +450,7 @@ if test -n "$path_plugins" ; then
+                 [Define this to change the plugins path])
+ fi
+ AM_CONDITIONAL(PATH_PLUGINS, test -n "$path_plugins")
++AC_SUBST(PATH_PLUGINS, "$path_plugins")
+ 
+ AC_SUBST(AM_CPPFLAGS, "$AM_CPPFLAGS")
+ AC_DEFINE([HAVE_NFS4_SET_DEBUG], 1,
+@@ -547,7 +551,7 @@ my_am_cflags="\
+  -pipe \
+  -Wall \
+  -Wextra \
+- -Werror=strict-prototypes \
++ $rpcgen_cflags \
+  -Werror=missing-prototypes \
+  -Werror=missing-declarations \
+  -Werror=format=2 \
+@@ -631,7 +635,6 @@ AC_CONFIG_FILES([
+ 	utils/nfsidmap/Makefile
+ 	utils/showmount/Makefile
+ 	utils/statd/Makefile
+-	utils/osd_login/Makefile
+ 	systemd/Makefile
+ 	tests/Makefile
+ 	tests/nsm_client/Makefile])
+diff --git a/nfs.conf b/nfs.conf
+index 0d0ec9b..796bee4 100644
+--- a/nfs.conf
++++ b/nfs.conf
+@@ -2,15 +2,16 @@
+ # This is a general configuration for the
+ # NFS daemons and tools
+ #
+-#[general]
++[general]
+ # pipefs-directory=/var/lib/nfs/rpc_pipefs
+ #
+-#[exportfs]
++[exportfs]
+ # debug=0
+ #
+-#[gssd]
++[gssd]
+ # use-memcache=0
+ # use-machine-creds=1
++# use-gss-proxy=0
+ # avoid-dns=1
+ # limit-to-legacy-enctypes=0
+ # context-timeout=0
+@@ -19,11 +20,11 @@
+ # cred-cache-directory=
+ # preferred-realm=
+ #
+-#[lockd]
++[lockd]
+ # port=0
+ # udp-port=0
+ #
+-#[mountd]
++[mountd]
+ # debug=0
+ # manage_gids=n
+ # descriptors=0
+@@ -33,11 +34,11 @@
+ # state-directory-path=/var/lib/nfs
+ # ha-callout=
+ #
+-#[nfsdcltrack]
++[nfsdcltrack]
+ # debug=0
+ # storagedir=/var/lib/nfs/nfsdcltrack
+ #
+-#[nfsd]
++[nfsd]
+ # debug=0
+ # threads=8
+ # host=
+@@ -54,7 +55,7 @@
+ # vers4.2=y
+ # rdma=n
+ #
+-#[statd]
++[statd]
+ # debug=0
+ # port=0
+ # outgoing-port=0
+@@ -62,12 +63,12 @@
+ # state-directory-path=/var/lib/nfs/statd
+ # ha-callout=
+ #
+-#[sm-notify]
++[sm-notify]
+ # debug=0
+ # retry-time=900
+ # outgoing-port=
+ # outgoing-addr=
+ # lift-grace=y
+ #
+-#[svcgssd]
++[svcgssd]
+ # principal=
+diff --git a/support/junction/Makefile.am b/support/junction/Makefile.am
+index 97e7426..be6958b 100644
+--- a/support/junction/Makefile.am
++++ b/support/junction/Makefile.am
+@@ -30,5 +30,3 @@ libjunction_la_SOURCES	= display.c export-cache.c junction.c \
+ 			  locations.c nfs.c path.c xml.c
+ 
+ MAINTAINERCLEANFILES	= Makefile.in
+-
+-AM_CPPFLAGS		= -I. -I../include -I/usr/include/libxml2
+diff --git a/support/nfs/conffile.c b/support/nfs/conffile.c
+index 3845b94..77c5790 100644
+--- a/support/nfs/conffile.c
++++ b/support/nfs/conffile.c
+@@ -405,11 +405,6 @@ conf_parse_line(int trans, char *line, const char *filename, int lineno, char **
+ 			  "missing tag in assignment", filename, lineno);
+ 		return;
+ 	}
+-	if (*val == '\0') {
+-		xlog_warn("config error at %s:%d: "
+-			  "missing value in assignment", filename, lineno);
+-		return;
+-	}
+ 
+ 	if (strcasecmp(line, "include")==0) {
+ 		/* load and parse subordinate config files */
+@@ -1830,6 +1825,8 @@ conf_write(const char *filename, const char *section, const char *arg,
+ 
+ 			/* this is the section we care about */
+ 			if (where != NULL && is_section(where->text, section, arg)) {
++				struct outbuffer *section_start = where;
++
+ 				/* is there an existing assignment */
+ 				while ((where = TAILQ_NEXT(where, link)) != NULL) {
+ 					if (is_tag(where->text, tag)) {
+@@ -1838,6 +1835,28 @@ conf_write(const char *filename, const char *section, const char *arg,
+ 					}
+ 				}
+ 
++				/* no active assignment, but is there a commented one */
++				if (!found) {
++					where = section_start;
++					while ((where = TAILQ_NEXT(where, link)) != NULL) {
++						if (is_comment(where->text)) {
++							char *cline = where->text;
++							while (isspace(*cline)) 
++								cline++;
++
++							if (*cline != '#') 
++								continue;
++							cline++;
++
++							if (is_tag(cline, tag)) {
++								found = true;
++								break;
++							}
++						}
++					}
++				}
++
++				/* replace the located tag with an updated one */
+ 				if (found) {
+ 					struct outbuffer *prev = TAILQ_PREV(where, tailhead, link);
+ 					bool again = false;
+diff --git a/support/nfsidmap/Makefile.am b/support/nfsidmap/Makefile.am
+index 8b5dfe4..cdbeb4c 100644
+--- a/support/nfsidmap/Makefile.am
++++ b/support/nfsidmap/Makefile.am
+@@ -1,4 +1,4 @@
+-pkgplugindir=$(libdir)/libnfsidmap
++pkgplugindir=$(PATH_PLUGINS)
+ 
+ if ENABLE_LDAP
+ UMICH_LDAP_LIB = umich_ldap.la
+diff --git a/systemd/nfs.conf.man b/systemd/nfs.conf.man
+index 189b052..699db3f 100644
+--- a/systemd/nfs.conf.man
++++ b/systemd/nfs.conf.man
+@@ -213,6 +213,7 @@ for details.
+ Recognized values:
+ .BR use-memcache ,
+ .BR use-machine-creds ,
++.BR use-gss-proxy ,
+ .BR avoid-dns ,
+ .BR limit-to-legacy-enctypes ,
+ .BR context-timeout ,
+diff --git a/systemd/rpc-statd.service b/systemd/rpc-statd.service
+index f41ae20..3e92cf7 100644
+--- a/systemd/rpc-statd.service
++++ b/systemd/rpc-statd.service
+@@ -4,9 +4,11 @@ DefaultDependencies=no
+ Conflicts=umount.target
+ Requires=nss-lookup.target rpcbind.socket
+ Wants=network-online.target
++Wants=rpc-statd-notify.service
+ After=network-online.target nss-lookup.target rpcbind.socket
+ 
+ PartOf=nfs-utils.service
++IgnoreOnIsolate=yes
+ 
+ [Service]
+ Environment=RPC_STATD_NO_NOTIFY=1
+diff --git a/tests/nfsconf/01-errors.exp b/tests/nfsconf/01-errors.exp
+index 2bf1b8c..0b985b4 100644
+--- a/tests/nfsconf/01-errors.exp
++++ b/tests/nfsconf/01-errors.exp
+@@ -4,7 +4,6 @@ nfsconf: config error at 01-errors.conf:10: non-matched ']', ignoring until next
+ nfsconf: config error at 01-errors.conf:11: ignoring line not in a section
+ nfsconf: config error at 01-errors.conf:14: line not empty and not an assignment
+ nfsconf: config error at 01-errors.conf:15: missing tag in assignment
+-nfsconf: config error at 01-errors.conf:16: missing value in assignment
+ nfsconf: config error at 01-errors.conf:18: unmatched quotes
+ [four]
+  four = foo = bar
+diff --git a/utils/Makefile.am b/utils/Makefile.am
+index d361aea..0a5b062 100644
+--- a/utils/Makefile.am
++++ b/utils/Makefile.am
+@@ -34,7 +34,6 @@ SUBDIRS = \
+ 	nfsstat \
+ 	showmount \
+ 	statd \
+-	osd_login \
+ 	$(OPTDIRS)
+ 
+ MAINTAINERCLEANFILES = Makefile.in
+diff --git a/utils/gssd/gssd.c b/utils/gssd/gssd.c
+index 2c14e5f..2e92f28 100644
+--- a/utils/gssd/gssd.c
++++ b/utils/gssd/gssd.c
+@@ -89,6 +89,7 @@ char *preferred_realm = NULL;
+ char *ccachedir = NULL;
+ /* Avoid DNS reverse lookups on server names */
+ static bool avoid_dns = true;
++static bool use_gssproxy = false;
+ int thread_started = false;
+ pthread_mutex_t pmutex = PTHREAD_MUTEX_INITIALIZER;
+ pthread_cond_t pcond = PTHREAD_COND_INITIALIZER;
+@@ -872,6 +873,7 @@ read_gss_conf(void)
+ 	if (s)
+ 		preferred_realm = s;
+ 
++	use_gssproxy = conf_get_bool("gssd", "use-gss-proxy", use_gssproxy);
+ }
+ 
+ int
+@@ -888,6 +890,9 @@ main(int argc, char *argv[])
+ 
+ 	read_gss_conf();
+ 
++	verbosity = conf_get_num("gssd", "Verbosity", verbosity);
++	rpc_verbosity = conf_get_num("gssd", "RPC-Verbosity", rpc_verbosity);
++
+ 	while ((opt = getopt(argc, argv, "DfvrlmnMp:k:d:t:T:R:")) != -1) {
+ 		switch (opt) {
+ 			case 'f':
+@@ -954,6 +959,14 @@ main(int argc, char *argv[])
+ 		exit(1);
+ 	}
+ 
++	if (use_gssproxy) {
++		if (setenv("GSS_USE_PROXY", "yes", 1) < 0) {
++			printerr(0, "gssd: Unable to set $GSS_USE_PROXY: %s\n", 
++				strerror(errno));
++			exit(EXIT_FAILURE);
++		}
++	}
++
+ 	if (ccachedir) {
+ 		char *ccachedir_copy;
+ 		char *ptr;
+diff --git a/utils/gssd/svcgssd.c b/utils/gssd/svcgssd.c
+index 8e918cc..ec49b61 100644
+--- a/utils/gssd/svcgssd.c
++++ b/utils/gssd/svcgssd.c
+@@ -113,6 +113,10 @@ main(int argc, char *argv[])
+ 	else
+ 		principal = s;
+ 
++	verbosity = conf_get_num("svcgssd", "Verbosity", verbosity);
++	rpc_verbosity = conf_get_num("svcgssd", "RPC-Verbosity", rpc_verbosity);
++	idmap_verbosity = conf_get_num("svcgssd", "IDMAP-Verbosity", idmap_verbosity);
++
+ 	while ((opt = getopt(argc, argv, "fivrnp:")) != -1) {
+ 		switch (opt) {
+ 			case 'f':
+diff --git a/utils/idmapd/idmapd.c b/utils/idmapd/idmapd.c
+index 4811e0f..91c0253 100644
+--- a/utils/idmapd/idmapd.c
++++ b/utils/idmapd/idmapd.c
+@@ -36,7 +36,7 @@
+ 
+ #include <sys/types.h>
+ #include <sys/time.h>
+-#include <sys/poll.h>
++#include <sys/inotify.h>
+ #include <sys/socket.h>
+ #include <sys/stat.h>
+ #include <time.h>
+@@ -205,15 +205,16 @@ static void usage(char *progname)
+ int
+ main(int argc, char **argv)
+ {
+-	int fd = 0, opt, fg = 0, nfsdret = -1;
++	int wd = -1, opt, fg = 0, nfsdret = -1;
+ 	struct idmap_clientq icq;
+-	struct event rootdirev, clntdirev, svrdirev;
++	struct event rootdirev, clntdirev, svrdirev, inotifyev;
+ 	struct event initialize;
+ 	struct passwd *pw;
+ 	struct group *gr;
+ 	struct stat sb;
+ 	char *xpipefsdir = NULL;
+ 	int serverstart = 1, clientstart = 1;
++	int inotify_fd;
+ 	int ret;
+ 	char *progname;
+ 	char *conf_path = NULL;
+@@ -261,6 +262,10 @@ main(int argc, char **argv)
+ 				strlcpy(pipefsdir, xpipefsdir, sizeof(pipefsdir));
+ 			CONF_SAVE(nobodyuser, conf_get_str("Mapping", "Nobody-User"));
+ 			CONF_SAVE(nobodygroup, conf_get_str("Mapping", "Nobody-Group"));
++			if (conf_get_bool("General", "server-only", false))
++				clientstart = 0;
++			if (conf_get_bool("General", "client-only", false))
++				serverstart = 0;
+ 		}
+ 	} else {
+ 		conf_path = NFS_CONFFILE;
+@@ -276,6 +281,10 @@ main(int argc, char **argv)
+ 				"cache-expiration", DEFAULT_IDMAP_CACHE_EXPIRY);
+ 		CONF_SAVE(nobodyuser, conf_get_str("Mapping", "Nobody-User"));
+ 		CONF_SAVE(nobodygroup, conf_get_str("Mapping", "Nobody-Group"));
++		if (conf_get_bool("General", "server-only", false))
++			clientstart = 0;
++		if (conf_get_bool("General", "client-only", false))
++			serverstart = 0;
+ 	}
+ 
+ 	while ((opt = getopt(argc, argv, GETOPTSTR)) != -1)
+@@ -373,18 +382,15 @@ main(int argc, char **argv)
+ 			}
+ 		}
+ 
+-		if ((fd = open(pipefsdir, O_RDONLY)) == -1)
+-			xlog_err("main: open(%s): %s", pipefsdir, strerror(errno));
+-
+-		if (fcntl(fd, F_SETSIG, SIGUSR1) == -1)
+-			xlog_err("main: fcntl(%s): %s", pipefsdir, strerror(errno));
+-
+-		if (fcntl(fd, F_NOTIFY,
+-			DN_CREATE | DN_DELETE | DN_MODIFY | DN_MULTISHOT) == -1) {
+-			xlog_err("main: fcntl(%s): %s", pipefsdir, strerror(errno));
+-			if (errno == EINVAL)
+-				xlog_err("main: Possibly no Dnotify support in kernel.");
++		inotify_fd = inotify_init1(IN_NONBLOCK);
++		if (inotify_fd == -1) {
++			xlog_err("Unable to initialise inotify_init1: %s\n", strerror(errno));
++		} else {
++			wd = inotify_add_watch(inotify_fd, pipefsdir, IN_CREATE | IN_DELETE | IN_MODIFY);
++			if (wd < 0)
++				xlog_err("Unable to inotify_add_watch(%s): %s\n", pipefsdir, strerror(errno));
+ 		}
++
+ 		TAILQ_INIT(&icq);
+ 
+ 		/* These events are persistent */
+@@ -394,6 +400,10 @@ main(int argc, char **argv)
+ 		signal_add(&clntdirev, NULL);
+ 		signal_set(&svrdirev, SIGHUP, svrreopen, NULL);
+ 		signal_add(&svrdirev, NULL);
++		if ( wd >= 0) {
++			event_set(&inotifyev, inotify_fd, EV_READ, dirscancb, &icq);
++			event_add(&inotifyev, NULL);
++		}
+ 
+ 		/* Fetch current state */
+ 		/* (Delay till start of event_dispatch to avoid possibly losing
+@@ -402,7 +412,7 @@ main(int argc, char **argv)
+ 		evtimer_add(&initialize, &now);
+ 	}
+ 
+-	if (nfsdret != 0 && fd == 0)
++	if (nfsdret != 0 && wd < 0)
+ 		xlog_err("main: Neither NFS client nor NFSd found");
+ 
+ 	daemon_ready();
+diff --git a/utils/mount/Makefile.am b/utils/mount/Makefile.am
+index 7b97c31..ad0be93 100644
+--- a/utils/mount/Makefile.am
++++ b/utils/mount/Makefile.am
+@@ -27,6 +27,7 @@ endif
+ 
+ mount_nfs_LDADD = ../../support/nfs/libnfs.la \
+ 		  ../../support/export/libexport.a \
++		  ../../support/misc/libmisc.a \
+ 		  $(LIBTIRPC)
+ 
+ mount_nfs_SOURCES = $(mount_common)
+diff --git a/utils/mount/error.c b/utils/mount/error.c
+index c9797fc..dfe5c7d 100644
+--- a/utils/mount/error.c
++++ b/utils/mount/error.c
+@@ -223,7 +223,7 @@ void mount_error(const char *spec, const char *mount_point, int error)
+ 				  progname, mount_point);
+ 		break;
+ 	case EBUSY:
+-		nfs_error(_("%s: %s is busy or already mounted"),
++		nfs_error(_("%s: %s is busy or already mounted or sharecache fail"),
+ 			progname, mount_point);
+ 		break;
+ 	case ENOENT:
+diff --git a/utils/mount/stropts.c b/utils/mount/stropts.c
+index 4d2e37e..0a25b1f 100644
+--- a/utils/mount/stropts.c
++++ b/utils/mount/stropts.c
+@@ -48,6 +48,7 @@
+ #include "version.h"
+ #include "parse_dev.h"
+ #include "conffile.h"
++#include "misc.h"
+ 
+ #ifndef NFS_PROGRAM
+ #define NFS_PROGRAM	(100003)
+@@ -1078,14 +1079,18 @@ static int nfsmount_fg(struct nfsmount_info *mi)
+ 		if (nfs_try_mount(mi))
+ 			return EX_SUCCESS;
+ 
+-		if (errno == EBUSY)
+-			/* The only cause of EBUSY is if exactly the desired
+-			 * filesystem is already mounted.  That can arguably
+-			 * be seen as success.  "mount -a" tries to optimise
+-			 * out this case but sometimes fails.  Help it out
+-			 * by pretending everything is rosy
++#pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
++		if (errno == EBUSY && is_mountpoint(mi->node)) {
++#pragma GCC diagnostic warning "-Wdiscarded-qualifiers"
++			/*
++			 * EBUSY can happen when mounting a filesystem that
++			 * is already mounted or when the context= are
++			 * different when using the -o sharecache
++			 *
++			 * Only error out in the latter case.
+ 			 */
+ 			return EX_SUCCESS;
++		}
+ 
+ 		if (nfs_is_permanent_error(errno))
+ 			break;
+diff --git a/utils/mountd/cache.c b/utils/mountd/cache.c
+index 6f42512..7e8d403 100644
+--- a/utils/mountd/cache.c
++++ b/utils/mountd/cache.c
+@@ -976,8 +976,9 @@ lookup_export(char *dom, char *path, struct addrinfo *ai)
+ 	return found;
+ }
+ 
+-#ifdef CONFIG_JUNCTION
++#ifdef HAVE_JUNCTION_SUPPORT
+ 
++#include <libxml/parser.h>
+ #include "junction.h"
+ 
+ struct nfs_fsloc_set {
+@@ -1084,8 +1085,7 @@ static bool locations_to_fslocdata(struct nfs_fsloc_set *locations,
+ 	*ttl = 0;
+ 
+ 	for (;;) {
+-		enum jp_status status;
+-		int len;
++		int len, status;
+ 
+ 		status = get_next_location(locations, &server,
+ 							&rootpath, ttl);
+@@ -1219,7 +1219,7 @@ nfs_get_basic_junction(const char *junct_path, struct nfs_fsloc_set **locset)
+ 		return EINVAL;
+ 	}
+ 
+-	locset->ns_current = locset->ns_list;
++	new->ns_current = new->ns_list;
+ 	new->ns_ttl = 300;
+ 	*locset = new;
+ 	return 0;
+@@ -1242,7 +1242,7 @@ static struct exportent *lookup_junction(char *dom, const char *pathname,
+ 	status = nfs_get_basic_junction(pathname, &locations);
+ 	switch (status) {
+ 		xlog(L_WARNING, "Dangling junction %s: %s",
+-			pathname, strerro(status));
++			pathname, strerror(status));
+ 		goto out;
+ 	}
+ 
+@@ -1252,8 +1252,8 @@ static struct exportent *lookup_junction(char *dom, const char *pathname,
+ 
+ 	exp = locations_to_export(locations, pathname, parent);
+ 
+-	nfs_free_locations(locset->ns_list);
+-	free(locset);
++	nfs_free_locations(locations->ns_list);
++	free(locations);
+ 
+ out:
+ 	xmlCleanupParser();
+@@ -1273,7 +1273,7 @@ static void lookup_nonexport(int f, char *buf, int buflen, char *dom, char *path
+ 	free(eep);
+ }
+ 
+-#else	/* !CONFIG_JUNCTION */
++#else	/* !HAVE_JUNCTION_SUPPORT */
+ 
+ static void lookup_nonexport(int f, char *buf, int buflen, char *dom, char *path,
+ 		struct addrinfo *UNUSED(ai))
+@@ -1281,7 +1281,7 @@ static void lookup_nonexport(int f, char *buf, int buflen, char *dom, char *path
+ 	dump_to_cache(f, buf, buflen, dom, path, NULL, 0);
+ }
+ 
+-#endif	/* !CONFIG_JUNCTION */
++#endif	/* !HAVE_JUNCTION_SUPPORT */
+ 
+ static void nfsd_export(int f)
+ {
+diff --git a/utils/nfsd/nfsd.c b/utils/nfsd/nfsd.c
+index 6b57e2b..b256bd9 100644
+--- a/utils/nfsd/nfsd.c
++++ b/utils/nfsd/nfsd.c
+@@ -83,6 +83,9 @@ main(int argc, char **argv)
+ 
+ 	conf_init_file(NFS_CONFFILE); 
+ 	xlog_from_conffile("nfsd");
++
++	nfssvc_get_minormask(&minormask);
++
+ 	count = conf_get_num("nfsd", "threads", count);
+ 	grace = conf_get_num("nfsd", "grace-time", grace);
+ 	lease = conf_get_num("nfsd", "lease-time", lease);
+@@ -101,13 +104,19 @@ main(int argc, char **argv)
+ 	for (i = 2; i <= 4; i++) {
+ 		char tag[20];
+ 		sprintf(tag, "vers%d", i);
+-		if (conf_get_bool("nfsd", tag, NFSCTL_VERISSET(versbits, i)))
++		if (conf_get_bool("nfsd", tag, NFSCTL_VERISSET(versbits, i))) {
+ 			NFSCTL_VERSET(versbits, i);
+-		else
++			if (i == 4)
++				minorvers = minorversset = minormask;
++		} else {
+ 			NFSCTL_VERUNSET(versbits, i);
++			if (i == 4) {
++				minorvers = 0;
++				minorversset = minormask;
++			}
++		}
+ 	}
+ 
+-	nfssvc_get_minormask(&minormask);
+ 	/* We assume the kernel will default all minor versions to 'on',
+ 	 * and allow the config file to disable some.
+ 	 */
+diff --git a/utils/nfsref/Makefile.am b/utils/nfsref/Makefile.am
+index 2b2bb53..44edc83 100644
+--- a/utils/nfsref/Makefile.am
++++ b/utils/nfsref/Makefile.am
+@@ -35,5 +35,3 @@ man8_MANS		= nfsref.man
+ 
+ MAINTAINERCLEANFILES	= Makefile.in
+ 
+-AM_CPPFLAGS		= -I. -I../../support/include
+-##AM_LDFLAGS		= -Wl,--as-needed
+diff --git a/utils/osd_login/Makefile.am b/utils/osd_login/Makefile.am
+deleted file mode 100644
+index ded1fd3..0000000
+--- a/utils/osd_login/Makefile.am
++++ /dev/null
+@@ -1,9 +0,0 @@
+-## Process this file with automake to produce Makefile.in
+-
+-# These binaries go in /sbin (not /usr/sbin), and that cannot be
+-# overridden at config time.
+-sbindir = /sbin
+-
+-dist_sbin_SCRIPTS = osd_login
+-
+-MAINTAINERCLEANFILES = Makefile.in
+diff --git a/utils/osd_login/osd_login b/utils/osd_login/osd_login
+deleted file mode 100644
+index 08cd2d2..0000000
+--- a/utils/osd_login/osd_login
++++ /dev/null
+@@ -1,118 +0,0 @@
+-#!/bin/bash
+-#
+-# osd_login : This script is part of the autologin feature
+-#             mandated by the pnfs-objects standard.
+-# It is called from objlayoutdriver.ko in the kernel.
+-
+-# Copyright (C) 2012, Sachin Bhamare <sbhamare@panasas.com>
+-# Copyright (C) 2012, Boaz Harrosh <bharrosh@panasas.com>
+-#
+-# This program is free software; you can redistribute it and/or modify
+-# it under the terms of the GNU General Public License version 2 as
+-# published by the Free Software Foundation.
+-#
+-# This program is distributed in the hope that it will be useful,
+-# but WITHOUT ANY WARRANTY; without even the implied warranty of
+-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-# GNU General Public License for more details.
+-#
+-# You should have received a copy of the GNU General Public License
+-# along with this program; if not, write to the Free Software
+-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+-# MA 02110-1301 USA
+-
+-umask 022
+-
+-PATH="/sbin:/usr/sbin:/bin:/usr/bin"
+-
+-iscsiadm=/sbin/iscsiadm
+-
+-PARENT_PID=$BASHPID
+-WATCHDOG_TIMEOUT=15
+-
+-protocol=""
+-portal=""
+-uri=""
+-osdname=""
+-systemid=""
+-
+-usage()
+-{
+-	echo "Usage: $0 -u <URI> -o <OSDNAME> -s <SYSTEMID>"
+-	echo "Options:"
+-	echo  "-u		target uri e.g. iscsi://<ip>:<port>"
+-	echo  "-o		osdname of the target OSD"
+-	echo  "-s		systemid of the target OSD"
+-}
+-
+-parse_cmdline()
+-{
+-	argc=$#
+-	if [ $# -lt 3 ]; then
+-		usage
+-		exit 1
+-	fi
+-
+-	# parse the input arguments
+-	while getopts "u:o:s:" options; do
+-	    case $options in
+-		u ) uri=$OPTARG;;
+-		o ) osdname=$OPTARG;;
+-		s ) systemid=$OPTARG;;
+-		\? ) usage
+-			exit 1;;
+-		* )  usage
+-			exit 1;;
+-	    esac
+-	done
+-
+-	echo "-u : $uri"
+-	echo "-o : $osdname"
+-	echo "-s : $systemid"
+-
+-	protocol=`echo $uri | awk -F ':' '{print $1}'`
+-	portal=`echo $uri | awk -F '//' '{print $2}'`
+-}
+-
+-watchdog()
+-{
+-	timeout=$1
+-	portal=$2
+-
+-	sleep $timeout
+-	if kill -9 $PARENT_PID; then
+-	    echo "watchdog : Timed out (>$timeout seconds) while login into $portal" | logger -t "osd_login"
+-	fi
+-	echo "watchdog: exiting .."
+-	exit 2
+-}
+-
+-login_iscsi_osd()
+-{
+-	echo "login into: $1"
+-	if ! $iscsiadm -m discovery -o nonpersistent -t sendtargets -p $1 --login; then
+-		echo "$iscsiadm -m discovery -t sendtargets -p $1 --login returned error $? !"
+-		sleep 1;
+-	fi
+-}
+-
+-echo "============= osd_login ========="
+-echo "progname : $0"
+-parse_cmdline "$@"
+-echo "protocol: $protocol"
+-echo "portal: $portal"
+-
+-watchdog $WATCHDOG_TIMEOUT $portal &
+-watchdog_pid=$!
+-
+-case $protocol in
+-iscsi)
+-	login_iscsi_osd $portal |& logger -t "osd_login"
+-	;;
+-*)
+-	echo "Error: protocol $protocol not supported !" | logger -t "osd_login"
+-	;;
+-esac
+-
+-kill -9 $watchdog_pid
+-exit 0
+diff --git a/utils/statd/sm-notify.c b/utils/statd/sm-notify.c
+index 7a48473..29dad38 100644
+--- a/utils/statd/sm-notify.c
++++ b/utils/statd/sm-notify.c
+@@ -503,6 +503,7 @@ main(int argc, char **argv)
+ 	s = conf_get_str("statd", "state-directory-path");
+ 	if (s && !nsm_setup_pathnames(argv[0], s))
+ 		exit(1);
++	opt_update_state = conf_get_bool("sm-notify", "update-state", opt_update_state);
+ 
+ 	while ((c = getopt(argc, argv, "dm:np:v:P:f")) != -1) {
+ 		switch (c) {
+diff --git a/utils/statd/start-statd b/utils/statd/start-statd
+index 82715b4..54ced82 100755
+--- a/utils/statd/start-statd
++++ b/utils/statd/start-statd
+@@ -20,7 +20,12 @@ fi
+ # First try systemd if it's installed.
+ if [ -d /run/systemd/system ]; then
+     # Quit only if the call worked.
+-    systemctl start rpc-statd.service && exit
++    if systemctl start rpc-statd.service; then
++        # Ensure systemd knows not to stop rpc.statd or its dependencies
++        # on 'systemctl isolate ..'
++        systemctl add-wants --runtime remote-fs.target rpc-statd.service
++        exit 0
++    fi
+ fi
+ 
+ cd /
