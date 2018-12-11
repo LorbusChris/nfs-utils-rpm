@@ -16,6 +16,10 @@ fi
 #
 grep "nfs.conf" /etc/sysconfig/nfs > /dev/null
 if [ $? -eq 0 ]; then
+	# Make sure the file is immutable.
+	if [ -w /etc/sysconfig/nfs ]; then
+		chattr +i /etc/sysconfig/nfs
+	fi 
 	exit 0
 fi
 

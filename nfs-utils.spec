@@ -18,6 +18,7 @@ Source6: nfsconvert.sh
 Source7: nfs-convert.service
 
 Patch001: nfs-utils.2.3.4-rc2.patch
+Patch002: nfs-utils-2.3.3-nfsref-linking.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -44,12 +45,12 @@ Provides: start-statd = %{epoch}:%{version}-%{release}
 
 License: MIT and GPLv2 and GPLv2+ and BSD
 Requires: rpcbind, sed, gawk, grep
-Requires: kmod, keyutils, quota
+Requires: kmod, keyutils, quota, e2fsprogs
 BuildRequires: libevent-devel libcap-devel
 BuildRequires: libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, gcc, device-mapper-devel
-BuildRequires: krb5-devel, libmount-devel
+BuildRequires: krb5-devel, libmount-devel, libxml2-devel
 BuildRequires: sqlite-devel
 BuildRequires: python3-devel
 BuildRequires: systemd
@@ -315,8 +316,12 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
-* Mon Dec 10 2018 Steve Dickson <steved@redhat.com> 2.3.3-3.rc2
+* Tue Dec 11 2018 Steve Dickson <steved@redhat.com> 2.3.3-3.rc2
 - Updated to latest RC release: nfs-utils-2-3-4-rc2
+- Addeding libxml2-devel dependency
+- Make sure /etc/sysconfig/nfs is immutable 
+- Added Requires: e2fsprogs (bz 1647727)
+- nfsref: switch the way libraries are linked
 
 * Fri Nov  9 2018 Steve Dickson <steved@redhat.com> 2.3.3-3.rc1
 - Fix typo in the spec file.

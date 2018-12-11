@@ -1,0 +1,29 @@
+commit 47aa0c9683e048eb325dc9779a5aff41250c2c68
+Author: Steve Dickson <steved@redhat.com>
+Date:   Tue Dec 11 12:51:37 2018 -0500
+
+    nfsref: switch the way libraries are linked.
+    
+    Link the static libs before the dynamic libs allowing
+    the routines in the static libs to be defined
+    by the dynamic libs
+    
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff --git a/utils/nfsref/Makefile.am b/utils/nfsref/Makefile.am
+index 44edc83..2409dd0 100644
+--- a/utils/nfsref/Makefile.am
++++ b/utils/nfsref/Makefile.am
+@@ -27,9 +27,9 @@ noinst_HEADERS		= nfsref.h
+ 
+ sbin_PROGRAMS		= nfsref
+ nfsref_SOURCES		= add.c lookup.c nfsref.c remove.c
+-LDADD			= $(LIBXML2) $(LIBCAP) \
+-			  ../../support/nfs/libnfs.la \
+-			  ../../support/junction/libjunction.la
++LDADD			= ../../support/nfs/libnfs.la \
++			  ../../support/junction/libjunction.la \
++			  $(LIBXML2) $(LIBCAP)
+ 
+ man8_MANS		= nfsref.man
+ 
