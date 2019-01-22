@@ -70,8 +70,6 @@ Provides: libnfsidmap%{?_isa} = %{epoch}:%{version}-%{release}
 License: BSD
 BuildRequires: pkgconfig, openldap-devel
 BuildRequires: automake, libtool
-Requires(postun): /sbin/ldconfig
-Requires(pre): /sbin/ldconfig
 Requires: openldap
 
 %description -n libnfsidmap
