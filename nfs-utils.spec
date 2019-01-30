@@ -19,6 +19,7 @@ Source7: nfs-convert.service
 
 Patch001: nfs-utils.2.3.4-rc2.patch
 Patch002: nfs-utils-2.3.3-nfsref-linking.patch
+Patch003: nfs-utils-2.3.3-printf-4k.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -317,6 +318,7 @@ fi
 %changelog
 * Wed Jan 30 2019 Steve Dickson <steved@redhat.com> 2.3.3-4.rc2
 - Make sysconfig/nfs mutable when the package is removed
+- Removed new error=format-overflow=2 errors
 
 * Tue Dec 11 2018 Steve Dickson <steved@redhat.com> 2.3.3-3.rc2
 - Updated to latest RC release: nfs-utils-2-3-4-rc2
