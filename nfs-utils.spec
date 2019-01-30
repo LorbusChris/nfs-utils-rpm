@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.3
-Release: 3.rc2%{?dist}
+Release: 4.rc2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -236,6 +236,7 @@ if [ $1 -eq 0 ]; then
 
     rm -rf /var/lib/nfs/statd
     rm -rf /var/lib/nfs/v4recovery
+    chattr -i /etc/sysconfig/nfs
 fi
 
 %postun
@@ -314,6 +315,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Wed Jan 30 2019 Steve Dickson <steved@redhat.com> 2.3.3-4.rc2
+- Make sysconfig/nfs mutable when the package is removed
+
 * Tue Dec 11 2018 Steve Dickson <steved@redhat.com> 2.3.3-3.rc2
 - Updated to latest RC release: nfs-utils-2-3-4-rc2
 - Addeding libxml2-devel dependency
