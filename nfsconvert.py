@@ -301,18 +301,6 @@ def map_values():
             eprint("Error moving old config %s: %s" % (SYSCONF_NFS, err))
             raise
 
-    # Create a new dummy file
-    with open(SYSCONF_NFS, 'w') as f:
-        f.write("#\n")
-        f.write("# This file is no longer used to configure NFS\n")
-        f.write("#\n")
-        f.write("# ALL configuration values are in /etc/nfs.conf. See nfs.conf(5).\n")
-        f.write("#\n")
-        f.write("# To set lockd kernel module parameters please see\n")
-        f.write("#  /etc/modprobe.d/lockd.conf\n")
-        f.write("#\n")
-        f.write("\n")
-
 # Main routine
 try:
     map_values()

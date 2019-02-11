@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.3
-Release: 4.rc2%{?dist}.1
+Release: 5.rc2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -10,12 +10,11 @@ Epoch: 1
 
 Source0: https://www.kernel.org/pub/linux/utils/nfs-utils/%{version}/%{name}-%{version}.tar.xz
 Source1: id_resolver.conf
-Source2: nfs.sysconfig
-Source3: lockd.conf
-Source4: 24-nfs-server.conf
-Source5: nfsconvert.py
-Source6: nfsconvert.sh
-Source7: nfs-convert.service
+Source2: lockd.conf
+Source3: 24-nfs-server.conf
+Source4: nfsconvert.py
+Source5: nfsconvert.sh
+Source6: nfs-convert.service
 
 Patch001: nfs-utils.2.3.4-rc2.patch
 Patch002: nfs-utils-2.3.3-nfsref-linking.patch
@@ -46,7 +45,7 @@ Provides: start-statd = %{epoch}:%{version}-%{release}
 
 License: MIT and GPLv2 and GPLv2+ and BSD
 Requires: rpcbind, sed, gawk, grep
-Requires: kmod, keyutils, quota, e2fsprogs
+Requires: kmod, keyutils, quota
 BuildRequires: libevent-devel libcap-devel
 BuildRequires: libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
@@ -135,7 +134,6 @@ mkdir -p $RPM_BUILD_ROOT%{_libexecdir}/nfs-utils/
 mkdir -p $RPM_BUILD_ROOT%{_pkgdir}/system
 mkdir -p $RPM_BUILD_ROOT%{_pkgdir}/system-generators
 mkdir -p ${RPM_BUILD_ROOT}%{_mandir}/man8
-mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/request-key.d
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/modprobe.d/
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/gssproxy
@@ -147,14 +145,13 @@ install -m 644 utils/mount/nfsmount.conf  $RPM_BUILD_ROOT%{_sysconfdir}
 install -m 644 nfs.conf  $RPM_BUILD_ROOT%{_sysconfdir}
 install -m 644 support/nfsidmap/idmapd.conf $RPM_BUILD_ROOT%{_sysconfdir}
 install -m 644 %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/request-key.d
-install -m 644 %{SOURCE2} $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/nfs
 
 mkdir -p $RPM_BUILD_ROOT/run/sysconfig
-install -m 644 %{SOURCE3} $RPM_BUILD_ROOT%{_sysconfdir}/modprobe.d/lockd.conf
-install -m 644 %{SOURCE4} $RPM_BUILD_ROOT%{_sysconfdir}/gssproxy
-install -m 755 %{SOURCE5} $RPM_BUILD_ROOT%{_sbindir}/nfsconvert
-install -m 755 %{SOURCE6} $RPM_BUILD_ROOT/%{_libexecdir}/nfs-utils/nfsconvert.sh
-install -m 644 %{SOURCE7} $RPM_BUILD_ROOT%{_pkgdir}/system
+install -m 644 %{SOURCE2} $RPM_BUILD_ROOT%{_sysconfdir}/modprobe.d/lockd.conf
+install -m 644 %{SOURCE3} $RPM_BUILD_ROOT%{_sysconfdir}/gssproxy
+install -m 755 %{SOURCE4} $RPM_BUILD_ROOT%{_sbindir}/nfsconvert
+install -m 755 %{SOURCE5} $RPM_BUILD_ROOT/%{_libexecdir}/nfs-utils/nfsconvert.sh
+install -m 644 %{SOURCE6} $RPM_BUILD_ROOT%{_pkgdir}/system
 
 rm -rf $RPM_BUILD_ROOT%{_libdir}/*.{a,la}
 rm -rf $RPM_BUILD_ROOT%{_libdir}/libnfsidmap/*.{a,la}
@@ -224,9 +221,11 @@ if [ $1 -eq 1 ] ; then
 fi
 
 # Check to see if converting to /etc/nfs.conf is needed
-grep "nfs.conf" /etc/sysconfig/nfs > /dev/null
-if [ $? -eq 1 ]; then
-	/bin/systemctl enable nfs-convert  >/dev/null 2>&1 || :
+if [ -f /etc/sysconfig/nfs ]; then
+	grep "nfs.conf" /etc/sysconfig/nfs > /dev/null
+	if [ $? -eq 1 ]; then
+		/bin/systemctl enable nfs-convert  >/dev/null 2>&1 || :
+	fi
 fi
 %systemd_post nfs-server
 
@@ -237,7 +236,6 @@ if [ $1 -eq 0 ]; then
 
     rm -rf /var/lib/nfs/statd
     rm -rf /var/lib/nfs/v4recovery
-    chattr -i /etc/sysconfig/nfs
 fi
 
 %postun
@@ -249,11 +247,7 @@ fi
 %triggerin -- nfs-utils > 1:2.1.1-3
 /bin/systemctl try-restart gssproxy || :
 
-%triggerpostun -- nfs-utils > 1:2.3.3-2
-/usr/bin/chattr -i %{_sysconfdir}/sysconfig/nfs || :
-
 %files
-%config(noreplace) /etc/sysconfig/nfs
 %config(noreplace) /etc/nfsmount.conf
 %dir %{_sysconfdir}/exports.d
 %dir %{_sharedstatedir}/nfs/v4recovery
@@ -316,6 +310,11 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Mon Feb 11 2019 Steve Dickson <steved@redhat.com> 2.3.3-5.rc2
+- Do not install /etc/sysconfig/nfs (bz 1668836)
+- Change nfsconvert.sh not to set the immutable bit (bz 1668836)
+- Change nfsconvert.py not to create the new dummy /etc/sysconfig/nfs (bz 1668836)
+
 * Fri Feb 01 2019 Fedora Release Engineering <releng@fedoraproject.org> - 1:2.3.3-4.rc2.1
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_30_Mass_Rebuild
 

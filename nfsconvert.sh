@@ -16,10 +16,6 @@ fi
 #
 grep "nfs.conf" /etc/sysconfig/nfs > /dev/null
 if [ $? -eq 0 ]; then
-	# Make sure the file is immutable.
-	if [ -w /etc/sysconfig/nfs ]; then
-		chattr +i /etc/sysconfig/nfs
-	fi 
 	exit 0
 fi
 
@@ -40,14 +36,3 @@ fi
 #
 /usr/sbin/nfsconvert
 
-#
-# If successful, make the file immutable.
-# This is to ensure that configuration management 
-# software gets an error trying to modify it. 
-#
-# Run `chattr -i /etc/sysconfig/nfs` as root 
-# to make it mutable again.
-#
-if [ $? -eq 0 ]; then
-	chattr +i /etc/sysconfig/nfs
-fi
