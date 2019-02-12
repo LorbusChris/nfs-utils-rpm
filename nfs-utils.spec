@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.3
-Release: 5.rc2%{?dist}
+Release: 6.rc2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -220,13 +220,10 @@ if [ $1 -eq 1 ] ; then
 	/bin/systemctl start nfs-client.target  >/dev/null 2>&1 || :
 fi
 
-# Check to see if converting to /etc/nfs.conf is needed
-if [ -f /etc/sysconfig/nfs ]; then
-	grep "nfs.conf" /etc/sysconfig/nfs > /dev/null
-	if [ $? -eq 1 ]; then
-		/bin/systemctl enable nfs-convert  >/dev/null 2>&1 || :
-	fi
-fi
+# Enable nfs-convert so if an old configuration
+# exists a conversion will occur
+/bin/systemctl enable nfs-convert  >/dev/null 2>&1 || :
+
 %systemd_post nfs-server
 
 %preun
@@ -310,6 +307,9 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %changelog
+* Tue Feb 12 2019 Steve Dickson <steved@redhat.com> 2.3.3-5.rc2
+- Always have the nfs-convert service enabled (bz 1668836)
+
 * Mon Feb 11 2019 Steve Dickson <steved@redhat.com> 2.3.3-5.rc2
 - Do not install /etc/sysconfig/nfs (bz 1668836)
 - Change nfsconvert.sh not to set the immutable bit (bz 1668836)
