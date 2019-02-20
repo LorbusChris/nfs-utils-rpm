@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.3
-Release: 6.rc2%{?dist}
+Release: 7.rc2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -63,6 +63,22 @@ Requires: libnfsidmap libevent
 Requires: libtirpc >= 0.2.3-1 libblkid libcap libmount
 %{?systemd_requires}
 Requires: gssproxy => 0.7.0-3
+
+%package -n nfs-utils-coreos
+Summary: Minimal NFS utilities for supporting clients
+Provides: nfsstat     = %{epoch}:%{version}-%{release}
+Provides: rpc.statd   = %{epoch}:%{version}-%{release}
+Provides: rpc.gssd    = %{epoch}:%{version}-%{release}
+Provides: mount.nfs   = %{epoch}:%{version}-%{release}
+Provides: mount.nfs4  = %{epoch}:%{version}-%{release}
+Provides: umount.nfs  = %{epoch}:%{version}-%{release}
+Provides: umount.nfs4 = %{epoch}:%{version}-%{release}
+Provides: start-statd = %{epoch}:%{version}-%{release}
+Provides: nfsidmap    = %{epoch}:%{version}-%{release}
+Provides: showmount   = %{epoch}:%{version}-%{release}
+
+%description -n nfs-utils-coreos
+Minimal NFS utilities for supporting clients
 
 %package -n libnfsidmap
 Summary: NFSv4 User and Group ID Mapping Library
@@ -306,8 +322,49 @@ fi
 %{_includedir}/nfsidmap_plugin.h
 %{_libdir}/libnfsidmap.so
 
+%files -n nfs-utils-coreos
+%config(noreplace) %{_sysconfdir}/nfsmount.conf
+%config(noreplace) %{_sysconfdir}/nfs.conf
+%dir %attr(555, root, root) %{_sharedstatedir}/nfs/rpc_pipefs
+%config(noreplace) %{_sysconfdir}/request-key.d/id_resolver.conf
+/sbin/rpc.statd
+%{_sbindir}/nfsstat
+%{_sbindir}/showmount
+%{_sbindir}/rpc.gssd
+%{_sbindir}/start-statd
+%{_sbindir}/nfsidmap
+%attr(4755,root,root)	/sbin/mount.nfs
+/sbin/mount.nfs4
+/sbin/umount.nfs
+/sbin/umount.nfs4
+%{_mandir}/*/nfs.5.gz
+%{_mandir}/*/nfs.conf.5.gz
+%{_mandir}/*/nfsmount.conf.5.gz
+%{_mandir}/*/nfs.systemd.7.gz
+%{_mandir}/*/gssd.8.gz
+%{_mandir}/*/mount.nfs.8.gz
+%{_mandir}/*/nfsconf.8.gz
+%{_mandir}/*/nfsidmap.8.gz
+%{_mandir}/*/nfsstat.8.gz
+%{_mandir}/*/rpc.gssd.8.gz
+%{_mandir}/*/rpc.statd.8.gz
+%{_mandir}/*/showmount.8.gz
+%{_mandir}/*/statd.8.gz
+%{_mandir}/*/umount.nfs.8.gz
+%{_mandir}/*/nfs.systemd.7.gz
+%{_pkgdir}/*/rpc-pipefs-generator
+%{_pkgdir}/*/auth-rpcgss-module.service
+%{_pkgdir}/*/nfs-client.target
+%{_pkgdir}/*/rpc-gssd.service
+%{_pkgdir}/*/rpc-statd.service
+%{_pkgdir}/*/rpc_pipefs.target
+%{_pkgdir}/*/var-lib-nfs-rpc_pipefs.mount
+
 %changelog
-* Tue Feb 12 2019 Steve Dickson <steved@redhat.com> 2.3.3-5.rc2
+* Wed Feb 20 2019 Steve Dickson <steved@redhat.com> 2.3.3-7.rc2
+- Added nfs-utils-coreos package (bz 1667889)
+
+* Tue Feb 12 2019 Steve Dickson <steved@redhat.com> 2.3.3-6.rc2
 - Always have the nfs-convert service enabled (bz 1668836)
 
 * Mon Feb 11 2019 Steve Dickson <steved@redhat.com> 2.3.3-5.rc2
