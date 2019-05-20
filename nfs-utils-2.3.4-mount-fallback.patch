@@ -1,0 +1,49 @@
+commit a709f25c1da4a2fb44a1f3fd060298fbbd88aa3c
+Author: Steve Dickson <steved@redhat.com>
+Date:   Tue May 14 15:52:50 2019 -0400
+
+    mount: Report correct error in the fall_back cases.
+    
+    In mount auto negotiation, a v3 mount is tried
+    when the v4 fails with error that could mean
+    v4 is not supported.
+    
+    When the v3 mount fails, the original v4 failure
+    should be used to set the errno, not the v3 failure.
+    
+    Fixes:https://bugzilla.redhat.com/show_bug.cgi?id=1709961
+    Signed-off-by: Steve Dickson <steved@redhat.com>
+
+diff --git a/utils/mount/stropts.c b/utils/mount/stropts.c
+index 1bb7a73..901f995 100644
+--- a/utils/mount/stropts.c
++++ b/utils/mount/stropts.c
+@@ -889,7 +889,7 @@ out:
+  */
+ static int nfs_autonegotiate(struct nfsmount_info *mi)
+ {
+-	int result;
++	int result, olderrno;
+ 
+ 	result = nfs_try_mount_v4(mi);
+ check_result:
+@@ -949,7 +949,18 @@ fall_back:
+ 	if (mi->version.v_mode == V_GENERAL)
+ 		/* v2,3 fallback not allowed */
+ 		return result;
+-	return nfs_try_mount_v3v2(mi, FALSE);
++
++	/*
++	 * Save the original errno in case the v3 
++	 * mount fails from one of the fall_back cases. 
++	 * Report the first failure not the v3 mount failure
++	 */
++	olderrno = errno;
++	if ((result = nfs_try_mount_v3v2(mi, FALSE)))
++		return result;
++
++	errno = olderrno;
++	return result;
+ }
+ 
+ /*

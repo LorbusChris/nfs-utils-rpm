@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.4
-Release: 0%{?dist}
+Release: 1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -15,6 +15,8 @@ Source3: 24-nfs-server.conf
 Source4: nfsconvert.py
 Source5: nfsconvert.sh
 Source6: nfs-convert.service
+
+Patch001: nfs-utils-2.3.4-mount-fallback.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -42,7 +44,7 @@ Provides: start-statd = %{epoch}:%{version}-%{release}
 License: MIT and GPLv2 and GPLv2+ and BSD
 Requires: rpcbind, sed, gawk, grep
 Requires: kmod, keyutils, quota
-BuildRequires: libevent-devel libcap-devel
+BuildRequires: libevent-devel libcap-devel libuuid-devel
 BuildRequires: libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
 BuildRequires: automake, libtool, gcc, device-mapper-devel
@@ -358,6 +360,9 @@ fi
 %{_pkgdir}/*/var-lib-nfs-rpc_pipefs.mount
 
 %changelog
+* Mon May 20 2019 Steve Dickson <steved@redhat.com> 2.3.4-1
+- mount: Report correct error in the fall_back cases (bz 1709961)
+
 * Fri May 10 2019 Steve Dickson <steved@redhat.com> 2.3.4-0 
 - Updated to the latest upstream release: 2.3.4 (bz 1708690)
 
