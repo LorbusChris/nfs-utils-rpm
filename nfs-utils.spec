@@ -18,6 +18,7 @@ Source6: nfs-convert.service
 
 Patch001: nfs-utils-2.3.4-mount-fallback.patch
 Patch002: nfs-utils-2.3.4-PRIx64-integers.patch
+Patch003: nfs-utils-2.3.4-mountd-memleak.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -361,9 +362,10 @@ fi
 %{_pkgdir}/*/var-lib-nfs-rpc_pipefs.mount
 
 %changelog
-* Tue May 21 2019 Steve Dickson <steved@redhat.com> 2.3.4-1
+* Thu May 23 2019 Steve Dickson <steved@redhat.com> 2.3.4-1
 - mount: Report correct error in the fall_back cases (bz 1709961)
 - sqlite.c: Use PRIx64 macro to print 64-bit integers
+- rpc.mountd: Fix e_hostname and e_uuid leaks (bz 1713360)
 
 * Fri May 10 2019 Steve Dickson <steved@redhat.com> 2.3.4-0 
 - Updated to the latest upstream release: 2.3.4 (bz 1708690)
