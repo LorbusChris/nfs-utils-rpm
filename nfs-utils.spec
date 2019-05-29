@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.3.4
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -19,6 +19,7 @@ Source6: nfs-convert.service
 Patch001: nfs-utils-2.3.4-mount-fallback.patch
 Patch002: nfs-utils-2.3.4-PRIx64-integers.patch
 Patch003: nfs-utils-2.3.4-mountd-memleak.patch
+Patch004: nfs-utils-2.3.4-mountd-segfault.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -362,6 +363,9 @@ fi
 %{_pkgdir}/*/var-lib-nfs-rpc_pipefs.mount
 
 %changelog
+* Tue May 28 2019 Steve Dickson <steved@redhat.com> 2.3.4-2
+- rpc.mountd: Fix mountd segfault (bz 1713937)
+
 * Thu May 23 2019 Steve Dickson <steved@redhat.com> 2.3.4-1
 - mount: Report correct error in the fall_back cases (bz 1709961)
 - sqlite.c: Use PRIx64 macro to print 64-bit integers
