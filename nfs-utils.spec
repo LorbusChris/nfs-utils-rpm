@@ -1,8 +1,8 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://linux-nfs.org/
-Version: 2.3.4
-Release: 2%{?dist}
+Version: 2.4.1
+Release: 0%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -15,11 +15,6 @@ Source3: 24-nfs-server.conf
 Source4: nfsconvert.py
 Source5: nfsconvert.sh
 Source6: nfs-convert.service
-
-Patch001: nfs-utils-2.3.4-mount-fallback.patch
-Patch002: nfs-utils-2.3.4-PRIx64-integers.patch
-Patch003: nfs-utils-2.3.4-mountd-memleak.patch
-Patch004: nfs-utils-2.3.4-mountd-segfault.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -363,6 +358,9 @@ fi
 %{_pkgdir}/*/var-lib-nfs-rpc_pipefs.mount
 
 %changelog
+* Mon Jun 24 2019 Steve Dickson <steved@redhat.com> 2.4.1-0
+- Updated to the latest upstream release: 2.4.1 (bz 1719016)
+
 * Tue May 28 2019 Steve Dickson <steved@redhat.com> 2.3.4-2
 - rpc.mountd: Fix mountd segfault (bz 1713937)
 
