@@ -1,0 +1,756 @@
+diff --git a/aclocal/kerberos5.m4 b/aclocal/kerberos5.m4
+index 8a0f3e4..faa5804 100644
+--- a/aclocal/kerberos5.m4
++++ b/aclocal/kerberos5.m4
+@@ -38,9 +38,11 @@ AC_DEFUN([AC_KERBEROS_V5],[
+       AC_DEFINE_UNQUOTED(KRB5_VERSION, $K5VERS, [Define this as the Kerberos version number])
+       if test -f $dir/include/gssapi/gssapi_krb5.h -a \
+                 \( -f $dir/lib/libgssapi_krb5.a -o \
++                   -f $dir/lib/libgssapi_krb5.so -o \
++                   -f $dir/lib32/libgssapi_krb5.a -o \
++                   -f $dir/lib32/libgssapi_krb5.so -o \
+                    -f $dir/lib64/libgssapi_krb5.a -o \
+-                   -f $dir/lib64/libgssapi_krb5.so -o \
+-                   -f $dir/lib/libgssapi_krb5.so \) ; then
++                   -f $dir/lib64/libgssapi_krb5.so \) ; then
+          AC_DEFINE(HAVE_KRB5, 1, [Define this if you have MIT Kerberos libraries])
+          KRBDIR="$dir"
+          gssapi_lib=gssapi_krb5
+diff --git a/support/misc/nfsd_path.c b/support/misc/nfsd_path.c
+index 84e4802..f078a66 100644
+--- a/support/misc/nfsd_path.c
++++ b/support/misc/nfsd_path.c
+@@ -1,3 +1,7 @@
++#ifdef HAVE_CONFIG_H
++#include <config.h>
++#endif
++
+ #include <errno.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+@@ -5,7 +9,6 @@
+ #include <stdlib.h>
+ #include <unistd.h>
+ 
+-#include "config.h"
+ #include "conffile.h"
+ #include "xmalloc.h"
+ #include "xlog.h"
+diff --git a/support/misc/xstat.c b/support/misc/xstat.c
+index fa04788..4c997ee 100644
+--- a/support/misc/xstat.c
++++ b/support/misc/xstat.c
+@@ -1,3 +1,7 @@
++#ifdef HAVE_CONFIG_H
++#include <config.h>
++#endif
++
+ #include <errno.h>
+ #include <sys/types.h>
+ #include <fcntl.h>
+@@ -5,7 +9,6 @@
+ #include <sys/sysmacros.h>
+ #include <unistd.h>
+ 
+-#include "config.h"
+ #include "xstat.h"
+ 
+ #ifdef HAVE_FSTATAT
+diff --git a/support/nfs/conffile.c b/support/nfs/conffile.c
+index b6400be..6ba8a35 100644
+--- a/support/nfs/conffile.c
++++ b/support/nfs/conffile.c
+@@ -500,7 +500,7 @@ conf_readfile(const char *path)
+ 
+ 	if ((stat (path, &sb) == 0) || (errno != ENOENT)) {
+ 		char *new_conf_addr = NULL;
+-		size_t sz = sb.st_size;
++		off_t sz;
+ 		int fd = open (path, O_RDONLY, 0);
+ 
+ 		if (fd == -1) {
+@@ -517,6 +517,11 @@ conf_readfile(const char *path)
+ 
+ 		/* only after we have the lock, check the file size ready to read it */
+ 		sz = lseek(fd, 0, SEEK_END);
++		if (sz < 0) {
++			xlog_warn("conf_readfile: unable to determine file size: %s",
++				  strerror(errno));
++			goto fail;
++		}
+ 		lseek(fd, 0, SEEK_SET);
+ 
+ 		new_conf_addr = malloc(sz+1);
+@@ -2162,6 +2167,7 @@ conf_write(const char *filename, const char *section, const char *arg,
+ 	ret = 0;
+ 
+ cleanup:
++	flush_outqueue(&inqueue, NULL);
+ 	flush_outqueue(&outqueue, NULL);
+ 
+ 	if (buff)
+diff --git a/support/nfsidmap/libnfsidmap.c b/support/nfsidmap/libnfsidmap.c
+index 7b8a871..9299e65 100644
+--- a/support/nfsidmap/libnfsidmap.c
++++ b/support/nfsidmap/libnfsidmap.c
+@@ -486,6 +486,9 @@ out:
+ 	if (gss_methods)
+ 		conf_free_list(gss_methods);
+ 
++	if (nfs4_methods)
++		conf_free_list(nfs4_methods);
++
+ 	return ret ? -ENOENT: 0;
+ }
+ 
+diff --git a/systemd/nfs-server-generator.c b/systemd/nfs-server-generator.c
+index 737f109..eec98fd 100644
+--- a/systemd/nfs-server-generator.c
++++ b/systemd/nfs-server-generator.c
+@@ -25,6 +25,7 @@
+ #include <ctype.h>
+ #include <stdio.h>
+ #include <mntent.h>
++#include <alloca.h>
+ 
+ #include "misc.h"
+ #include "nfslib.h"
+@@ -98,7 +99,7 @@ int main(int argc, char *argv[])
+ 		exit(1);
+ 	}
+ 
+-	path = malloc(strlen(argv[1]) + sizeof(dirbase) + sizeof(filebase));
++	path = alloca(strlen(argv[1]) + sizeof(dirbase) + sizeof(filebase));
+ 	if (!path)
+ 		exit(2);
+ 	if (export_read(_PATH_EXPORTS, 1) +
+diff --git a/tests/statdb_dump.c b/tests/statdb_dump.c
+index 92d63f2..3ac12bf 100644
+--- a/tests/statdb_dump.c
++++ b/tests/statdb_dump.c
+@@ -23,6 +23,7 @@
+ #include "config.h"
+ #endif
+ 
++#include <string.h>
+ #include <stdio.h>
+ #include <errno.h>
+ #include <arpa/inet.h>
+diff --git a/tools/mountstats/mountstats.py b/tools/mountstats/mountstats.py
+index 2f525f4..6ac83cc 100755
+--- a/tools/mountstats/mountstats.py
++++ b/tools/mountstats/mountstats.py
+@@ -308,6 +308,8 @@ class DeviceData:
+             op = words[0][:-1]
+             self.__rpc_data['ops'] += [op]
+             self.__rpc_data[op] = [int(word) for word in words[1:]]
++            if len(self.__rpc_data[op]) < 9:
++                self.__rpc_data[op] += [0]
+ 
+     def parse_stats(self, lines):
+         """Turn a list of lines from a mount stat file into a 
+@@ -582,7 +584,7 @@ class DeviceData:
+             self.__nfs_data['fstype'] = 'nfs4'
+         self.__rpc_data['ops'] = ops
+         for op in ops:
+-            self.__rpc_data[op] = [0 for i in range(8)]
++            self.__rpc_data[op] = [0 for i in range(9)]
+ 
+     def accumulate_iostats(self, new_stats):
+         """Accumulate counters from all RPC op buckets in new_stats.  This is
+@@ -607,6 +609,8 @@ class DeviceData:
+         queued_for = float(rpc_stats[5])
+         rtt = float(rpc_stats[6])
+         exe = float(rpc_stats[7])
++        if len(rpc_stats) >= 9:
++            errs = int(rpc_stats[8])
+ 
+         # prevent floating point exceptions
+         if ops != 0:
+@@ -615,12 +619,15 @@ class DeviceData:
+             rtt_per_op = rtt / ops
+             exe_per_op = exe / ops
+             queued_for_per_op = queued_for / ops
++            if len(rpc_stats) >= 9:
++                errs_percent = (errs * 100) / ops
+         else:
+             kb_per_op = 0.0
+             retrans_percent = 0.0
+             rtt_per_op = 0.0
+             exe_per_op = 0.0
+             queued_for_per_op = 0.0
++            errs_percent = 0.0
+ 
+         op += ':'
+         print(format(op.lower(), '<16s'), end='')
+@@ -630,7 +637,10 @@ class DeviceData:
+         print(format('retrans', '>16s'), end='')
+         print(format('avg RTT (ms)', '>16s'), end='')
+         print(format('avg exe (ms)', '>16s'), end='')
+-        print(format('avg queue (ms)', '>16s'))
++        print(format('avg queue (ms)', '>16s'), end='')
++        if len(rpc_stats) >= 9:
++            print(format('errors', '>16s'), end='')
++        print()
+ 
+         print(format((ops / sample_time), '>24.3f'), end='')
+         print(format((kilobytes / sample_time), '>16.3f'), end='')
+@@ -639,7 +649,11 @@ class DeviceData:
+         print(format(retransmits, '>16'), end='')
+         print(format(rtt_per_op, '>16.3f'), end='')
+         print(format(exe_per_op, '>16.3f'), end='')
+-        print(format(queued_for_per_op, '>16.3f'))
++        print(format(queued_for_per_op, '>16.3f'), end='')
++        if len(rpc_stats) >= 9:
++            errors = '{0:>10.0f} ({1:>3.1f}%)'.format(errs, errs_percent).strip()
++            print(format(errors, '>16'), end='')
++        print()
+ 
+     def display_iostats(self, sample_time):
+         """Display NFS and RPC stats in an iostat-like way
+diff --git a/tools/nfs-iostat/nfs-iostat.py b/tools/nfs-iostat/nfs-iostat.py
+old mode 100644
+new mode 100755
+index dec0e86..b7e98a2
+--- a/tools/nfs-iostat/nfs-iostat.py
++++ b/tools/nfs-iostat/nfs-iostat.py
+@@ -329,6 +329,8 @@ class DeviceData:
+         queued_for = float(rpc_stats[5])
+         rtt = float(rpc_stats[6])
+         exe = float(rpc_stats[7])
++        if len(rpc_stats) >= 9:
++            errs = float(rpc_stats[8])
+ 
+         # prevent floating point exceptions
+         if ops != 0:
+@@ -337,12 +339,16 @@ class DeviceData:
+             rtt_per_op = rtt / ops
+             exe_per_op = exe / ops
+             queued_for_per_op = queued_for / ops
++            if len(rpc_stats) >= 9:
++                errs_percent = (errs * 100) / ops
+         else:
+             kb_per_op = 0.0
+             retrans_percent = 0.0
+             rtt_per_op = 0.0
+             exe_per_op = 0.0
+             queued_for_per_op = 0.0
++            if len(rpc_stats) >= 9:
++                errs_percent = 0.0
+ 
+         op += ':'
+         print(format(op.lower(), '<16s'), end='')
+@@ -352,7 +358,10 @@ class DeviceData:
+         print(format('retrans', '>16s'), end='')
+         print(format('avg RTT (ms)', '>16s'), end='')
+         print(format('avg exe (ms)', '>16s'), end='')
+-        print(format('avg queue (ms)', '>16s'))
++        print(format('avg queue (ms)', '>16s'), end='')
++        if len(rpc_stats) >= 9:
++            print(format('errors', '>16s'), end='')
++        print()
+ 
+         print(format((ops / sample_time), '>24.3f'), end='')
+         print(format((kilobytes / sample_time), '>16.3f'), end='')
+@@ -361,7 +370,11 @@ class DeviceData:
+         print(format(retransmits, '>16'), end='')
+         print(format(rtt_per_op, '>16.3f'), end='')
+         print(format(exe_per_op, '>16.3f'), end='')
+-        print(format(queued_for_per_op, '>16.3f'))
++        print(format(queued_for_per_op, '>16.3f'), end='')
++        if len(rpc_stats) >= 9:
++            errors = '{0:>10.0f} ({1:>3.1f}%)'.format(errs, errs_percent).strip()
++            print(format(errors, '>16'), end='')
++        print()
+ 
+     def ops(self, sample_time):
+         sends = float(self.__rpc_data['rpcsends'])
+diff --git a/tools/nfs-iostat/nfsiostat.man b/tools/nfs-iostat/nfsiostat.man
+index 9ae94c5..940c043 100644
+--- a/tools/nfs-iostat/nfsiostat.man
++++ b/tools/nfs-iostat/nfsiostat.man
+@@ -97,6 +97,14 @@ This is the duration from the time the NFS client created the RPC request task t
+ .RE
+ .RE
+ .RE
++.RS 8
++- \fBerrors\fR
++.RS
++This is the number of operations that completed with an error status (status < 0).  This count is only available on kernels with RPC iostats version 1.1 or above.
++.RS
++.RE
++.RE
++.RE
+ .TP
+ Note that if an interval is used as argument to \fBnfsiostat\fR, then the diffrence from previous interval will be displayed, otherwise the results will be from the time that the share was mounted.
+ 
+diff --git a/utils/blkmapd/device-discovery.c b/utils/blkmapd/device-discovery.c
+index e811703..f5f9b10 100644
+--- a/utils/blkmapd/device-discovery.c
++++ b/utils/blkmapd/device-discovery.c
+@@ -26,6 +26,10 @@
+  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
++#ifdef HAVE_CONFIG_H
++#include "config.h"
++#endif /* HAVE_CONFIG_H */
++
+ #include <sys/sysmacros.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+@@ -51,10 +55,6 @@
+ #include <errno.h>
+ #include <libdevmapper.h>
+ 
+-#ifdef HAVE_CONFIG_H
+-#include "config.h"
+-#endif /* HAVE_CONFIG_H */
+-
+ #include "device-discovery.h"
+ #include "xcommon.h"
+ #include "nfslib.h"
+diff --git a/utils/gssd/gssd.man b/utils/gssd/gssd.man
+index e620f0d..cc3a210 100644
+--- a/utils/gssd/gssd.man
++++ b/utils/gssd/gssd.man
+@@ -305,6 +305,14 @@ section of the
+ .I /etc/nfs.conf
+ configuration file.  Values recognized include:
+ .TP
++.B verbosity
++Value which is equivalent to the number of
++.BR -v .
++.TP
++.B rpc-verbosity
++Value which is equivalent to the number of
++.BR -r .
++.TP
+ .B use-memcache
+ A Boolean flag equivalent to
+ .BR -M .
+diff --git a/utils/gssd/krb5_util.c b/utils/gssd/krb5_util.c
+index 454a6eb..0474783 100644
+--- a/utils/gssd/krb5_util.c
++++ b/utils/gssd/krb5_util.c
+@@ -912,6 +912,8 @@ find_keytab_entry(krb5_context context, krb5_keytab kt,
+ 				k5err = gssd_k5_err_msg(context, code);
+ 				printerr(3, "%s while getting keytab entry for '%s'\n",
+ 					 k5err, spn);
++				free(k5err);
++				k5err = NULL;
+ 				/*
+ 				 * We tried the active directory machine account
+ 				 * with the hostname part as-is and failed...
+@@ -1014,6 +1016,8 @@ query_krb5_ccache(const char* cred_cache, char **ret_princname,
+ 	char *str = NULL;
+ 	char *princstring;
+ 
++	*ret_princname = *ret_realm = NULL;
++
+ 	ret = krb5_init_context(&context);
+ 	if (ret) 
+ 		return 0;
+@@ -1048,7 +1052,7 @@ err_princ:
+ 	krb5_cc_close(context, ccache);
+ err_cache:
+ 	krb5_free_context(context);
+-	return found;
++	return (*ret_princname && *ret_realm);
+ }
+ 
+ /*==========================*/
+@@ -1231,6 +1235,8 @@ gssd_destroy_krb5_machine_creds(void)
+ 			k5err = gssd_k5_err_msg(context, code);
+ 			printerr(0, "WARNING: %s while destroying credential "
+ 				    "cache '%s'\n", k5err, ple->ccname);
++			free(k5err);
++			k5err = NULL;
+ 		}
+ 	}
+ 	krb5_free_context(context);
+diff --git a/utils/idmapd/idmapd.c b/utils/idmapd/idmapd.c
+index 62e37b8..c187e7d 100644
+--- a/utils/idmapd/idmapd.c
++++ b/utils/idmapd/idmapd.c
+@@ -34,6 +34,10 @@
+  *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
++#ifdef HAVE_CONFIG_H
++#include "config.h"
++#endif /* HAVE_CONFIG_H */
++
+ #include <sys/types.h>
+ #include <sys/time.h>
+ #include <sys/inotify.h>
+@@ -62,10 +66,6 @@
+ #include <libgen.h>
+ #include <nfsidmap.h>
+ 
+-#ifdef HAVE_CONFIG_H
+-#include "config.h"
+-#endif /* HAVE_CONFIG_H */
+-
+ #include "xlog.h"
+ #include "conffile.h"
+ #include "queue.h"
+@@ -520,14 +520,16 @@ static void
+ clntscancb(int UNUSED(fd), short UNUSED(which), void *data)
+ {
+ 	struct idmap_clientq *icq = data;
+-	struct idmap_client *ic;
++	struct idmap_client *ic, *ic_next;
+ 
+-	TAILQ_FOREACH(ic, icq, ic_next)
++	for (ic = TAILQ_FIRST(icq); ic != NULL; ic = ic_next) { 
++		ic_next = TAILQ_NEXT(ic, ic_next);
+ 		if (ic->ic_fd == -1 && nfsopen(ic) == -1) {
+ 			close(ic->ic_dirfd);
+ 			TAILQ_REMOVE(icq, ic, ic_next);
+ 			free(ic);
+ 		}
++	}
+ }
+ 
+ static void
+diff --git a/utils/mount/network.c b/utils/mount/network.c
+index e166a82..6ac913d 100644
+--- a/utils/mount/network.c
++++ b/utils/mount/network.c
+@@ -39,7 +39,7 @@
+ #include <sys/socket.h>
+ #include <sys/wait.h>
+ #include <sys/stat.h>
+-#if defined(__GLIBC__) && (__GLIBC__ < 2) || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 24)
++#if defined(__GLIBC__) && ((__GLIBC__ < 2) || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 24))
+ /* Cannot safely include linux/in6.h in old glibc, so hardcode the needed values */
+ # define IPV6_PREFER_SRC_PUBLIC 2
+ # define IPV6_ADDR_PREFERENCES 72
+diff --git a/utils/mount/nfs.man b/utils/mount/nfs.man
+index 9ee9bd9..6ba9cef 100644
+--- a/utils/mount/nfs.man
++++ b/utils/mount/nfs.man
+@@ -1252,7 +1252,7 @@ If absolute cache coherence among clients is required,
+ applications should use file locking. Alternatively, applications
+ can also open their files with the O_DIRECT flag
+ to disable data caching entirely.
+-.SS "File timestamp maintainence"
++.SS "File timestamp maintenance"
+ NFS servers are responsible for managing file and directory timestamps
+ .RB ( atime ,
+ .BR ctime ", and"
+diff --git a/utils/nfsdcld/legacy.c b/utils/nfsdcld/legacy.c
+index f0ca316..07f477a 100644
+--- a/utils/nfsdcld/legacy.c
++++ b/utils/nfsdcld/legacy.c
+@@ -24,6 +24,7 @@
+ #include <errno.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
++#include <limits.h>
+ #include "cld.h"
+ #include "sqlite.h"
+ #include "xlog.h"
+diff --git a/utils/nfsdcld/sqlite.c b/utils/nfsdcld/sqlite.c
+index cd658ef..fa81df8 100644
+--- a/utils/nfsdcld/sqlite.c
++++ b/utils/nfsdcld/sqlite.c
+@@ -67,6 +67,7 @@
+ #include "cld-internal.h"
+ #include "conffile.h"
+ #include "legacy.h"
++#include "nfslib.h"
+ 
+ #define CLD_SQLITE_LATEST_SCHEMA_VERSION 3
+ #define CLTRACK_DEFAULT_STORAGEDIR NFS_STATEDIR "/nfsdcltrack"
+@@ -448,6 +449,129 @@ out:
+ 	return ret;
+ }
+ 
++/*
++ * Helper for renaming a recovery table to fix the padding.
++ */
++static int
++sqlite_fix_table_name(const char *name)
++{
++	int ret;
++	uint64_t val;
++	char *err;
++
++	if (sscanf(name, "rec-%" PRIx64, &val) != 1)
++		return -EINVAL;
++	ret = snprintf(buf, sizeof(buf), "ALTER TABLE \"%s\" "
++			"RENAME TO \"rec-%016" PRIx64 "\";",
++			name, val);
++	if (ret < 0) {
++		xlog(L_ERROR, "sprintf failed!");
++		return -EINVAL;
++	} else if ((size_t)ret >= sizeof(buf)) {
++		xlog(L_ERROR, "sprintf output too long! (%d chars)", ret);
++		return -EINVAL;
++	}
++	ret = sqlite3_exec(dbh, (const char *)buf, NULL, NULL, &err);
++	if (ret != SQLITE_OK) {
++		xlog(L_ERROR, "Unable to fix table for epoch %d: %s",
++		     val, err);
++		goto out;
++	}
++	xlog(D_GENERAL, "Renamed table %s to rec-%016" PRIx64, name, val);
++out:
++	sqlite3_free(err);
++	return ret;
++}
++
++/*
++ * Callback for the sqlite_exec statement in sqlite_check_table_names.
++ * If the epoch encoded in the table name matches either the current
++ * epoch or the recovery epoch, then try to fix the padding.  Otherwise,
++ * we bail.
++ */
++static int
++sqlite_check_table_names_cb(void *UNUSED(arg), int ncols, char **cols,
++			    char **UNUSED(colnames))
++{
++	int ret = SQLITE_OK;
++	uint64_t val;
++
++	if (ncols > 1)
++		return -EINVAL;
++	if (sscanf(cols[0], "rec-%" PRIx64, &val) != 1)
++		return -EINVAL;
++	if (val == current_epoch || val == recovery_epoch) {
++		xlog(D_GENERAL, "found invalid table name %s for %s epoch",
++		     cols[0], val == current_epoch ? "current" : "recovery");
++		ret = sqlite_fix_table_name(cols[0]);
++	} else {
++		xlog(L_ERROR, "found invalid table name %s for unknown epoch %"
++		     PRId64, cols[0], val);
++		return -EINVAL;
++	}
++	return ret;
++}
++
++/*
++ * Look for recovery table names where the epoch isn't zero-padded
++ */
++static int
++sqlite_check_table_names(void)
++{
++	int ret;
++	char *err;
++
++	ret = sqlite3_exec(dbh, "SELECT name FROM sqlite_master "
++			   "WHERE type=\"table\" AND name LIKE \"%rec-%\" "
++			   "AND length(name) < 20;",
++			   sqlite_check_table_names_cb, NULL, &err);
++	if (ret != SQLITE_OK) {
++		xlog(L_ERROR, "Table names check failed: %s", err);
++	}
++	sqlite3_free(err);
++	return ret;
++}
++
++/*
++ * Simple db health check.  For now we're just making sure that the recovery
++ * table names are of the format "rec-CCCCCCCCCCCCCCCC" (where C is the hex
++ * representation of the epoch value) and that epoch value matches either
++ * the current epoch or the recovery epoch.
++ */
++static int
++sqlite_check_db_health(void)
++{
++	int ret, ret2;
++	char *err;
++
++	ret = sqlite3_exec(dbh, "BEGIN EXCLUSIVE TRANSACTION;", NULL, NULL,
++				&err);
++	if (ret != SQLITE_OK) {
++		xlog(L_ERROR, "Unable to begin transaction: %s", err);
++		goto rollback;
++	}
++
++	ret = sqlite_check_table_names();
++	if (ret != SQLITE_OK)
++		goto rollback;
++
++	ret = sqlite3_exec(dbh, "COMMIT TRANSACTION;", NULL, NULL, &err);
++	if (ret != SQLITE_OK) {
++		xlog(L_ERROR, "Unable to commit transaction: %s", err);
++		goto rollback;
++	}
++
++cleanup:
++	sqlite3_free(err);
++	xlog(D_GENERAL, "%s: returning %d", __func__, ret);
++	return ret;
++rollback:
++	ret2 = sqlite3_exec(dbh, "ROLLBACK TRANSACTION;", NULL, NULL, &err);
++	if (ret2 != SQLITE_OK)
++		xlog(L_ERROR, "Unable to rollback transaction: %s", err);
++	goto cleanup;
++}
++
+ static int
+ sqlite_attach_db(const char *path)
+ {
+@@ -536,7 +660,7 @@ sqlite_copy_cltrack_records(int *num_rec)
+ 		xlog(L_ERROR, "Unable to begin transaction: %s", err);
+ 		goto rollback;
+ 	}
+-	ret = snprintf(buf, sizeof(buf), "DELETE FROM \"rec-%" PRIx64 "\";",
++	ret = snprintf(buf, sizeof(buf), "DELETE FROM \"rec-%016" PRIx64 "\";",
+ 			current_epoch);
+ 	if (ret < 0) {
+ 		xlog(L_ERROR, "sprintf failed!");
+@@ -551,7 +675,7 @@ sqlite_copy_cltrack_records(int *num_rec)
+ 		xlog(L_ERROR, "Unable to clear records from current epoch: %s", err);
+ 		goto rollback;
+ 	}
+-	ret = snprintf(buf, sizeof(buf), "INSERT INTO \"rec-%" PRIx64 "\" "
++	ret = snprintf(buf, sizeof(buf), "INSERT INTO \"rec-%016" PRIx64 "\" "
+ 				"SELECT id FROM attached.clients;",
+ 				current_epoch);
+ 	if (ret < 0) {
+@@ -673,6 +797,13 @@ sqlite_prepare_dbh(const char *topdir)
+ 	if (ret)
+ 		goto out_close;
+ 
++	ret = sqlite_check_db_health();
++	if (ret) {
++		xlog(L_ERROR, "Database health check failed! "
++			"Database must be fixed manually.");
++		goto out_close;
++	}
++
+ 	/* one-time "upgrade" from older client tracking methods */
+ 	if (first_time) {
+ 		sqlite_copy_cltrack_records(&num_cltrack_records);
+@@ -704,7 +835,7 @@ sqlite_insert_client(const unsigned char *clname, const size_t namelen)
+ 	int ret;
+ 	sqlite3_stmt *stmt = NULL;
+ 
+-	ret = snprintf(buf, sizeof(buf), "INSERT OR REPLACE INTO \"rec-%" PRIx64 "\" "
++	ret = snprintf(buf, sizeof(buf), "INSERT OR REPLACE INTO \"rec-%016" PRIx64 "\" "
+ 				"VALUES (?);", current_epoch);
+ 	if (ret < 0) {
+ 		xlog(L_ERROR, "sprintf failed!");
+@@ -749,7 +880,7 @@ sqlite_remove_client(const unsigned char *clname, const size_t namelen)
+ 	int ret;
+ 	sqlite3_stmt *stmt = NULL;
+ 
+-	ret = snprintf(buf, sizeof(buf), "DELETE FROM \"rec-%" PRIx64 "\" "
++	ret = snprintf(buf, sizeof(buf), "DELETE FROM \"rec-%016" PRIx64 "\" "
+ 				"WHERE id==?;", current_epoch);
+ 	if (ret < 0) {
+ 		xlog(L_ERROR, "sprintf failed!");
+@@ -799,7 +930,7 @@ sqlite_check_client(const unsigned char *clname, const size_t namelen)
+ 	int ret;
+ 	sqlite3_stmt *stmt = NULL;
+ 
+-	ret = snprintf(buf, sizeof(buf), "SELECT count(*) FROM  \"rec-%" PRIx64 "\" "
++	ret = snprintf(buf, sizeof(buf), "SELECT count(*) FROM  \"rec-%016" PRIx64 "\" "
+ 				"WHERE id==?;", recovery_epoch);
+ 	if (ret < 0) {
+ 		xlog(L_ERROR, "sprintf failed!");
+@@ -892,7 +1023,7 @@ sqlite_grace_start(void)
+ 			goto rollback;
+ 		}
+ 
+-		ret = snprintf(buf, sizeof(buf), "CREATE TABLE \"rec-%" PRIx64 "\" "
++		ret = snprintf(buf, sizeof(buf), "CREATE TABLE \"rec-%016" PRIx64 "\" "
+ 				"(id BLOB PRIMARY KEY);",
+ 				tcur);
+ 		if (ret < 0) {
+@@ -916,7 +1047,7 @@ sqlite_grace_start(void)
+ 		 * values in the grace table, just clear out the records for
+ 		 * the current reboot epoch.
+ 		 */
+-		ret = snprintf(buf, sizeof(buf), "DELETE FROM \"rec-%" PRIx64 "\";",
++		ret = snprintf(buf, sizeof(buf), "DELETE FROM \"rec-%016" PRIx64 "\";",
+ 				tcur);
+ 		if (ret < 0) {
+ 			xlog(L_ERROR, "sprintf failed!");
+@@ -977,7 +1108,7 @@ sqlite_grace_done(void)
+ 		goto rollback;
+ 	}
+ 
+-	ret = snprintf(buf, sizeof(buf), "DROP TABLE \"rec-%" PRIx64 "\";",
++	ret = snprintf(buf, sizeof(buf), "DROP TABLE \"rec-%016" PRIx64 "\";",
+ 		recovery_epoch);
+ 	if (ret < 0) {
+ 		xlog(L_ERROR, "sprintf failed!");
+@@ -1028,7 +1159,7 @@ sqlite_iterate_recovery(int (*cb)(struct cld_client *clnt), struct cld_client *c
+ 		return -EINVAL;
+ 	}
+ 
+-	ret = snprintf(buf, sizeof(buf), "SELECT * FROM \"rec-%" PRIx64 "\";",
++	ret = snprintf(buf, sizeof(buf), "SELECT * FROM \"rec-%016" PRIx64 "\";",
+ 		recovery_epoch);
+ 	if (ret < 0) {
+ 		xlog(L_ERROR, "sprintf failed!");
+diff --git a/utils/statd/monitor.c b/utils/statd/monitor.c
+index 9400048..20c8ebd 100644
+--- a/utils/statd/monitor.c
++++ b/utils/statd/monitor.c
+@@ -66,7 +66,7 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
+ 			*my_name  = argp->mon_id.my_id.my_name;
+ 	struct my_id	*id = &argp->mon_id.my_id;
+ 	char		*cp;
+-	notify_list	*clnt;
++	notify_list	*clnt = NULL;
+ 	struct sockaddr_in my_addr = {
+ 		.sin_family		= AF_INET,
+ 		.sin_addr.s_addr	= htonl(INADDR_LOOPBACK),
+@@ -177,6 +177,7 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
+ 	 * We're committed...ignoring errors.  Let's hope that a malloc()
+ 	 * doesn't fail.  (I should probably fix this assumption.)
+ 	 */
++	clnt = NULL;
+ 	if (!existing && !(clnt = nlist_new(my_name, mon_name, 0))) {
+ 		free(dnsname);
+ 		xlog_warn("out of memory");
+@@ -223,6 +224,7 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
+ 
+ failure:
+ 	xlog_warn("STAT_FAIL to %s for SM_MON of %s", my_name, mon_name);
++	free(clnt);
+ 	return (&result);
+ }
+ 
+@@ -242,6 +244,7 @@ load_one_host(const char *hostname,
+ 	clnt->dns_name = strdup(hostname);
+ 	if (clnt->dns_name == NULL) {
+ 		nlist_free(NULL, clnt);
++		free(clnt);
+ 		return 0;
+ 	}
+ 
+diff --git a/utils/statd/notlist.c b/utils/statd/notlist.c
+index 0341c15..45879a4 100644
+--- a/utils/statd/notlist.c
++++ b/utils/statd/notlist.c
+@@ -210,7 +210,6 @@ nlist_free(notify_list **head, notify_list *entry)
+ 	if (NL_MON_NAME(entry))
+ 		free(NL_MON_NAME(entry));
+ 	free(entry->dns_name);
+-	free(entry);
+ }
+ 
+ /* 
+@@ -219,8 +218,14 @@ nlist_free(notify_list **head, notify_list *entry)
+ void 
+ nlist_kill(notify_list **head)
+ {
+-	while (*head)
++	notify_list *next;
++
++	while (*head) {
++		next = (*head)->next;
+ 		nlist_free(head, *head);
++		free(*head);
++		*head = next;
++	}
+ }
+ 
+ /*
