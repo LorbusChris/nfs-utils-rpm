@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.4.1
-Release: 1.rc1%{?dist}
+Release: 2.rc1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -42,8 +42,6 @@ Provides: sm-notify   = %{epoch}:%{version}-%{release}
 Provides: start-statd = %{epoch}:%{version}-%{release}
 
 License: MIT and GPLv2 and GPLv2+ and BSD
-Requires: rpcbind, sed, gawk, grep
-Requires: kmod, keyutils, quota
 BuildRequires: libevent-devel libcap-devel libuuid-devel
 BuildRequires: libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
@@ -59,8 +57,10 @@ Requires(pre): coreutils
 Requires(preun): coreutils
 Requires: libnfsidmap libevent
 Requires: libtirpc >= 0.2.3-1 libblkid libcap libmount
-%{?systemd_requires}
 Requires: gssproxy => 0.7.0-3
+Requires: rpcbind, sed, gawk, grep
+Requires: kmod, keyutils, quota
+%{?systemd_requires}
 
 %package -n nfs-utils-coreos
 Summary: Minimal NFS utilities for supporting clients
@@ -74,6 +74,8 @@ Provides: umount.nfs4 = %{epoch}:%{version}-%{release}
 Provides: start-statd = %{epoch}:%{version}-%{release}
 Provides: nfsidmap    = %{epoch}:%{version}-%{release}
 Provides: showmount   = %{epoch}:%{version}-%{release}
+Requires: rpcbind
+%{?systemd_requires}
 
 %description -n nfs-utils-coreos
 Minimal NFS utilities for supporting clients
@@ -156,7 +158,7 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/gssproxy
 
 install -s -m 755 tools/rpcdebug/rpcdebug $RPM_BUILD_ROOT%{_sbindir}
 install -m 644 utils/mount/nfsmount.conf  $RPM_BUILD_ROOT%{_sysconfdir}
-install -m 644 nfs.conf  $RPM_BUILD_ROOT%{_sysconfdir}
+install -m 644 nfs.conf $RPM_BUILD_ROOT%{_sysconfdir}
 install -m 644 support/nfsidmap/idmapd.conf $RPM_BUILD_ROOT%{_sysconfdir}
 install -m 644 %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/request-key.d
 
@@ -208,7 +210,7 @@ else
 fi 
 
 # Using the 16-bit value of -2 for the nfsnobody uid and gid
-%global nfsnobody_uid	65534
+%global nfsnobody_uid 65534
 
 # Nowadays 'nobody/65534' user/group are included in setup rpm. But on
 # systems installed previously, nobody/99 might be present, with user
@@ -274,7 +276,7 @@ fi
 %config(noreplace) %{_sysconfdir}/request-key.d/id_resolver.conf
 %config(noreplace) %{_sysconfdir}/modprobe.d/lockd.conf
 %config(noreplace) %{_sysconfdir}/nfs.conf
-%attr(0600,root,root) %config(noreplace) /%{_sysconfdir}/gssproxy/24-nfs-server.conf
+%attr(0600,root,root) %config(noreplace) %{_sysconfdir}/gssproxy/24-nfs-server.conf
 %doc linux-nfs/ChangeLog linux-nfs/KNOWNBUGS linux-nfs/NEW linux-nfs/README
 %doc linux-nfs/THANKS linux-nfs/TODO
 /sbin/rpc.statd
@@ -322,18 +324,22 @@ fi
 %{_libdir}/libnfsidmap.so
 
 %files -n nfs-utils-coreos
+%dir %attr(555, root, root) %{_sharedstatedir}/nfs/rpc_pipefs
+%dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd
+%dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd/sm
+%dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd/sm.bak
+%ghost %attr(644,rpcuser,rpcuser) %{_statdpath}/state
 %config(noreplace) %{_sysconfdir}/nfsmount.conf
 %config(noreplace) %{_sysconfdir}/nfs.conf
-%dir %attr(555, root, root) %{_sharedstatedir}/nfs/rpc_pipefs
 %config(noreplace) %{_sysconfdir}/request-key.d/id_resolver.conf
-/sbin/rpc.statd
+%{_sbindir}/nfsidmap
 %{_sbindir}/nfsstat
-%{_sbindir}/showmount
 %{_sbindir}/rpc.gssd
 %{_sbindir}/start-statd
-%{_sbindir}/nfsidmap
-%attr(4755,root,root)	/sbin/mount.nfs
+%{_sbindir}/showmount
+%attr(4755,root,root) /sbin/mount.nfs
 /sbin/mount.nfs4
+/sbin/rpc.statd
 /sbin/umount.nfs
 /sbin/umount.nfs4
 %{_mandir}/*/nfs.5.gz
@@ -360,6 +366,9 @@ fi
 %{_pkgdir}/*/var-lib-nfs-rpc_pipefs.mount
 
 %changelog
+* Tue Nov 05 2019 Christian Glombek <lorbus@fedoraproject.org> 2.4.1-2.rc1
+- Added missing Requires and statd dirs to nfs-utils-coreos package (bz 1768897)
+
 * Thu Aug 29 2019 Steve Dickson <steved@redhat.com> 2.4.1-1.rc1
 - Updated to the latest upstream RC release: nfs-utils-2-4-2-rc1
 
