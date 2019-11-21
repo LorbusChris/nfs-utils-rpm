@@ -1,8 +1,8 @@
 Summary: NFS utilities and supporting clients and daemons for the kernel NFS server
 Name: nfs-utils
 URL: http://linux-nfs.org/
-Version: 2.4.1
-Release: 2.rc1%{?dist}
+Version: 2.4.2
+Release: 0%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -15,8 +15,6 @@ Source3: 24-nfs-server.conf
 Source4: nfsconvert.py
 Source5: nfsconvert.sh
 Source6: nfs-convert.service
-
-Patch001: nfs-utils.2.4.2-rc1.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -298,6 +296,7 @@ fi
 %{_sbindir}/nfsconf
 %{_sbindir}/nfsref
 %{_sbindir}/nfsconvert
+%{_sbindir}/clddb-tool
 %{_mandir}/*/*
 %{_pkgdir}/*/*
 
@@ -356,7 +355,6 @@ fi
 %{_mandir}/*/showmount.8.gz
 %{_mandir}/*/statd.8.gz
 %{_mandir}/*/umount.nfs.8.gz
-%{_mandir}/*/nfs.systemd.7.gz
 %{_pkgdir}/*/rpc-pipefs-generator
 %{_pkgdir}/*/auth-rpcgss-module.service
 %{_pkgdir}/*/nfs-client.target
@@ -366,7 +364,10 @@ fi
 %{_pkgdir}/*/var-lib-nfs-rpc_pipefs.mount
 
 %changelog
-* Tue Nov 05 2019 Christian Glombek <lorbus@fedoraproject.org> 2.4.1-2.rc1
+* Wed Nov 13 2019 Steve Dickson <steved@redhat.com> 2.4.2-0
+- Updated to the latest upstream release: 2.4.2 (bz 1772987)
+
+* Tue Nov 05 2019 Christian Glombek <lorbus@fedoraproject.org> 2.4.1-1.rc1
 - Added missing Requires and statd dirs to nfs-utils-coreos package (bz 1768897)
 
 * Thu Aug 29 2019 Steve Dickson <steved@redhat.com> 2.4.1-1.rc1
