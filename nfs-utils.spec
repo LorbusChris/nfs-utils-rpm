@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.4.2
-Release: 0%{?dist}
+Release: 1.rc2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -15,6 +15,8 @@ Source3: 24-nfs-server.conf
 Source4: nfsconvert.py
 Source5: nfsconvert.sh
 Source6: nfs-convert.service
+
+Patch001: nfs-utils.2.4.3-rc2.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -364,6 +366,9 @@ fi
 %{_pkgdir}/*/var-lib-nfs-rpc_pipefs.mount
 
 %changelog
+* Fri Nov 22 2019 Steve Dickson <steved@redhat.com> 2.4.2-1.rc2
+- Updated to the latest upstream RC release: nfs-utils-2-4-3-rc2 (bz 1772987)
+
 * Wed Nov 13 2019 Steve Dickson <steved@redhat.com> 2.4.2-0
 - Updated to the latest upstream release: 2.4.2 (bz 1772987)
 
