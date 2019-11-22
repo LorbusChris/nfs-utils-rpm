@@ -1,30 +1,176 @@
-commit d5e303461846a5c7282b819fb729760bef472d89
-Author: Joey Hess <joeyh@debian.org>
-Date:   Fri Nov 22 10:31:13 2019 -0500
-
-    mount: Do not overwrite /etc/mtab if it's symlink
-    
-    Some systems have /etc/mtab symlink to /proc/mounts. In that case
-    mount.nfs complains:
-    Can't set permissions on mtab: Operation not permitted
-    
-    See https://bugs.debian.org/476577
-    
-    This change makes mount.nfs handle symlinked /etc/mtab the way
-    umount.nfs and util- linux handle it.
-    
-    Cc: Chuck Lever <chuck.lever@oracle.com>
-    Signed-off-by: Joey Hess <joeyh@debian.org>
-    [ pvorel: took patch from Debian, rebased for 2.4.3-rc1 and created commit
-    message. Patch is also used in Gentoo. ]
-    Signed-off-by: Petr Vorel <petr.vorel@gmail.com>
-    Signed-off-by: Steve Dickson <steved@redhat.com>
-
+diff --git a/aclocal/kerberos5.m4 b/aclocal/kerberos5.m4
+index faa5804..bf0e88b 100644
+--- a/aclocal/kerberos5.m4
++++ b/aclocal/kerberos5.m4
+@@ -42,7 +42,9 @@ AC_DEFUN([AC_KERBEROS_V5],[
+                    -f $dir/lib32/libgssapi_krb5.a -o \
+                    -f $dir/lib32/libgssapi_krb5.so -o \
+                    -f $dir/lib64/libgssapi_krb5.a -o \
+-                   -f $dir/lib64/libgssapi_krb5.so \) ; then
++                   -f $dir/lib64/libgssapi_krb5.so -o \
++                   -f $dir/lib/$(uname -m)-linux-gnu/libgssapi_krb5.a -o \
++                   -f $dir/lib/$(uname -m)-linux-gnu/libgssapi_krb5.so \) ; then
+          AC_DEFINE(HAVE_KRB5, 1, [Define this if you have MIT Kerberos libraries])
+          KRBDIR="$dir"
+          gssapi_lib=gssapi_krb5
+diff --git a/configure.ac b/configure.ac
+index 9ba9d4b..949ff9f 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -510,6 +510,7 @@ AC_TYPE_PID_T
+ AC_TYPE_SIZE_T
+ AC_HEADER_TIME
+ AC_STRUCT_TM
++AC_CHECK_TYPES([struct file_handle])
+ 
+ dnl *************************************************************
+ dnl Check for functions
+diff --git a/support/junction/junction.c b/support/junction/junction.c
+index ab6caa6..41cce26 100644
+--- a/support/junction/junction.c
++++ b/support/junction/junction.c
+@@ -23,6 +23,10 @@
+  *	http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
+  */
+ 
++#ifdef HAVE_CONFIG_H
++#include <config.h>
++#endif
++
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ 
+diff --git a/support/junction/xml.c b/support/junction/xml.c
+index 7005e95..813110b 100644
+--- a/support/junction/xml.c
++++ b/support/junction/xml.c
+@@ -327,7 +327,7 @@ junction_parse_xml_read(const char *pathname, int fd, const char *name,
+ 	if (retval != FEDFS_OK)
+ 		return retval;
+ 
+-	xlog(D_CALL, "%s: XML document contained in junction:\n%ld.%s",
++	xlog(D_CALL, "%s: XML document contained in junction:\n%zu.%s",
+ 		__func__, len, (char *)buf);
+ 
+ 	retval = junction_parse_xml_buf(pathname, name, buf, len, doc);
+diff --git a/support/misc/file.c b/support/misc/file.c
+index e7c3819..06f6bb2 100644
+--- a/support/misc/file.c
++++ b/support/misc/file.c
+@@ -18,6 +18,10 @@
+  * along with nfs-utils.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
++#ifdef HAVE_CONFIG_H
++#include <config.h>
++#endif
++
+ #include <sys/stat.h>
+ 
+ #include <string.h>
+diff --git a/support/misc/mountpoint.c b/support/misc/mountpoint.c
+index c6217f2..14d6731 100644
+--- a/support/misc/mountpoint.c
++++ b/support/misc/mountpoint.c
+@@ -3,6 +3,10 @@
+  * check if a given path is a mountpoint 
+  */
+ 
++#ifdef HAVE_CONFIG_H
++#include <config.h>
++#endif
++
+ #include <string.h>
+ #include "xcommon.h"
+ #include <sys/stat.h>
+diff --git a/support/nfs/cacheio.c b/support/nfs/cacheio.c
+index 9dc4cf1..7c4cf37 100644
+--- a/support/nfs/cacheio.c
++++ b/support/nfs/cacheio.c
+@@ -15,6 +15,10 @@
+  *
+  */
+ 
++#ifdef HAVE_CONFIG_H
++#include <config.h>
++#endif
++
+ #include <nfslib.h>
+ #include <stdio.h>
+ #include <stdio_ext.h>
+diff --git a/support/nfs/nfs_mntent.c b/support/nfs/nfs_mntent.c
+index 05a4c68..25e5944 100644
+--- a/support/nfs/nfs_mntent.c
++++ b/support/nfs/nfs_mntent.c
+@@ -9,7 +9,7 @@
+  */
+ 
+ #include <stdio.h>
+-#include <string.h>		/* for index */
++#include <string.h>		/* for strchr */
+ #include <ctype.h>		/* for isdigit */
+ #include <sys/stat.h>		/* for umask */
+ #include <unistd.h>		/* for ftruncate */
+@@ -176,7 +176,7 @@ nfs_getmntent (mntFILE *mfp) {
+ 			return NULL;
+ 
+ 		mfp->mntent_lineno++;
+-		s = index (buf, '\n');
++		s = strchr (buf, '\n');
+ 		if (s == NULL) {
+ 			/* Missing final newline?  Otherwise extremely */
+ 			/* long line - assume file was corrupted */
+@@ -184,7 +184,7 @@ nfs_getmntent (mntFILE *mfp) {
+ 				fprintf(stderr, _("[mntent]: warning: no final "
+ 					"newline at the end of %s\n"),
+ 					mfp->mntent_file);
+-				s = index (buf, 0);
++				s = strchr (buf, 0);
+ 			} else {
+ 				mfp->mntent_errs = 1;
+ 				goto err;
+diff --git a/tools/locktest/testlk.c b/tools/locktest/testlk.c
+index b392f71..ea51f78 100644
+--- a/tools/locktest/testlk.c
++++ b/tools/locktest/testlk.c
+@@ -81,7 +81,7 @@ main(int argc, char **argv)
+ 		if (fl.l_type == F_UNLCK) {
+ 			printf("%s: no conflicting lock\n", fname);
+ 		} else {
+-			printf("%s: conflicting lock by %d on (%ld;%ld)\n",
++			printf("%s: conflicting lock by %d on (%zd;%zd)\n",
+ 				fname, fl.l_pid, fl.l_start, fl.l_len);
+ 		}
+ 		return 0;
+diff --git a/utils/mount/error.c b/utils/mount/error.c
+index 562f312..986f066 100644
+--- a/utils/mount/error.c
++++ b/utils/mount/error.c
+@@ -62,7 +62,7 @@ static int rpc_strerror(int spos)
+ 	char *tmp;
+ 
+ 	if (estr) {
+-		if ((ptr = index(estr, ':')))
++		if ((ptr = strchr(estr, ':')))
+ 			estr = ++ptr;
+ 
+ 		tmp = &errbuf[spos];
 diff --git a/utils/mount/fstab.c b/utils/mount/fstab.c
-index 8b0aaf1..146d8f4 100644
+index eedbdda..146d8f4 100644
 --- a/utils/mount/fstab.c
 +++ b/utils/mount/fstab.c
-@@ -61,7 +61,7 @@ mtab_does_not_exist(void) {
+@@ -7,6 +7,10 @@
+  * - Moved code to nfs-utils/support/nfs from util-linux/mount.
+  */
+ 
++#ifdef HAVE_CONFIG_H
++#include <config.h>
++#endif
++
+ #include <errno.h>
+ #include <stdio.h>
+ #include <fcntl.h>
+@@ -57,7 +61,7 @@ mtab_does_not_exist(void) {
  	return var_mtab_does_not_exist;
  }
  
@@ -46,7 +192,7 @@ index 313bf9b..8676c8c 100644
  int mtab_does_not_exist(void);
  void reset_mtab_info(void);
 diff --git a/utils/mount/mount.c b/utils/mount/mount.c
-index 91f1087..92a0dfe 100644
+index 91f1087..2be3dc2 100644
 --- a/utils/mount/mount.c
 +++ b/utils/mount/mount.c
 @@ -204,6 +204,13 @@ create_mtab (void) {
@@ -57,56 +203,62 @@ index 91f1087..92a0dfe 100644
 +	   that would create a file /proc/mounts in case the proc filesystem
 +	   is not mounted, and the fchmod below would also fail. */
 +	if (mtab_is_a_symlink()) {
-+		return EX_SUCCESS;
++		return;
 +	}
 +
  	lock_mtab();
  
  	mfp = nfs_setmntent (MOUNTED, "a+");
-
-commit f7c0c0dc4a02d87965d3fbbab69786ca07fdecea
-Author: Guillaume Rousse <guillomovitch@gmail.com>
-Date:   Fri Nov 22 10:20:03 2019 -0500
-
-    fix compilation with  -Werror=format on i586
-    
-    Signed-off-by: Steve Dickson <steved@redhat.com>
-
-diff --git a/support/junction/xml.c b/support/junction/xml.c
-index 7005e95..813110b 100644
---- a/support/junction/xml.c
-+++ b/support/junction/xml.c
-@@ -327,7 +327,7 @@ junction_parse_xml_read(const char *pathname, int fd, const char *name,
- 	if (retval != FEDFS_OK)
- 		return retval;
+diff --git a/utils/mountd/cache.c b/utils/mountd/cache.c
+index 3861f84..e5186c7 100644
+--- a/utils/mountd/cache.c
++++ b/utils/mountd/cache.c
+@@ -221,7 +221,7 @@ static void auth_unix_gid(int f)
+ 		xlog(L_ERROR, "auth_unix_gid: error writing reply");
+ }
  
--	xlog(D_CALL, "%s: XML document contained in junction:\n%ld.%s",
-+	xlog(D_CALL, "%s: XML document contained in junction:\n%zu.%s",
- 		__func__, len, (char *)buf);
- 
- 	retval = junction_parse_xml_buf(pathname, name, buf, len, doc);
-diff --git a/tools/locktest/testlk.c b/tools/locktest/testlk.c
-index b392f71..ea51f78 100644
---- a/tools/locktest/testlk.c
-+++ b/tools/locktest/testlk.c
-@@ -81,7 +81,7 @@ main(int argc, char **argv)
- 		if (fl.l_type == F_UNLCK) {
- 			printf("%s: no conflicting lock\n", fname);
- 		} else {
--			printf("%s: conflicting lock by %d on (%ld;%ld)\n",
-+			printf("%s: conflicting lock by %d on (%zd;%zd)\n",
- 				fname, fl.l_pid, fl.l_start, fl.l_len);
- 		}
+-#if USE_BLKID
++#ifdef USE_BLKID
+ static const char *get_uuid_blkdev(char *path)
+ {
+ 	/* We set *safe if we know that we need the
+@@ -446,7 +446,7 @@ static int same_path(char *child, char *parent, int len)
+ 	if (count_slashes(p) != count_slashes(parent))
  		return 0;
-
-commit a20dbec98f46c53596646cafca1051cf351ed3a4
-Author: Doug Nazar <nazard@nazar.ca>
-Date:   Fri Nov 22 10:17:38 2019 -0500
-
-    nfsdcld: Fix printf format strings on 32bit
-    
-    Signed-off-by: Steve Dickson <steved@redhat.com>
-
+ 
+-#if HAVE_NAME_TO_HANDLE_AT
++#if defined(HAVE_NAME_TO_HANDLE_AT) && defined(HAVE_STRUCT_FILE_HANDLE)
+ 	struct {
+ 		struct file_handle fh;
+ 		unsigned char handle[128];
+diff --git a/utils/mountd/fsloc.c b/utils/mountd/fsloc.c
+index cf42944..1b869b6 100644
+--- a/utils/mountd/fsloc.c
++++ b/utils/mountd/fsloc.c
+@@ -128,7 +128,7 @@ static struct servers *method_list(char *data)
+ 	bool v6esc = false;
+ 
+ 	xlog(L_NOTICE, "method_list(%s)", data);
+-	for (ptr--, listsize=1; ptr; ptr=index(ptr, ':'), listsize++)
++	for (ptr--, listsize=1; ptr; ptr=strchr(ptr, ':'), listsize++)
+ 		ptr++;
+ 	list = malloc(listsize * sizeof(char *));
+ 	copy = strdup(data);
+diff --git a/utils/nfsdcld/legacy.c b/utils/nfsdcld/legacy.c
+index 07f477a..3c6bea6 100644
+--- a/utils/nfsdcld/legacy.c
++++ b/utils/nfsdcld/legacy.c
+@@ -15,6 +15,10 @@
+  * Boston, MA 02110-1301, USA.
+  */
+ 
++#ifdef HAVE_CONFIG_H
++#include <config.h>
++#endif
++
+ #include <stdio.h>
+ #include <dirent.h>
+ #include <string.h>
 diff --git a/utils/nfsdcld/nfsdcld.c b/utils/nfsdcld/nfsdcld.c
 index b064336..9297df5 100644
 --- a/utils/nfsdcld/nfsdcld.c
@@ -205,217 +357,3 @@ index 23be797..09518e2 100644
  		__func__, current_epoch, recovery_epoch);
  
  out:
-
-commit 31bb484b22c220c561f3a95c3b7ca3ea9b96cc9b
-Author: Petr Vorel <petr.vorel@gmail.com>
-Date:   Mon Nov 18 11:27:19 2019 -0500
-
-    mountd: Fix compilation for --disable-uuid
-    
-    Although code in configure.ac pretends to set USE_BLKID as 0
-    via AC_DEFINE_UNQUOTED, it's actually not defined
-    support/include/config.h.in
-    support/include/config.h
-    /* #undef USE_BLKID */
-    
-    Fixes: 8e643554 ("Allow disabling of libblkid usage.")
-    
-    Signed-off-by: Petr Vorel <petr.vorel@gmail.com>
-    Signed-off-by: Steve Dickson <steved@redhat.com>
-
-diff --git a/utils/mountd/cache.c b/utils/mountd/cache.c
-index 31e9507..e5186c7 100644
---- a/utils/mountd/cache.c
-+++ b/utils/mountd/cache.c
-@@ -221,7 +221,7 @@ static void auth_unix_gid(int f)
- 		xlog(L_ERROR, "auth_unix_gid: error writing reply");
- }
- 
--#if USE_BLKID
-+#ifdef USE_BLKID
- static const char *get_uuid_blkdev(char *path)
- {
- 	/* We set *safe if we know that we need the
-
-commit f100d07d923b5db60d42dc2453485fa0dba69a79
-Author: Petr Vorel <petr.vorel@gmail.com>
-Date:   Mon Nov 18 08:58:36 2019 -0500
-
-    mountd: Add check for 'struct file_handle'
-    
-    From: Maxime Hadjinlian <maxime.hadjinlian@gmail.com>
-    
-    The code to check if name_to_handle_at() is implemented generates only a
-    warning but with some toolchain it doesn't fail to link (the function must be
-    implemented somewhere).
-    However the "struct file_handle" type is not available.
-    
-    So, this patch adds a check for this struct.
-    
-    Patch taken from buildroot distribution.
-    
-    Signed-off-by: Thomas Petazzoni <thomas.petazzoni@bootlin.com>
-    [ pvorel: rebased from nfs-utils-1-3-4 ]
-    Signed-off-by: Petr Vorel <petr.vorel@gmail.com>
-    Signed-off-by: Maxime Hadjinlian <maxime.hadjinlian@gmail.com>
-    Signed-off-by: Steve Dickson <steved@redhat.com>
-
-diff --git a/configure.ac b/configure.ac
-index 9ba9d4b..949ff9f 100644
---- a/configure.ac
-+++ b/configure.ac
-@@ -510,6 +510,7 @@ AC_TYPE_PID_T
- AC_TYPE_SIZE_T
- AC_HEADER_TIME
- AC_STRUCT_TM
-+AC_CHECK_TYPES([struct file_handle])
- 
- dnl *************************************************************
- dnl Check for functions
-diff --git a/utils/mountd/cache.c b/utils/mountd/cache.c
-index 3861f84..31e9507 100644
---- a/utils/mountd/cache.c
-+++ b/utils/mountd/cache.c
-@@ -446,7 +446,7 @@ static int same_path(char *child, char *parent, int len)
- 	if (count_slashes(p) != count_slashes(parent))
- 		return 0;
- 
--#if HAVE_NAME_TO_HANDLE_AT
-+#if defined(HAVE_NAME_TO_HANDLE_AT) && defined(HAVE_STRUCT_FILE_HANDLE)
- 	struct {
- 		struct file_handle fh;
- 		unsigned char handle[128];
-
-commit 55185d07ead736fb2cb9e6ec5ae5caba42a7f056
-Author: Petr Vorel <petr.vorel@gmail.com>
-Date:   Mon Nov 18 08:51:40 2019 -0500
-
-    autoconf: Add Debian paths for Kerberos v5 with GSS
-    
-    Debian stores it's shared libraries in
-    /usr/lib/$(uname -m)-linux-gnu
-    
-    Signed-off-by: Petr Vorel <petr.vorel@gmail.com>
-    Signed-off-by: Steve Dickson <steved@redhat.com>
-
-diff --git a/aclocal/kerberos5.m4 b/aclocal/kerberos5.m4
-index faa5804..bf0e88b 100644
---- a/aclocal/kerberos5.m4
-+++ b/aclocal/kerberos5.m4
-@@ -42,7 +42,9 @@ AC_DEFUN([AC_KERBEROS_V5],[
-                    -f $dir/lib32/libgssapi_krb5.a -o \
-                    -f $dir/lib32/libgssapi_krb5.so -o \
-                    -f $dir/lib64/libgssapi_krb5.a -o \
--                   -f $dir/lib64/libgssapi_krb5.so \) ; then
-+                   -f $dir/lib64/libgssapi_krb5.so -o \
-+                   -f $dir/lib/$(uname -m)-linux-gnu/libgssapi_krb5.a -o \
-+                   -f $dir/lib/$(uname -m)-linux-gnu/libgssapi_krb5.so \) ; then
-          AC_DEFINE(HAVE_KRB5, 1, [Define this if you have MIT Kerberos libraries])
-          KRBDIR="$dir"
-          gssapi_lib=gssapi_krb5
-
-commit 1378280398ef9f5cd45f5542ae2945b9a360b132
-Author: Doug Nazar <nazard@nazar.ca>
-Date:   Sun Nov 17 14:31:33 2019 -0500
-
-    Ensure consistent struct stat definition
-    
-    Although 2fbc62e2a13fc ("Fix include order between config.h and stat.h")
-    reorganized those files that were already including config.h, not all
-    files were including config.h.
-    
-    Fixes at least stack smashing crashes in mountd on 32-bit systems.
-    
-    Signed-off-by: Doug Nazar <nazard@nazar.ca>
-    Signed-off-by: Steve Dickson <steved@redhat.com>
-
-diff --git a/support/junction/junction.c b/support/junction/junction.c
-index ab6caa6..41cce26 100644
---- a/support/junction/junction.c
-+++ b/support/junction/junction.c
-@@ -23,6 +23,10 @@
-  *	http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
-  */
- 
-+#ifdef HAVE_CONFIG_H
-+#include <config.h>
-+#endif
-+
- #include <sys/types.h>
- #include <sys/stat.h>
- 
-diff --git a/support/misc/file.c b/support/misc/file.c
-index e7c3819..06f6bb2 100644
---- a/support/misc/file.c
-+++ b/support/misc/file.c
-@@ -18,6 +18,10 @@
-  * along with nfs-utils.  If not, see <http://www.gnu.org/licenses/>.
-  */
- 
-+#ifdef HAVE_CONFIG_H
-+#include <config.h>
-+#endif
-+
- #include <sys/stat.h>
- 
- #include <string.h>
-diff --git a/support/misc/mountpoint.c b/support/misc/mountpoint.c
-index c6217f2..14d6731 100644
---- a/support/misc/mountpoint.c
-+++ b/support/misc/mountpoint.c
-@@ -3,6 +3,10 @@
-  * check if a given path is a mountpoint 
-  */
- 
-+#ifdef HAVE_CONFIG_H
-+#include <config.h>
-+#endif
-+
- #include <string.h>
- #include "xcommon.h"
- #include <sys/stat.h>
-diff --git a/support/nfs/cacheio.c b/support/nfs/cacheio.c
-index 9dc4cf1..7c4cf37 100644
---- a/support/nfs/cacheio.c
-+++ b/support/nfs/cacheio.c
-@@ -15,6 +15,10 @@
-  *
-  */
- 
-+#ifdef HAVE_CONFIG_H
-+#include <config.h>
-+#endif
-+
- #include <nfslib.h>
- #include <stdio.h>
- #include <stdio_ext.h>
-diff --git a/utils/mount/fstab.c b/utils/mount/fstab.c
-index eedbdda..8b0aaf1 100644
---- a/utils/mount/fstab.c
-+++ b/utils/mount/fstab.c
-@@ -7,6 +7,10 @@
-  * - Moved code to nfs-utils/support/nfs from util-linux/mount.
-  */
- 
-+#ifdef HAVE_CONFIG_H
-+#include <config.h>
-+#endif
-+
- #include <errno.h>
- #include <stdio.h>
- #include <fcntl.h>
-diff --git a/utils/nfsdcld/legacy.c b/utils/nfsdcld/legacy.c
-index 07f477a..3c6bea6 100644
---- a/utils/nfsdcld/legacy.c
-+++ b/utils/nfsdcld/legacy.c
-@@ -15,6 +15,10 @@
-  * Boston, MA 02110-1301, USA.
-  */
- 
-+#ifdef HAVE_CONFIG_H
-+#include <config.h>
-+#endif
-+
- #include <stdio.h>
- #include <dirent.h>
- #include <string.h>
