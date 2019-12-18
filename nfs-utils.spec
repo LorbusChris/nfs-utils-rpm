@@ -24,6 +24,7 @@ Patch102: nfs-utils-1.2.5-idmap-errmsg.patch
 Patch103: nfs-utils-2.3.1-systemd-gssproxy-restart.patch
 Patch104: nfs-utils-2.3.3-man-tcpwrappers.patch
 Patch105: nfs-utils-2.3.3-nfsconf-usegssproxy.patch
+Patch106: nfs-utils-2.4.2-systemd-svcgssd.patch
 
 Provides: exportfs    = %{epoch}:%{version}-%{release}
 Provides: nfsstat     = %{epoch}:%{version}-%{release}
@@ -371,6 +372,7 @@ fi
 
 * Wed Dec 18 2019 Steve Dickson <steved@redhat.com> 2.4.2-3.rc3
 - Updated to the latest upstream RC release: nfs-utils-2-4-3-rc3 (bz 1782349)
+- Remove rpc-svcgssd from auth-rpcgss-module (bz 1662737)
 
 * Fri Nov 22 2019 Steve Dickson <steved@redhat.com> 2.4.2-2.rc2
 -  mount: Fix return 0 from void function
