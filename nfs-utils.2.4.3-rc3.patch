@@ -14,7 +14,7 @@ index faa5804..bf0e88b 100644
           KRBDIR="$dir"
           gssapi_lib=gssapi_krb5
 diff --git a/configure.ac b/configure.ac
-index 9ba9d4b..949ff9f 100644
+index 9ba9d4b..e969975 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -510,6 +510,7 @@ AC_TYPE_PID_T
@@ -25,6 +25,31 @@ index 9ba9d4b..949ff9f 100644
  
  dnl *************************************************************
  dnl Check for functions
+@@ -533,11 +534,23 @@ AC_FUNC_STAT
+ AC_FUNC_VPRINTF
+ AC_CHECK_FUNCS([alarm atexit dup2 fdatasync ftruncate getcwd \
+                gethostbyaddr gethostbyname gethostname getmntent \
+-               getnameinfo getrpcbyname getrpcbynumber getrpcbynumber_r getifaddrs \
++               getnameinfo getrpcbyname getifaddrs \
+                gettimeofday hasmntopt inet_ntoa innetgr memset mkdir pathconf \
+                ppoll realpath rmdir select socket strcasecmp strchr strdup \
+                strerror strrchr strtol strtoul sigprocmask name_to_handle_at])
+ 
++save_CFLAGS=$CFLAGS
++save_LIBS=$LIBS
++CFLAGS="$CFLAGS $AM_CPPFLAGS"
++LIBS="$LIBS $LIBTIRPC"
++AC_CHECK_FUNCS([getrpcbynumber getrpcbynumber_r])
++CFLAGS=$save_CFLAGS
++LIBS=$save_LIBS
++
++if test "$ac_cv_func_getrpcbynumber_r" != "yes" -a "$ac_cv_func_getrpcbynumber" != "yes"; then
++   AC_MSG_ERROR([Neither getrpcbynumber_r nor getrpcbynumber are available])
++fi
++
+ dnl *************************************************************
+ dnl Check for data sizes
+ dnl *************************************************************
 diff --git a/support/junction/junction.c b/support/junction/junction.c
 index ab6caa6..41cce26 100644
 --- a/support/junction/junction.c
@@ -83,6 +108,20 @@ index c6217f2..14d6731 100644
  #include <string.h>
  #include "xcommon.h"
  #include <sys/stat.h>
+diff --git a/support/misc/xstat.c b/support/misc/xstat.c
+index 661e29e..a438fbc 100644
+--- a/support/misc/xstat.c
++++ b/support/misc/xstat.c
+@@ -51,6 +51,9 @@ statx_do_stat(int fd, const char *pathname, struct stat *statbuf, int flags)
+ 			statx_copy(statbuf, &stxbuf);
+ 			return 0;
+ 		}
++		/* glibc emulation doesn't support AT_STATX_DONT_SYNC */
++		if (errno == EINVAL)
++			errno = ENOSYS;
+ 		if (errno == ENOSYS)
+ 			statx_supported = 0;
+ 	} else
 diff --git a/support/nfs/cacheio.c b/support/nfs/cacheio.c
 index 9dc4cf1..7c4cf37 100644
 --- a/support/nfs/cacheio.c
@@ -129,6 +168,22 @@ index 05a4c68..25e5944 100644
  			} else {
  				mfp->mntent_errs = 1;
  				goto err;
+diff --git a/systemd/Makefile.am b/systemd/Makefile.am
+index 590258a..75cdd9f 100644
+--- a/systemd/Makefile.am
++++ b/systemd/Makefile.am
+@@ -36,6 +36,11 @@ unit_files += \
+ endif
+ endif
+ 
++if CONFIG_NFSDCLD
++unit_files += \
++    nfsdcld.service
++endif
++
+ man5_MANS	= nfs.conf.man
+ man7_MANS	= nfs.systemd.man
+ EXTRA_DIST = $(unit_files) $(man5_MANS) $(man7_MANS)
 diff --git a/tools/locktest/testlk.c b/tools/locktest/testlk.c
 index b392f71..ea51f78 100644
 --- a/tools/locktest/testlk.c
@@ -142,6 +197,55 @@ index b392f71..ea51f78 100644
  				fname, fl.l_pid, fl.l_start, fl.l_len);
  		}
  		return 0;
+diff --git a/utils/gssd/krb5_util.c b/utils/gssd/krb5_util.c
+index 0474783..bff759f 100644
+--- a/utils/gssd/krb5_util.c
++++ b/utils/gssd/krb5_util.c
+@@ -121,6 +121,9 @@
+ #include <krb5.h>
+ #include <rpc/auth_gss.h>
+ 
++#include <sys/types.h>
++#include <fcntl.h>
++
+ #include "nfslib.h"
+ #include "gssd.h"
+ #include "err_util.h"
+@@ -314,6 +317,25 @@ gssd_find_existing_krb5_ccache(uid_t uid, char *dirname,
+ 	return err;
+ }
+ 
++/* check if the ticket cache exists, if not set nocache=1 so that new
++ * tgt is gotten
++ */
++static int
++gssd_check_if_cc_exists(struct gssd_k5_kt_princ *ple)
++{
++	int fd;
++	char cc_name[BUFSIZ];
++
++	snprintf(cc_name, sizeof(cc_name), "%s/%s%s_%s",
++		ccachesearch[0], GSSD_DEFAULT_CRED_PREFIX,
++		GSSD_DEFAULT_MACHINE_CRED_SUFFIX, ple->realm);
++	fd = open(cc_name, O_RDONLY);
++	if (fd < 0)
++		return 1;
++	close(fd);
++	return 0;
++}
++
+ /*
+  * Obtain credentials via a key in the keytab given
+  * a keytab handle and a gssd_k5_kt_princ structure.
+@@ -348,6 +370,8 @@ gssd_get_single_krb5_cred(krb5_context context,
+ 
+ 	memset(&my_creds, 0, sizeof(my_creds));
+ 
++	if (!nocache && !use_memcache)
++		nocache = gssd_check_if_cc_exists(ple);
+ 	/*
+ 	 * Workaround for clock skew among NFS server, NFS client and KDC
+ 	 * 300 because clock skew must be within 300sec for kerberos
 diff --git a/utils/mount/error.c b/utils/mount/error.c
 index 562f312..986f066 100644
 --- a/utils/mount/error.c
@@ -244,6 +348,20 @@ index cf42944..1b869b6 100644
  		ptr++;
  	list = malloc(listsize * sizeof(char *));
  	copy = strdup(data);
+diff --git a/utils/nfsdcld/Makefile.am b/utils/nfsdcld/Makefile.am
+index 2c4e5a1..273d64f 100644
+--- a/utils/nfsdcld/Makefile.am
++++ b/utils/nfsdcld/Makefile.am
+@@ -1,9 +1,5 @@
+ ## Process this file with automake to produce Makefile.in
+ 
+-# These binaries go in /sbin (not /usr/sbin), and that cannot be
+-# overridden at config time. The kernel "knows" the /sbin name.
+-sbindir = /sbin
+-
+ man8_MANS	= nfsdcld.man
+ EXTRA_DIST	= $(man8_MANS)
+ 
 diff --git a/utils/nfsdcld/legacy.c b/utils/nfsdcld/legacy.c
 index 07f477a..3c6bea6 100644
 --- a/utils/nfsdcld/legacy.c
@@ -260,7 +378,7 @@ index 07f477a..3c6bea6 100644
  #include <dirent.h>
  #include <string.h>
 diff --git a/utils/nfsdcld/nfsdcld.c b/utils/nfsdcld/nfsdcld.c
-index b064336..9297df5 100644
+index b064336..2ad1001 100644
 --- a/utils/nfsdcld/nfsdcld.c
 +++ b/utils/nfsdcld/nfsdcld.c
 @@ -378,7 +378,7 @@ cld_not_implemented(struct cld_client *clnt)
@@ -326,6 +444,15 @@ index b064336..9297df5 100644
  			 __func__, wsize);
  		ret = cld_pipe_open(clnt);
  		if (ret) {
+@@ -737,7 +737,7 @@ out:
+ int
+ main(int argc, char **argv)
+ {
+-	char arg;
++	int arg;
+ 	int rc = 0;
+ 	bool foreground = false;
+ 	char *progname;
 diff --git a/utils/nfsdcld/sqlite.c b/utils/nfsdcld/sqlite.c
 index 23be797..09518e2 100644
 --- a/utils/nfsdcld/sqlite.c

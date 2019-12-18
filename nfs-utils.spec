@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.4.2
-Release: 2.rc2%{?dist}.1
+Release: 3.rc3%{?dist}.1
 Epoch: 1
 
 # group all 32bit related archs
@@ -16,7 +16,7 @@ Source4: nfsconvert.py
 Source5: nfsconvert.sh
 Source6: nfs-convert.service
 
-Patch001: nfs-utils.2.4.3-rc2.patch
+Patch001: nfs-utils.2.4.3-rc3.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -298,6 +298,7 @@ fi
 %{_sbindir}/nfsconf
 %{_sbindir}/nfsref
 %{_sbindir}/nfsconvert
+%{_sbindir}/nfsdcld
 %{_sbindir}/clddb-tool
 %{_mandir}/*/*
 %{_pkgdir}/*/*
@@ -308,7 +309,6 @@ fi
 /sbin/mount.nfs4
 /sbin/umount.nfs
 /sbin/umount.nfs4
-/sbin/nfsdcld
 
 %files -n libnfsidmap
 %doc support/nfsidmap/AUTHORS support/nfsidmap/README support/nfsidmap/COPYING
@@ -366,8 +366,11 @@ fi
 %{_pkgdir}/*/var-lib-nfs-rpc_pipefs.mount
 
 %changelog
-* Wed Jan 29 2020 Fedora Release Engineering <releng@fedoraproject.org> - 1:2.4.2-2.rc2.1
+* Wed Jan 29 2020 Fedora Release Engineering <releng@fedoraproject.org> - 1:2.4.2-3.rc3.1
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_32_Mass_Rebuild
+
+* Wed Dec 18 2019 Steve Dickson <steved@redhat.com> 2.4.2-3.rc3
+- Updated to the latest upstream RC release: nfs-utils-2-4-3-rc3 (bz 1782349)
 
 * Fri Nov 22 2019 Steve Dickson <steved@redhat.com> 2.4.2-2.rc2
 -  mount: Fix return 0 from void function
