@@ -17,6 +17,7 @@ Source5: nfsconvert.sh
 Source6: nfs-convert.service
 
 Patch001: nfs-utils.2.4.3-rc3.patch
+Patch002: nfs-utils-2.4.2-libnfsidmap-verbose.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -370,9 +371,10 @@ fi
 * Wed Jan 29 2020 Fedora Release Engineering <releng@fedoraproject.org> - 1:2.4.2-3.rc3.1
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_32_Mass_Rebuild
 
-* Wed Dec 18 2019 Steve Dickson <steved@redhat.com> 2.4.2-3.rc3
+* Thu Dec 19 2019 Steve Dickson <steved@redhat.com> 2.4.2-3.rc3
 - Updated to the latest upstream RC release: nfs-utils-2-4-3-rc3 (bz 1782349)
 - Remove rpc-svcgssd from auth-rpcgss-module (bz 1662737)
+- libnfsidmap: Turn off default verbosity (bz 1774787)
 
 * Fri Nov 22 2019 Steve Dickson <steved@redhat.com> 2.4.2-2.rc2
 -  mount: Fix return 0 from void function
