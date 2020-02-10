@@ -315,7 +315,6 @@ fi
 %{_libdir}/libnfsidmap.so.*
 %{_libdir}/libnfsidmap/*.so
 %{_mandir}/man3/nfs4_uid_to_name.*
-%{_mandir}/man5/idmapd.conf.*
 
 %files -n libnfsidmap-devel
 %{_libdir}/pkgconfig/libnfsidmap.pc
@@ -368,6 +367,7 @@ fi
 * Mon Feb 10 2020 Steve Dickson <steved@redhat.com> 2.4.3-0
 - Updated to latest upstream release: nfs-utils-2-4-3 (bz 1787831)
 - Fix error in preuninstall scriptlet (bz 1785816)
+- Fix update conflicts (bz 1724305)
 
 * Wed Jan 29 2020 Fedora Release Engineering <releng@fedoraproject.org> - 1:2.4.2-3.rc3.1
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_32_Mass_Rebuild
