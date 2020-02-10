@@ -244,7 +244,7 @@ fi
 %preun
 if [ $1 -eq 0 ]; then
 	%systemd_preun nfs-client.target
-	%systemd_preun nfs-server.server
+	%systemd_preun nfs-server.service
 
     rm -rf /var/lib/nfs/statd
     rm -rf /var/lib/nfs/v4recovery
@@ -365,8 +365,9 @@ fi
 %{_pkgdir}/*/var-lib-nfs-rpc_pipefs.mount
 
 %changelog
-* Sat Feb 08 2020 Steve Dickson <steved@redhat.com> 2.4.3-0
+* Mon Feb 10 2020 Steve Dickson <steved@redhat.com> 2.4.3-0
 - Updated to latest upstream release: nfs-utils-2-4-3 (bz 1787831)
+- Fix error in preuninstall scriptlet (bz 1785816)
 
 * Wed Jan 29 2020 Fedora Release Engineering <releng@fedoraproject.org> - 1:2.4.2-3.rc3.1
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_32_Mass_Rebuild
