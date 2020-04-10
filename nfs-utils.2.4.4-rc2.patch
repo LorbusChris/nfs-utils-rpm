@@ -1,0 +1,336 @@
+diff --git a/support/nfs/conffile.c b/support/nfs/conffile.c
+index d55bfe1..3d13610 100644
+--- a/support/nfs/conffile.c
++++ b/support/nfs/conffile.c
+@@ -429,9 +429,9 @@ conf_parse_line(int trans, char *line, const char *filename, int lineno, char **
+ 
+ 		subconf = conf_readfile(relpath);
+ 		if (subconf == NULL) {
+-			xlog_warn("config error at %s:%d: "
+-				"error loading included config",
+-				  filename, lineno);
++			if (!optional)
++				xlog_warn("config error at %s:%d: error loading included config",
++					  filename, lineno);
+ 			if (relpath)
+ 				free(relpath);
+ 			return;
+diff --git a/utils/exportfs/exports.man b/utils/exportfs/exports.man
+index e3a16f6..1d17184 100644
+--- a/utils/exportfs/exports.man
++++ b/utils/exportfs/exports.man
+@@ -494,6 +494,33 @@ export entry for
+ .B /home/joe
+ in the example section below, which maps all requests to uid 150 (which
+ is supposedly that of user joe).
++
++.SS Subdirectory Exports
++
++Normally you should only export only the root of a filesystem.  The NFS
++server will also allow you to export a subdirectory of a filesystem,
++however, this has drawbacks:
++
++First, it may be possible for a malicious user to access files on the
++filesystem outside of the exported subdirectory, by guessing filehandles
++for those other files.  The only way to prevent this is by using the
++.IR no_subtree_check
++option, which can cause other problems.
++
++Second, export options may not be enforced in the way that you would
++expect.  For example, the
++.IR security_label
++option will not work on subdirectory exports, and if nested subdirectory
++exports change the
++.IR security_label
++or
++.IR sec=
++options, NFSv4 clients will normally see only the options on the parent
++export.  Also, where security options differ, a malicious client may use
++filehandle-guessing attacks to access the files from one subdirectory
++using the options from another.
++
++
+ .SS Extra Export Tables
+ After reading 
+ .I /etc/exports 
+diff --git a/utils/exportfs/nfsd.man b/utils/exportfs/nfsd.man
+index 9efa29f..514153f 100644
+--- a/utils/exportfs/nfsd.man
++++ b/utils/exportfs/nfsd.man
+@@ -13,14 +13,8 @@ nfsd \- special filesystem for controlling Linux NFS server
+ The
+ .B nfsd
+ filesystem is a special filesystem which provides access to the Linux
+-NFS server.  The filesystem consists of a single directory which
+-contains a number of files.  These files are actually gateways into
+-the NFS server.  Writing to them can affect the server.  Reading from
+-them can provide information about the server.
+-.P
+-This file system is only available in Linux 2.6 and later series
+-kernels (and in the later parts of the 2.5 development series leading
+-up to 2.6).  This man page does not apply to 2.4 and earlier.
++NFS server.  Writing to files in this filesystem can affect the server.
++Reading from them can provide information about the server.
+ .P
+ As well as this filesystem, there are a collection of files in the
+ .B procfs
+@@ -38,13 +32,10 @@ filesystem mounted at
+ .B /proc/fs/nfsd
+ or
+ .BR /proc/fs/nfs .
+-If it is not mounted, they will fall-back on 2.4 style functionality.
+-This involves accessing the NFS server via a systemcall.  This
+-systemcall is scheduled to be removed after the 2.6 kernel series.
+ .SH DETAILS
+-The three files in the
++Files in the
+ .B nfsd
+-filesystem are:
++filesystem include:
+ .TP
+ .B exports
+ This file contains a list of filesystems that are currently exported
+@@ -90,6 +81,16 @@ for that path as exported to the given client.  The filehandle's length
+ will be at most the number of bytes given.
+ 
+ The filehandle will be represented in hex with a leading '\ex'.
++
++.TP
++.B clients/
++This directory contains a subdirectory for each NFSv4 client.  Each file
++under that subdirectory gives some details about the client in YAML
++format.  In addition, writing "expire\\n" to the
++.B ctl
++file will force the server to immediately revoke all state held by that
++client.
++
+ .PP
+ The directory
+ .B /proc/net/rpc
+@@ -191,6 +192,16 @@ number represents a bit-pattern where bits that are set cause certain
+ classes of tracing to be enabled.  Consult the kernel header files to
+ find out what number correspond to what tracing.
+ 
++.SH NOTES
++This file system is only available in Linux 2.6 and later series
++kernels (and in the later parts of the 2.5 development series leading
++up to 2.6).  This man page does not apply to 2.4 and earlier.
++.P
++Previously the nfsctl systemcall was used for communication between nfsd
++and user utilities.  That systemcall was removed in kernel version 3.1.
++Older nfs-utils versions were able to fall back to nfsctl if necessary;
++that was removed from nfs-utils 1.3.5.
++
+ .SH SEE ALSO
+ .BR nfsd (8),
+ .BR rpc.nfsd (8),
+diff --git a/utils/gssd/gssd.c b/utils/gssd/gssd.c
+index c38dedb..588da0f 100644
+--- a/utils/gssd/gssd.c
++++ b/utils/gssd/gssd.c
+@@ -493,8 +493,8 @@ gssd_get_clnt(struct topdir *tdi, const char *name)
+ 	clp->wd = inotify_add_watch(inotify_fd, clp->relpath, IN_CREATE | IN_DELETE);
+ 	if (clp->wd < 0) {
+ 		if (errno != ENOENT)
+-			printerr(0, "ERROR: inotify_add_watch failed for %s: %s\n",
+-			 	clp->relpath, strerror(errno));
++			printerr(0, "ERROR: %s: inotify_add_watch failed for %s: %s\n",
++			 	__FUNCTION__, clp->relpath, strerror(errno));
+ 		goto out;
+ 	}
+ 
+@@ -523,8 +523,9 @@ gssd_scan_clnt(struct clnt_info *clp)
+ 
+ 	clntfd = openat(pipefs_fd, clp->relpath, O_RDONLY);
+ 	if (clntfd < 0) {
+-		printerr(0, "ERROR: can't openat %s: %s\n",
+-			 clp->relpath, strerror(errno));
++		if (errno != ENOENT)
++			printerr(0, "ERROR: %s: can't openat %s: %s\n",
++			 	__FUNCTION__, clp->relpath, strerror(errno));
+ 		return -1;
+ 	}
+ 
+@@ -588,8 +589,8 @@ gssd_get_topdir(const char *name)
+ 
+ 	tdi->wd = inotify_add_watch(inotify_fd, name, IN_CREATE);
+ 	if (tdi->wd < 0) {
+-		printerr(0, "ERROR: inotify_add_watch failed for top dir %s: %s\n",
+-			 tdi->name, strerror(errno));
++		printerr(0, "ERROR: %s: inotify_add_watch failed for top dir %s: %s\n",
++			 __FUNCTION__, tdi->name, strerror(errno));
+ 		free(tdi);
+ 		return NULL;
+ 	}
+@@ -616,8 +617,9 @@ gssd_scan_topdir(const char *name)
+ 
+ 	dfd = openat(pipefs_fd, tdi->name, O_RDONLY);
+ 	if (dfd < 0) {
+-		printerr(0, "ERROR: can't openat %s: %s\n",
+-			 tdi->name, strerror(errno));
++		if (errno != ENOENT)
++			printerr(0, "ERROR: %s: can't openat %s: %s\n",
++			 	__FUNCTION__, tdi->name, strerror(errno));
+ 		return;
+ 	}
+ 
+diff --git a/utils/gssd/krb5_util.c b/utils/gssd/krb5_util.c
+index a1c43d2..8c73748 100644
+--- a/utils/gssd/krb5_util.c
++++ b/utils/gssd/krb5_util.c
+@@ -484,7 +484,7 @@ gssd_get_single_krb5_cred(krb5_context context,
+ 	if (ccache)
+ 		krb5_cc_close(context, ccache);
+ 	krb5_free_cred_contents(context, &my_creds);
+-	free(k5err);
++	krb5_free_string(context, k5err);
+ 	return (code);
+ }
+ 
+@@ -723,7 +723,7 @@ gssd_search_krb5_keytab(krb5_context context, krb5_keytab kt,
+ 				 "we failed to unparse principal name: %s\n",
+ 				 k5err);
+ 			k5_free_kt_entry(context, kte);
+-			free(k5err);
++			krb5_free_string(context, k5err);
+ 			k5err = NULL;
+ 			continue;
+ 		}
+@@ -770,7 +770,7 @@ gssd_search_krb5_keytab(krb5_context context, krb5_keytab kt,
+ 	if (retval < 0)
+ 		retval = 0;
+   out:
+-	free(k5err);
++	krb5_free_string(context, k5err);
+ 	return retval;
+ }
+ 
+@@ -799,7 +799,7 @@ find_keytab_entry(krb5_context context, krb5_keytab kt,
+ 	int tried_all = 0, tried_default = 0, tried_upper = 0;
+ 	krb5_principal princ;
+ 	const char *notsetstr = "not set";
+-	char *adhostoverride;
++	char *adhostoverride = NULL;
+ 
+ 
+ 	/* Get full target hostname */
+@@ -827,7 +827,6 @@ find_keytab_entry(krb5_context context, krb5_keytab kt,
+ 				adhostoverride);
+ 	        /* No overflow: Windows cannot handle strings longer than 19 chars */
+ 	        strcpy(myhostad, adhostoverride);
+-		free(adhostoverride);
+ 	} else {
+ 	        strcpy(myhostad, myhostname);
+ 	        for (i = 0; myhostad[i] != 0; ++i) {
+@@ -836,6 +835,8 @@ find_keytab_entry(krb5_context context, krb5_keytab kt,
+ 	        myhostad[i] = '$';
+ 	        myhostad[i+1] = 0;
+ 	}
++	if (adhostoverride)
++		krb5_free_string(context, adhostoverride);
+ 
+ 	if (!srchost) {
+ 		retval = get_full_hostname(myhostname, myhostname, sizeof(myhostname));
+@@ -926,7 +927,7 @@ find_keytab_entry(krb5_context context, krb5_keytab kt,
+ 				k5err = gssd_k5_err_msg(context, code);
+ 				printerr(1, "%s while building principal for '%s'\n",
+ 					 k5err, spn);
+-				free(k5err);
++				krb5_free_string(context, k5err);
+ 				k5err = NULL;
+ 				continue;
+ 			}
+@@ -936,7 +937,7 @@ find_keytab_entry(krb5_context context, krb5_keytab kt,
+ 				k5err = gssd_k5_err_msg(context, code);
+ 				printerr(3, "%s while getting keytab entry for '%s'\n",
+ 					 k5err, spn);
+-				free(k5err);
++				krb5_free_string(context, k5err);
+ 				k5err = NULL;
+ 				/*
+ 				 * We tried the active directory machine account
+@@ -985,7 +986,7 @@ out:
+ 		k5_free_default_realm(context, default_realm);
+ 	if (realmnames)
+ 		krb5_free_host_realm(context, realmnames);
+-	free(k5err);
++	krb5_free_string(context, k5err);
+ 	return retval;
+ }
+ 
+@@ -1248,7 +1249,7 @@ gssd_destroy_krb5_machine_creds(void)
+ 			printerr(0, "WARNING: %s while resolving credential "
+ 				    "cache '%s' for destruction\n", k5err,
+ 				    ple->ccname);
+-			free(k5err);
++			krb5_free_string(context, k5err);
+ 			k5err = NULL;
+ 			continue;
+ 		}
+@@ -1257,13 +1258,13 @@ gssd_destroy_krb5_machine_creds(void)
+ 			k5err = gssd_k5_err_msg(context, code);
+ 			printerr(0, "WARNING: %s while destroying credential "
+ 				    "cache '%s'\n", k5err, ple->ccname);
+-			free(k5err);
++			krb5_free_string(context, k5err);
+ 			k5err = NULL;
+ 		}
+ 	}
+ 	krb5_free_context(context);
+   out:
+-	free(k5err);
++	krb5_free_string(context, k5err);
+ }
+ 
+ /*
+@@ -1346,7 +1347,7 @@ out_free_kt:
+ out_free_context:
+ 	krb5_free_context(context);
+ out:
+-	free(k5err);
++	krb5_free_string(context, k5err);
+ 	return retval;
+ }
+ 
+diff --git a/utils/mount/error.c b/utils/mount/error.c
+index 986f066..73295bf 100644
+--- a/utils/mount/error.c
++++ b/utils/mount/error.c
+@@ -210,8 +210,7 @@ void mount_error(const char *spec, const char *mount_point, int error)
+ 		nfs_error(_("%s: an incorrect mount option was specified"), progname);
+ 		break;
+ 	case EOPNOTSUPP:
+-		nfs_error(_("%s: requested NFS version or transport"
+-				" protocol is not supported"),
++		nfs_error(_("%s: requested NFS version or transport protocol is not supported"),
+ 				progname);
+ 		break;
+ 	case ENOTDIR:
+diff --git a/utils/mount/mount.c b/utils/mount/mount.c
+index 2be3dc2..b98f9e0 100644
+--- a/utils/mount/mount.c
++++ b/utils/mount/mount.c
+@@ -393,11 +393,6 @@ int main(int argc, char *argv[])
+ 	if(!strncmp(progname, "umount", strlen("umount")))
+ 		exit(nfsumount(argc, argv));
+ 
+-	if ((argc < 3)) {
+-		mount_usage();
+-		exit(EX_USAGE);
+-	}
+-
+ 	mount_config_init(progname);
+ 
+ 	while ((c = getopt_long(argc, argv, "rvVwfno:hs",
+@@ -437,6 +432,11 @@ int main(int argc, char *argv[])
+ 		}
+ 	}
+ 
++	if ((argc < 3)) {
++		mount_usage();
++		exit(EX_USAGE);
++	}
++
+ 	/*
+ 	 * Extra non-option words at the end are bogus...
+ 	 */
