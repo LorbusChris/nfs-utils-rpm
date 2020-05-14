@@ -366,7 +366,7 @@ fi
 %{_pkgdir}/*/var-lib-nfs-rpc_pipefs.mount
 
 %changelog
-* Tue 07 Apr 2020 01:14:19 PM EDT
+* Tue Apr 07 2020 Steve Dickson <steved@redhat.com> 2.4.3-1.rc2
 - Updated to the latest RC release: nfs-utils-2-4-4-rc2 (bz 1807999)
 
 * Tue Mar 03 2020 Steve Dickson <steved@redhat.com> 2.4.3-1.rc1
