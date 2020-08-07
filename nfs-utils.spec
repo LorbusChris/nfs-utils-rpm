@@ -198,8 +198,6 @@ done
 cat /etc/group | cut -d':' -f 1 | grep --quiet rpcuser 2>/dev/null
 if [ "$?" -eq 1 ]; then
     /usr/sbin/groupadd -g %{rpcuser_uid} rpcuser >/dev/null 2>&1 || :
-else
-    /usr/sbin/groupmod -g %{rpcuser_uid} rpcuser >/dev/null 2>&1 || :
 fi
 
 # Create rpcuser uid as long as it does not already exist.
@@ -368,8 +366,9 @@ fi
 %{_pkgdir}/*/var-lib-nfs-rpc_pipefs.mount
 
 %changelog
-* Fri Aug 07 2020 Steve Dickson <steved@redhat.com> 2.5.2-1.rc3
+* Fri Aug 07 2020 Steve Dickson <steved@redhat.com> 2.5.2-2.rc3
 - rpc.idmapd: Turn down the verbosity in flush_inotify() (bz 1867172)
+- Don't modify /etc/group on upgrades (bz 1856890)
 
 * Tue Aug 04 2020 Steve Dickson <steved@redhat.com> 2.5.1-1.rc3
 - Updated to the latest RC release: nfs-utils-2-5-2-rc3 (bz 1856958)
