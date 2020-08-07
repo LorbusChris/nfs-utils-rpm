@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.5.1
-Release: 1.rc3%{?dist}
+Release: 2.rc3%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -17,6 +17,7 @@ Source5: nfsconvert.sh
 Source6: nfs-convert.service
 
 Patch001: nfs-utils-2.5.2-rc3.patch
+Patch002: nfs-utils-2.5.1-rpcidmap-nodebug-msg.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -367,6 +368,9 @@ fi
 %{_pkgdir}/*/var-lib-nfs-rpc_pipefs.mount
 
 %changelog
+* Fri Aug 07 2020 Steve Dickson <steved@redhat.com> 2.5.2-1.rc3
+- rpc.idmapd: Turn down the verbosity in flush_inotify() (bz 1867172)
+
 * Tue Aug 04 2020 Steve Dickson <steved@redhat.com> 2.5.1-1.rc3
 - Updated to the latest RC release: nfs-utils-2-5-2-rc3 (bz 1856958)
 
