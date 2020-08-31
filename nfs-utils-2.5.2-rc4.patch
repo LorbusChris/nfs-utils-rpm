@@ -867,7 +867,7 @@ index f4f5975..1e8c58d 100644
  
  #endif /* _RPC_GSSD_H_ */
 diff --git a/utils/gssd/gssd_proc.c b/utils/gssd/gssd_proc.c
-index 8fe6605..2a8b618 100644
+index 8fe6605..e830f49 100644
 --- a/utils/gssd/gssd_proc.c
 +++ b/utils/gssd/gssd_proc.c
 @@ -149,9 +149,10 @@ do_downcall(int k5_fd, uid_t uid, struct authgss_private_data *pd,
@@ -919,15 +919,7 @@ index 8fe6605..2a8b618 100644
  						     service, srchost);
  	/*
  	 * Get a list of credential cache names and try each
-@@ -686,6 +687,7 @@ process_krb5_upcall(struct clnt_info *clp, uid_t uid, int fd, char *srchost,
- 	} else {
- 		get_hostbased_client_buffer(gacceptor, mech, &acceptor);
- 		gss_release_name(&min_stat, &gacceptor);
-+		gss_release_oid(&min_stat, &mech);
- 	}
- 
- 	/*
-@@ -730,7 +732,7 @@ handle_krb5_upcall(struct clnt_upcall_info *info)
+@@ -730,7 +731,7 @@ handle_krb5_upcall(struct clnt_upcall_info *info)
  	printerr(2, "\n%s: uid %d (%s)\n", __func__, info->uid, clp->relpath);
  
  	process_krb5_upcall(clp, info->uid, clp->krb5_fd, NULL, NULL, NULL);
@@ -936,7 +928,7 @@ index 8fe6605..2a8b618 100644
  }
  
  void
-@@ -747,8 +749,10 @@ handle_gssd_upcall(struct clnt_upcall_info *info)
+@@ -747,8 +748,10 @@ handle_gssd_upcall(struct clnt_upcall_info *info)
  	char			*enctypes = NULL;
  	char			*upcall_str;
  	char			*pbuf = info->lbuf;
@@ -948,7 +940,7 @@ index 8fe6605..2a8b618 100644
  
  	upcall_str = strdup(info->lbuf);
  	if (upcall_str == NULL) {
-@@ -830,6 +834,6 @@ handle_gssd_upcall(struct clnt_upcall_info *info)
+@@ -830,6 +833,6 @@ handle_gssd_upcall(struct clnt_upcall_info *info)
  out:
  	free(upcall_str);
  out_nomem:

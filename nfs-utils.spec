@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.5.1
-Release: 2.rc4%{?dist}
+Release: 3.rc4%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -365,6 +365,9 @@ fi
 %{_pkgdir}/*/var-lib-nfs-rpc_pipefs.mount
 
 %changelog
+* Mon Aug 31 2020 Steve Dickson <steved@redhat.com> 2.5.2-3.rc4
+- Fixed rpc.gssd: munmap_chunk(): invalid pointer
+
 * Mon Aug 31 2020 Steve Dickson <steved@redhat.com> 2.5.2-2.rc4
 - Updated to the latest RC release: nfs-utils-2-5-2-rc4 
 
