@@ -1,0 +1,37 @@
+diff -up nfs-utils-2.5.1/tools/mountstats/mountstats.py.orig nfs-utils-2.5.1/tools/mountstats/mountstats.py
+--- nfs-utils-2.5.1/tools/mountstats/mountstats.py.orig	2020-09-08 10:59:58.289384682 -0400
++++ nfs-utils-2.5.1/tools/mountstats/mountstats.py	2020-09-08 14:02:05.560514346 -0400
+@@ -951,10 +951,11 @@ def print_iostat_summary(old, new, devic
+         if not old or device not in old:
+             stats.display_iostats(time)
+         else:
+-            old_stats = DeviceData()
+-            old_stats.parse_stats(old[device])
+-            diff_stats = stats.compare_iostats(old_stats)
+-            diff_stats.display_iostats(time)
++            if ("fstype autofs" not in str(old[device])) and ("fstype autofs" not in str(new[device])):
++                old_stats = DeviceData()
++                old_stats.parse_stats(old[device])
++                diff_stats = stats.compare_iostats(old_stats)
++                diff_stats.display_iostats(time)
+ 
+ def iostat_command(args):
+     """iostat-like command for NFS mount points
+diff -up nfs-utils-2.5.1/tools/nfs-iostat/nfs-iostat.py.orig nfs-utils-2.5.1/tools/nfs-iostat/nfs-iostat.py
+--- nfs-utils-2.5.1/tools/nfs-iostat/nfs-iostat.py.orig	2020-09-08 10:59:58.286384653 -0400
++++ nfs-utils-2.5.1/tools/nfs-iostat/nfs-iostat.py	2020-09-08 14:02:05.560514346 -0400
+@@ -470,10 +470,13 @@ def parse_stats_file(filename):
+ def print_iostat_summary(old, new, devices, time, options):
+     stats = {}
+     diff_stats = {}
++    devicelist = []
+     if old:
+         # Trim device list to only include intersection of old and new data,
+         # this addresses umounts due to autofs mountpoints
+-        devicelist = [x for x in old if x in devices]
++        for device in devices:
++            if "fstype autofs" not in str(old[device]):
++                devicelist.append(device)
+     else:
+         devicelist = devices
+ 

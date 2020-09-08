@@ -18,6 +18,7 @@ Source6: nfs-convert.service
 
 Patch001: nfs-utils-2.5.2-rc4.patch
 Patch002: nfs-utils-2.5.1-rpcidmap-dontfreeconfig.patch
+Patch003: nfs-utils-2.5.1-nfsiostat-KeyError.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -368,6 +369,7 @@ fi
 %changelog
 * Tue Sep 08 2020 Steve Dickson <steved@redhat.com> 2.5.2-4.rc4
 - rpc.idmapd: Do not free config variables (bz 1873965)
+- nfsiostat: Drop autofs entries before calling compare_iostats()
 
 * Mon Aug 31 2020 Steve Dickson <steved@redhat.com> 2.5.2-3.rc4
 - Fixed rpc.gssd: munmap_chunk(): invalid pointer
