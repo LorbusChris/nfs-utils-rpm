@@ -1,9 +1,9 @@
-diff -up nfs-utils-2.3.1/systemd/nfs-server.service.orig nfs-utils-2.3.1/systemd/nfs-server.service
---- nfs-utils-2.3.1/systemd/nfs-server.service.orig	2018-01-19 10:25:38.153513857 -0500
-+++ nfs-utils-2.3.1/systemd/nfs-server.service	2018-01-19 10:30:52.977245126 -0500
-@@ -26,6 +26,7 @@ Type=oneshot
+diff -up nfs-utils-2.5.2/systemd/nfs-server.service.orig nfs-utils-2.5.2/systemd/nfs-server.service
+--- nfs-utils-2.5.2/systemd/nfs-server.service.orig	2020-12-16 12:31:27.677558163 -0500
++++ nfs-utils-2.5.2/systemd/nfs-server.service	2020-12-16 12:33:56.751806659 -0500
+@@ -23,6 +23,7 @@ Type=oneshot
  RemainAfterExit=yes
- ExecStartPre=/usr/sbin/exportfs -r
+ ExecStartPre=-/usr/sbin/exportfs -r
  ExecStart=/usr/sbin/rpc.nfsd
 +ExecStart=-/bin/sh -c 'if systemctl -q is-active gssproxy; then systemctl reload gssproxy ; fi'
  ExecStop=/usr/sbin/rpc.nfsd 0
