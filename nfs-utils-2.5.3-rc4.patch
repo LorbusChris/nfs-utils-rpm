@@ -320,7 +320,7 @@ index 1d17184..54b3f87 100644
  .IR no_wdelay
  This option has no effect if
 diff --git a/utils/mount/configfile.c b/utils/mount/configfile.c
-index 93fe500..7934f4f 100644
+index 93fe500..e865998 100644
 --- a/utils/mount/configfile.c
 +++ b/utils/mount/configfile.c
 @@ -1,5 +1,5 @@
@@ -571,7 +571,7 @@ index 93fe500..7934f4f 100644
 -		if (opts && strcasestr(opts, buf) != NULL)
 +		field = mountopts_alias(node->field, &argtype);
 +		if (po_contains(options, field) == PO_FOUND)
- 			continue;
++			continue;
 +		/* Some options can be inverted by a "no" prefix.
 +		 * Check for these.
 +		 * "no" prefixes are unlikely in the config file as
@@ -579,7 +579,7 @@ index 93fe500..7934f4f 100644
 +		 */
 +		if (strncmp(field, "no", 2) == 0 &&
 +		    po_contains(options, field+2) == PO_FOUND)
-+			continue;
+ 			continue;
 +		if (strlen(field) < BUFSIZ-3) {
 +			strcat(strcpy(buf, "no"), field);
 +			if (po_contains(options, buf) == PO_FOUND)
@@ -590,10 +590,10 @@ index 93fe500..7934f4f 100644
 +		/* If fg or bg already present, ignore bg or fg */
 +		if (strcmp(field, "fg") == 0 &&
 +		    po_contains(options, "bg") == PO_FOUND)
-+			continue;
+ 			continue;
 +		if (strcmp(field, "bg") == 0 &&
 +		    po_contains(options, "fg") == PO_FOUND)
- 			continue;
++			continue;
 +
 +		if (is_version(field)) {
 +			if (have_version)
@@ -604,7 +604,7 @@ index 93fe500..7934f4f 100644
  		buf[0] = '\0';
  		value = conf_get_section(section, arg, node->field);
  		if (value == NULL)
-@@ -333,99 +277,66 @@ conf_parse_mntopts(char *section, char *arg, char *opts)
+@@ -333,99 +277,68 @@ conf_parse_mntopts(char *section, char *arg, char *opts)
  		}
  		if (buf[0] == '\0')
  			continue;
@@ -614,8 +614,10 @@ index 93fe500..7934f4f 100644
 -		 */
 -		list_size += strlen(buf) + 1;
 -		add_entry(buf);
++		if (default_value(buf))
++			continue;
++
 +		po_append(options, buf);
-+		default_value(buf);
  	}
  	conf_free_list(list);
  }
@@ -680,25 +682,25 @@ index 93fe500..7934f4f 100644
  
  	/*
 -	 * Finally process all the global mount options. 
-+	 * Finally process all the global mount options.
- 	 */
+-	 */
 -	conf_parse_mntopts(NFSMOUNT_GLOBAL_OPTS, NULL, mount_opts);
-+	conf_parse_mntopts(NFSMOUNT_GLOBAL_OPTS, NULL, options);
- 
- 	/*
+-
+-	/*
 -	 * If no mount options were found in the configuration file
 -	 * just return what was passed in .
-+	 * Strip out defaults, which have already been handled,
-+	 * then join the rest and return.
++	 * Finally process all the global mount options.
  	 */
 -	if (SLIST_EMPTY(&head))
 -		return mount_opts;
--
--	/*
++	conf_parse_mntopts(NFSMOUNT_GLOBAL_OPTS, NULL, options);
+ 
+ 	/*
 -	 * Found options in the configuration file. So
 -	 * concatenate the configuration options with the 
 -	 * options that were passed in
--	 */
++	 * Strip out defaults, which have already been handled,
++	 * then join the rest and return.
+ 	 */
 -	if (mount_opts)
 -		optlen = strlen(mount_opts);
 -
@@ -1039,6 +1041,67 @@ index 0745e0f..0a15376 100644
  char *			po_get(struct mount_options *, char *);
  po_found_t		po_get_numeric(struct mount_options *,
  					char *, long *);
+diff --git a/utils/mountd/v4root.c b/utils/mountd/v4root.c
+index dd9828e..6f640aa 100644
+--- a/utils/mountd/v4root.c
++++ b/utils/mountd/v4root.c
+@@ -34,9 +34,9 @@ static nfs_export pseudo_root = {
+ 	.m_export = {
+ 		.e_hostname = "*",
+ 		.e_path = "/",
+-		.e_flags = NFSEXP_READONLY | NFSEXP_ROOTSQUASH
++		.e_flags = NFSEXP_READONLY
+ 				| NFSEXP_NOSUBTREECHECK | NFSEXP_FSID
+-				| NFSEXP_V4ROOT,
++				| NFSEXP_V4ROOT | NFSEXP_INSECURE_PORT,
+ 		.e_anonuid = 65534,
+ 		.e_anongid = 65534,
+ 		.e_squids = NULL,
+@@ -55,15 +55,11 @@ static nfs_export pseudo_root = {
+ };
+ 
+ static void
+-set_pseudofs_security(struct exportent *pseudo, int flags)
++set_pseudofs_security(struct exportent *pseudo)
+ {
+ 	struct flav_info *flav;
+ 	int i;
+ 
+-	if (flags & NFSEXP_INSECURE_PORT)
+-		pseudo->e_flags |= NFSEXP_INSECURE_PORT;
+-	if ((flags & NFSEXP_ROOTSQUASH) == 0)
+-		pseudo->e_flags &= ~NFSEXP_ROOTSQUASH;
+ 	for (flav = flav_map; flav < flav_map + flav_map_size; flav++) {
+ 		struct sec_entry *new;
+ 
+@@ -73,8 +69,7 @@ set_pseudofs_security(struct exportent *pseudo, int flags)
+ 		i = secinfo_addflavor(flav, pseudo);
+ 		new = &pseudo->e_secinfo[i];
+ 
+-		if (flags & NFSEXP_INSECURE_PORT)
+-			new->flags |= NFSEXP_INSECURE_PORT;
++		new->flags |= NFSEXP_INSECURE_PORT;
+ 	}
+ }
+ 
+@@ -93,7 +88,7 @@ v4root_create(char *path, nfs_export *export)
+ 	strncpy(eep.e_path, path, sizeof(eep.e_path)-1);
+ 	if (strcmp(path, "/") != 0)
+ 		eep.e_flags &= ~NFSEXP_FSID;
+-	set_pseudofs_security(&eep, curexp->e_flags);
++	set_pseudofs_security(&eep);
+ 	exp = export_create(&eep, 0);
+ 	if (exp == NULL)
+ 		return NULL;
+@@ -141,7 +136,7 @@ pseudofs_update(char *hostname, char *path, nfs_export *source)
+ 		return 0;
+ 	}
+ 	/* Update an existing V4ROOT export: */
+-	set_pseudofs_security(&exp->m_export, source->m_export.e_flags);
++	set_pseudofs_security(&exp->m_export);
+ 	return 0;
+ }
+ 
 diff --git a/utils/nfsd/nfsd.c b/utils/nfsd/nfsd.c
 index a412a02..c9f0385 100644
 --- a/utils/nfsd/nfsd.c
