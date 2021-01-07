@@ -43,6 +43,7 @@ Provides: sm-notify   = %{epoch}:%{version}-%{release}
 Provides: start-statd = %{epoch}:%{version}-%{release}
 
 License: MIT and GPLv2 and GPLv2+ and BSD
+BuildRequires: make
 BuildRequires: libevent-devel libcap-devel libuuid-devel
 BuildRequires: libtirpc-devel libblkid-devel
 BuildRequires: krb5-libs >= 1.4 autoconf >= 2.57 openldap-devel >= 2.2
