@@ -15,6 +15,7 @@ Source3: 24-nfs-server.conf
 Source4: nfsconvert.py
 Source5: nfsconvert.sh
 Source6: nfs-convert.service
+Source7: 10-nfsv4.conf
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -79,6 +80,20 @@ Requires: rpcbind
 
 %description -n nfs-utils-coreos
 Minimal NFS utilities for supporting clients
+
+%package -n nfsv4-client-utils
+Summary: NFSv4 utilities for supporting client
+Provides: nfsstat     = %{epoch}:%{version}-%{release}
+Provides: rpc.gssd    = %{epoch}:%{version}-%{release}
+Provides: mount.nfs   = %{epoch}:%{version}-%{release}
+Provides: mount.nfs4  = %{epoch}:%{version}-%{release}
+Provides: umount.nfs  = %{epoch}:%{version}-%{release}
+Provides: umount.nfs4 = %{epoch}:%{version}-%{release}
+Provides: nfsidmap    = %{epoch}:%{version}-%{release}
+Requires: gssproxy => 0.7.0-3
+
+%description -n nfsv4-client-utils
+The nfsv4-client-utils packages provided NFSv4 client support 
 
 %package -n libnfsidmap
 Summary: NFSv4 User and Group ID Mapping Library
@@ -182,6 +197,9 @@ mkdir -p $RPM_BUILD_ROOT%{_sharedstatedir}/nfs/statd/sm.bak
 mkdir -p $RPM_BUILD_ROOT%{_sharedstatedir}/nfs/v4recovery
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/exports.d
 
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/nfsmount.conf.d
+install -m 644 %{SOURCE7} $RPM_BUILD_ROOT%{_sysconfdir}/nfsmount.conf.d
+
 
 %pre
 # move files so the running service will have this applied as well
@@ -240,6 +258,13 @@ fi
 
 %systemd_post nfs-server
 
+%post -n nfsv4-client-utils
+if [ $1 -eq 1 ] ; then
+	# Initial installation
+	/bin/systemctl enable nfs-client.target >/dev/null 2>&1 || :
+	/bin/systemctl start nfs-client.target  >/dev/null 2>&1 || :
+fi
+
 %preun
 if [ $1 -eq 0 ]; then
 	%systemd_preun nfs-client.target
@@ -249,9 +274,20 @@ if [ $1 -eq 0 ]; then
     rm -rf /var/lib/nfs/v4recovery
 fi
 
+%preun -n nfsv4-client-utils
+if [ $1 -eq 0 ]; then
+	%systemd_preun nfs-client.target
+
+	rm -rf /etc/nfsmount.conf.d
+    rm -rf /var/lib/nfs/v4recovery
+fi
+
 %postun
 %systemd_postun_with_restart  nfs-client.target
 %systemd_postun_with_restart  nfs-server
+
+%postun -n nfsv4-client-utils
+%systemd_postun_with_restart  nfs-client.target
 
 /bin/systemctl --system daemon-reload >/dev/null 2>&1 || :
 
@@ -363,7 +399,49 @@ fi
 %{_pkgdir}/*/rpc_pipefs.target
 %{_pkgdir}/*/var-lib-nfs-rpc_pipefs.mount
 
+%files -n nfsv4-client-utils
+%config(noreplace) /etc/nfsmount.conf
+%dir %{_sharedstatedir}/nfs/v4recovery
+%dir %attr(555, root, root) %{_sharedstatedir}/nfs/rpc_pipefs
+%dir %{_libexecdir}/nfs-utils
+%config(noreplace) %{_sysconfdir}/request-key.d/id_resolver.conf
+%attr(0600,root,root) %config(noreplace) %{_sysconfdir}/gssproxy/24-nfs-server.conf
+%attr(0600,root,root) %config(noreplace) %{_sysconfdir}/nfsmount.conf.d/10-nfsv4.conf
+%{_sbindir}/rpc.gssd
+%{_sbindir}/mountstats
+%{_sbindir}/nfsiostat
+%{_sbindir}/nfsidmap
+%{_sbindir}/nfsconvert
+%attr(755,root,root) %{_libexecdir}/nfs-utils/nfsconvert.sh
+%attr(4755,root,root) /sbin/mount.nfs
+/sbin/mount.nfs4
+/sbin/umount.nfs
+/sbin/umount.nfs4
+%{_mandir}/*/nfs.5.gz
+%{_mandir}/*/nfs.conf.5.gz
+%{_mandir}/*/nfsmount.conf.5.gz
+%{_mandir}/*/gssd.8.gz
+%{_mandir}/*/mount.nfs.8.gz
+%{_mandir}/*/nfsconf.8.gz
+%{_mandir}/*/nfsidmap.8.gz
+%{_mandir}/*/rpc.gssd.8.gz
+%{_mandir}/*/mount.nfs.8.gz
+%{_mandir}/*/umount.nfs.8.gz
+%{_mandir}/*/mountstats.8.gz
+%{_mandir}/*/nfsiostat.8.gz
+%{_mandir}/*/nfsidmap.8.gz
+%{_pkgdir}/*/rpc-pipefs-generator
+%{_pkgdir}/*/auth-rpcgss-module.service
+%{_pkgdir}/*/nfs-client.target
+%{_pkgdir}/*/nfs-convert.service
+%{_pkgdir}/*/rpc-gssd.service
+%{_pkgdir}/*/rpc_pipefs.target
+%{_pkgdir}/*/var-lib-nfs-rpc_pipefs.mount
+
 %changelog
+* Sat Mar 13 Steve Dickson <steved@redhat.com> 2.5.3-1
+* Created a V4 only client package 
+
 * Tue Mar 02 2021 Zbigniew Jędrzejewski-Szmek <zbyszek@in.waw.pl> - 1:2.5.3-1
 - Rebuilt for updated systemd-rpm-macros
   See https://pagure.io/fesco/issue/2583.
