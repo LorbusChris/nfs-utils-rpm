@@ -81,9 +81,17 @@ Requires: rpcbind
 %description -n nfs-utils-coreos
 Minimal NFS utilities for supporting clients
 
+%package -n nfs-stats-utils
+Summary: NFS utilities for supporting clients
+Provides: nfsstat     = %{epoch}:%{version}-%{release}
+Provides: mountstats  = %{epoch}:%{version}-%{release}
+Provides: nfsiostat   = %{epoch}:%{version}-%{release}
+
+%description -n nfs-stats-utils
+Show NFS client Statistics
+
 %package -n nfsv4-client-utils
 Summary: NFSv4 utilities for supporting client
-Provides: nfsstat     = %{epoch}:%{version}-%{release}
 Provides: rpc.gssd    = %{epoch}:%{version}-%{release}
 Provides: mount.nfs   = %{epoch}:%{version}-%{release}
 Provides: mount.nfs4  = %{epoch}:%{version}-%{release}
@@ -408,10 +416,9 @@ fi
 %attr(0600,root,root) %config(noreplace) %{_sysconfdir}/gssproxy/24-nfs-server.conf
 %attr(0600,root,root) %config(noreplace) %{_sysconfdir}/nfsmount.conf.d/10-nfsv4.conf
 %{_sbindir}/rpc.gssd
-%{_sbindir}/mountstats
-%{_sbindir}/nfsiostat
 %{_sbindir}/nfsidmap
 %{_sbindir}/nfsconvert
+%{_sbindir}/nfsstat
 %attr(755,root,root) %{_libexecdir}/nfs-utils/nfsconvert.sh
 %attr(4755,root,root) /sbin/mount.nfs
 /sbin/mount.nfs4
@@ -427,9 +434,8 @@ fi
 %{_mandir}/*/rpc.gssd.8.gz
 %{_mandir}/*/mount.nfs.8.gz
 %{_mandir}/*/umount.nfs.8.gz
-%{_mandir}/*/mountstats.8.gz
-%{_mandir}/*/nfsiostat.8.gz
 %{_mandir}/*/nfsidmap.8.gz
+%{_mandir}/*/nfsstat.8.gz
 %{_pkgdir}/*/rpc-pipefs-generator
 %{_pkgdir}/*/auth-rpcgss-module.service
 %{_pkgdir}/*/nfs-client.target
@@ -438,9 +444,16 @@ fi
 %{_pkgdir}/*/rpc_pipefs.target
 %{_pkgdir}/*/var-lib-nfs-rpc_pipefs.mount
 
+%files -n nfs-stats-utils
+%{_sbindir}/mountstats
+%{_sbindir}/nfsiostat
+%{_mandir}/*/mountstats.8.gz
+%{_mandir}/*/nfsiostat.8.gz
+
 %changelog
 * Sat Mar 13 Steve Dickson <steved@redhat.com> 2.5.3-1
 * Created a V4 only client package 
+* Broke out the stat cmds using python into a separate package
 
 * Tue Mar 02 2021 Zbigniew Jędrzejewski-Szmek <zbyszek@in.waw.pl> - 1:2.5.3-1
 - Rebuilt for updated systemd-rpm-macros
