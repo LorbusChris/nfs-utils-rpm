@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.5.3
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -451,7 +451,7 @@ fi
 %{_mandir}/*/nfsiostat.8.gz
 
 %changelog
-* Sat Mar 13 Steve Dickson <steved@redhat.com> 2.5.3-1
+* Sat Mar 13 Steve Dickson <steved@redhat.com> 2.5.3-2
 * Created a V4 only client package 
 * Broke out the stat cmds using python into a separate package
 
