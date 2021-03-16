@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.5.3
-Release: 2%{?dist}
+Release: 2.rc1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -16,6 +16,8 @@ Source4: nfsconvert.py
 Source5: nfsconvert.sh
 Source6: nfs-convert.service
 Source7: 10-nfsv4.conf
+
+Patch001: nfs-utils-2.5.4-rc1.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -451,9 +453,12 @@ fi
 %{_mandir}/*/nfsiostat.8.gz
 
 %changelog
-* Sat Mar 13 Steve Dickson <steved@redhat.com> 2.5.3-2
-* Created a V4 only client package 
-* Broke out the stat cmds using python into a separate package
+* Mon Mar 15 2021 Steve Dickson <steved@redhat.com> 2.5.3-2.rc1
+- Updated to the latest RC release: nfs-utils-2-5-4-rc1 (bz 1939257)
+
+* Sat Mar 13 2021 Steve Dickson <steved@redhat.com> 2.5.3-2
+- Created a V4 only client package 
+- Broke out the stat cmds using python into a separate package
 
 * Tue Mar 02 2021 Zbigniew Jędrzejewski-Szmek <zbyszek@in.waw.pl> - 1:2.5.3-1
 - Rebuilt for updated systemd-rpm-macros
