@@ -1,0 +1,16 @@
+diff -up nfs-utils-2.5.3/nfs.conf.orig nfs-utils-2.5.3/nfs.conf
+--- nfs-utils-2.5.3/nfs.conf.orig	2021-03-16 13:38:43.922161313 -0400
++++ nfs-utils-2.5.3/nfs.conf	2021-03-16 13:39:24.560299448 -0400
+@@ -72,9 +72,9 @@ use-gss-proxy=1
+ # vers4.0=y
+ # vers4.1=y
+ # vers4.2=y
+-# rdma=n
+-# rdma-port=20049
+-#
++rdma=y
++rdma-port=20049
++
+ [statd]
+ # debug=0
+ # port=0
