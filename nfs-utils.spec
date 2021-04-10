@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.5.3
-Release: 3.rc1%{?dist}
+Release: 3.rc2%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -17,8 +17,7 @@ Source5: nfsconvert.sh
 Source6: nfs-convert.service
 Source7: 10-nfsv4.conf
 
-Patch001: nfs-utils-2.5.4-rc1.patch
-Patch002: nfs-utils-2.5.3-rdma-on.patch
+Patch001: nfs-utils-2.5.4-rc2.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -454,6 +453,9 @@ fi
 %{_mandir}/*/nfsiostat.8.gz
 
 %changelog
+* Sat Apr 10 2021 Steve Dickson <steved@redhat.com> 2.5.3-3.rc2
+- Updated to the latest RC release: nfs-utils-2-5-4-rc2 (bz 1947146)
+
 * Tue Mar 16 2021 Steve Dickson <steved@redhat.com> 2.5.3-3.rc1
 - Enable NFS server RDMA by default (bz 1931565)
 
