@@ -1,6 +1,6 @@
-diff -up nfs-utils-2.1.1/utils/statd/sm-notify.man.orig nfs-utils-2.1.1/utils/statd/sm-notify.man
---- nfs-utils-2.1.1/utils/statd/sm-notify.man.orig	2017-04-26 12:45:14.205742654 -0400
-+++ nfs-utils-2.1.1/utils/statd/sm-notify.man	2017-04-26 12:45:44.042630801 -0400
+diff -up nfs-utils-2.5.3/utils/statd/sm-notify.man.orig nfs-utils-2.5.3/utils/statd/sm-notify.man
+--- nfs-utils-2.5.3/utils/statd/sm-notify.man.orig	2021-02-20 12:16:52.000000000 -0500
++++ nfs-utils-2.5.3/utils/statd/sm-notify.man	2021-05-06 12:50:44.221080339 -0400
 @@ -184,7 +184,7 @@ where NSM state information resides.
  If this option is not specified,
  .B sm-notify
@@ -10,7 +10,7 @@ diff -up nfs-utils-2.1.1/utils/statd/sm-notify.man.orig nfs-utils-2.1.1/utils/st
  by default.
  .IP
  After starting,
-@@ -330,13 +330,13 @@ Currently, the
+@@ -338,13 +338,13 @@ Currently, the
  command supports sending notification only via datagram transport protocols.
  .SH FILES
  .TP 2.5i
@@ -27,10 +27,10 @@ diff -up nfs-utils-2.1.1/utils/statd/sm-notify.man.orig nfs-utils-2.1.1/utils/st
  NSM state number for this host
  .TP 2.5i
  .I /proc/sys/fs/nfs/nsm_local_state
-diff -up nfs-utils-2.1.1/utils/statd/statd.man.orig nfs-utils-2.1.1/utils/statd/statd.man
---- nfs-utils-2.1.1/utils/statd/statd.man.orig	2017-01-12 10:21:39.000000000 -0500
-+++ nfs-utils-2.1.1/utils/statd/statd.man	2017-04-26 12:45:44.043630798 -0400
-@@ -253,7 +253,7 @@ where NSM state information resides.
+diff -up nfs-utils-2.5.3/utils/statd/statd.man.orig nfs-utils-2.5.3/utils/statd/statd.man
+--- nfs-utils-2.5.3/utils/statd/statd.man.orig	2021-05-06 12:49:46.346753461 -0400
++++ nfs-utils-2.5.3/utils/statd/statd.man	2021-05-06 12:50:44.222080345 -0400
+@@ -251,7 +251,7 @@ where NSM state information resides.
  If this option is not specified,
  .B rpc.statd
  uses
@@ -39,7 +39,7 @@ diff -up nfs-utils-2.1.1/utils/statd/statd.man.orig nfs-utils-2.1.1/utils/statd/
  by default.
  .IP
  After starting,
-@@ -425,13 +425,13 @@ If set to a positive integer, has the sa
+@@ -431,13 +431,13 @@ If set to a positive integer, has the sa
  .IR \-\-no\-notify .
  .SH FILES
  .TP 2.5i
@@ -55,4 +55,4 @@ diff -up nfs-utils-2.1.1/utils/statd/statd.man.orig nfs-utils-2.1.1/utils/statd/
 +.I /var/lib/nfs/statd/state
  NSM state number for this host
  .TP 2.5i
- .I /var/run/run.statd.pid
+ .I /run/run.statd.pid
