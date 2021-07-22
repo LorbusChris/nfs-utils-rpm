@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.5.4
-Release: 0%{?dist}
+Release: 1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -451,6 +451,9 @@ fi
 %{_mandir}/*/nfsiostat.8.gz
 
 %changelog
+* Thu Jul 22 2021 Fedora Release Engineering <releng@fedoraproject.org> - 1:2.5.4-1
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_35_Mass_Rebuild
+
 * Mon Jun 21 2021 Steve Dickson <steved@redhat.com> 2.5.4-0
 - Updated to the latest upstream release: nfs-utils-2-5-4 (bz 1957900)
 
