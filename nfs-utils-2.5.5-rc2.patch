@@ -1,0 +1,404 @@
+diff --git a/configure.ac b/configure.ac
+index 93520a80..bc2d0f02 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -688,9 +688,28 @@ AC_SUBST([ACLOCAL_AMFLAGS], ["-I $ac_macro_dir \$(ACLOCAL_FLAGS)"])
+ AC_SUBST([_sysconfdir])
+ AC_CONFIG_COMMANDS_PRE([eval eval _sysconfdir=$sysconfdir])
+ 
++# make _statedir available for substituion in config files
++# 2 "evals" needed late to expand variable names.
++AC_SUBST([_statedir])
++AC_CONFIG_COMMANDS_PRE([eval eval _statedir=$statedir])
++
++if test "$statedir" = "/var/lib/nfs"; then
++	rpc_pipefsmount="var-lib-nfs-rpc_pipefs.mount"
++else
++	rpc_pipefsmount="$(systemd-escape -p "$statedir/rpc_pipefs").mount"
++fi
++AC_SUBST(rpc_pipefsmount)
++
++# make _rpc_pipefsmount available for substituion in config files
++# 2 "evals" needed late to expand variable names.
++AC_SUBST([_rpc_pipefsmount])
++AC_CONFIG_COMMANDS_PRE([eval eval _rpc_pipefsmount=$rpc_pipefsmount])
++
+ AC_CONFIG_FILES([
+ 	Makefile
+ 	systemd/rpc-gssd.service
++	systemd/rpc_pipefs.target
++	systemd/var-lib-nfs-rpc_pipefs.mount
+ 	linux-nfs/Makefile
+ 	support/Makefile
+ 	support/export/Makefile
+diff --git a/install-dep b/install-dep
+new file mode 100755
+index 00000000..621618fe
+--- /dev/null
++++ b/install-dep
+@@ -0,0 +1,21 @@
++#!/bin/bash
++#install dependencies for compiling from source code
++
++#RHEL/Fedora/CentOS-Stream/Rocky
++which dnf &>/dev/null || which yum &>/dev/null && {
++	yum install -y automake libtool make gcc rpcgen libtirpc-devel libevent-devel sqlite-devel device-mapper-devel \
++		libblkid-devel krb5-devel libuuid-devel
++}
++
++#Debian/ubuntu
++which apt &>/dev/null && {
++	apt install -o APT::Install-Suggests=0 -o APT::Install-Recommends=0 --ignore-missing -y \
++		autotools-dev automake make libtool pkg-config libtirpc-dev libevent-dev libsqlite3-dev \
++		libdevmapper-dev libblkid-dev libkrb5-dev libkeyutils-dev uuid-dev
++}
++
++#openSUSE Leap
++which zypper &>/dev/null && {
++	zypper in --no-recommends -y automake libtool make gcc rpcgen libtirpc-devel libevent-devel sqlite-devel \
++		device-mapper-devel libblkid-devel krb5-devel libuuid-devel
++}
+diff --git a/support/nfsidmap/nss.c b/support/nfsidmap/nss.c
+index 669760b7..0f43076e 100644
+--- a/support/nfsidmap/nss.c
++++ b/support/nfsidmap/nss.c
+@@ -365,10 +365,8 @@ static int _nss_name_to_gid(char *name, gid_t *gid, int dostrip)
+ out_buf:
+ 	free(buf);
+ out_name:
+-	if (dostrip)
+-		free(localname);
+-	if (get_reformat_group())
+-		free(ref_name);
++	free(localname);
++	free(ref_name);
+ out:
+ 	return err;
+ }
+diff --git a/support/nfsidmap/regex.c b/support/nfsidmap/regex.c
+index fdbb2e2f..958b4ac8 100644
+--- a/support/nfsidmap/regex.c
++++ b/support/nfsidmap/regex.c
+@@ -157,6 +157,7 @@ again:
+ 	IDMAP_LOG(4, ("regexp_getpwnam: name '%s' mapped to '%s'",
+ 		  name, localname));
+ 
++	free(localname);
+ 	*err_p = 0;
+ 	return pw;
+ 
+diff --git a/systemd/Makefile.am b/systemd/Makefile.am
+index 650ad25c..8c7b676f 100644
+--- a/systemd/Makefile.am
++++ b/systemd/Makefile.am
+@@ -12,7 +12,9 @@ unit_files =  \
+     rpc-statd-notify.service \
+     rpc-statd.service \
+     \
+-    proc-fs-nfsd.mount \
++    proc-fs-nfsd.mount
++
++rpc_pipefs_mount_file = \
+     var-lib-nfs-rpc_pipefs.mount
+ 
+ if CONFIG_NFSV4
+@@ -75,4 +77,5 @@ genexec_PROGRAMS = nfs-server-generator rpc-pipefs-generator
+ install-data-hook: $(unit_files)
+ 	mkdir -p $(DESTDIR)/$(unitdir)
+ 	cp $(unit_files) $(DESTDIR)/$(unitdir)
++	cp $(rpc_pipefs_mount_file) $(DESTDIR)/$(unitdir)/$(rpc_pipefsmount)
+ endif
+diff --git a/systemd/rpc-pipefs-generator.c b/systemd/rpc-pipefs-generator.c
+index 8e218aa7..c24db567 100644
+--- a/systemd/rpc-pipefs-generator.c
++++ b/systemd/rpc-pipefs-generator.c
+@@ -21,7 +21,7 @@
+ #include "conffile.h"
+ #include "systemd.h"
+ 
+-#define RPC_PIPEFS_DEFAULT "/var/lib/nfs/rpc_pipefs"
++#define RPC_PIPEFS_DEFAULT NFS_STATEDIR "/rpc_pipefs"
+ 
+ static int generate_mount_unit(const char *pipefs_path, const char *pipefs_unit,
+ 			       const char *dirname)
+diff --git a/systemd/rpc_pipefs.target.in b/systemd/rpc_pipefs.target.in
+new file mode 100644
+index 00000000..332f62b6
+--- /dev/null
++++ b/systemd/rpc_pipefs.target.in
+@@ -0,0 +1,3 @@
++[Unit]
++Requires=@_rpc_pipefsmount@
++After=@_rpc_pipefsmount@
+diff --git a/systemd/var-lib-nfs-rpc_pipefs.mount.in b/systemd/var-lib-nfs-rpc_pipefs.mount.in
+new file mode 100644
+index 00000000..4c5d6ce4
+--- /dev/null
++++ b/systemd/var-lib-nfs-rpc_pipefs.mount.in
+@@ -0,0 +1,10 @@
++[Unit]
++Description=RPC Pipe File System
++DefaultDependencies=no
++After=systemd-tmpfiles-setup.service
++Conflicts=umount.target
++
++[Mount]
++What=sunrpc
++Where=@_statedir@/rpc_pipefs
++Type=rpc_pipefs
+diff --git a/utils/blkmapd/device-discovery.c b/utils/blkmapd/device-discovery.c
+index 77ebe736..2736ac89 100644
+--- a/utils/blkmapd/device-discovery.c
++++ b/utils/blkmapd/device-discovery.c
+@@ -63,7 +63,7 @@
+ #define EVENT_SIZE (sizeof(struct inotify_event))
+ #define EVENT_BUFSIZE (1024 * EVENT_SIZE)
+ 
+-#define RPCPIPE_DIR	"/var/lib/nfs/rpc_pipefs"
++#define RPCPIPE_DIR	NFS_STATEDIR "/rpc_pipefs"
+ #define PID_FILE	"/run/blkmapd.pid"
+ 
+ #define CONF_SAVE(w, f) do {			\
+diff --git a/utils/gssd/gssd.c b/utils/gssd/gssd.c
+index 4113cbab..833d8e01 100644
+--- a/utils/gssd/gssd.c
++++ b/utils/gssd/gssd.c
+@@ -1016,7 +1016,7 @@ read_gss_conf(void)
+ 		keytabfile = s;
+ 	s = conf_get_str("gssd", "cred-cache-directory");
+ 	if (s)
+-		ccachedir = s;
++		ccachedir = strdup(s);
+ 	s = conf_get_str("gssd", "preferred-realm");
+ 	if (s)
+ 		preferred_realm = s;
+@@ -1070,7 +1070,8 @@ main(int argc, char *argv[])
+ 				keytabfile = optarg;
+ 				break;
+ 			case 'd':
+-				ccachedir = optarg;
++				free(ccachedir);
++				ccachedir = strdup(optarg);
+ 				break;
+ 			case 't':
+ 				context_timeout = atoi(optarg);
+@@ -1133,7 +1134,6 @@ main(int argc, char *argv[])
+ 	}
+ 
+ 	if (ccachedir) {
+-		char *ccachedir_copy;
+ 		char *ptr;
+ 
+ 		for (ptr = ccachedir, i = 2; *ptr; ptr++)
+@@ -1141,8 +1141,7 @@ main(int argc, char *argv[])
+ 				i++;
+ 
+ 		ccachesearch = malloc(i * sizeof(char *));
+-	       	ccachedir_copy = strdup(ccachedir);
+-		if (!ccachedir_copy || !ccachesearch) {
++		if (!ccachesearch) {
+ 			printerr(0, "malloc failure\n");
+ 			exit(EXIT_FAILURE);
+ 		}
+@@ -1274,6 +1273,7 @@ main(int argc, char *argv[])
+ 
+ 	free(preferred_realm);
+ 	free(ccachesearch);
++	free(ccachedir);
+ 
+ 	return rc < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
+ }
+diff --git a/utils/gssd/gssd.h b/utils/gssd/gssd.h
+index c52c5b48..519dc431 100644
+--- a/utils/gssd/gssd.h
++++ b/utils/gssd/gssd.h
+@@ -39,7 +39,7 @@
+ #include <pthread.h>
+ 
+ #ifndef GSSD_PIPEFS_DIR
+-#define GSSD_PIPEFS_DIR		"/var/lib/nfs/rpc_pipefs"
++#define GSSD_PIPEFS_DIR		NFS_STATEDIR "/rpc_pipefs"
+ #endif
+ #define DNOTIFY_SIGNAL		(SIGRTMIN + 3)
+ 
+diff --git a/utils/gssd/krb5_util.c b/utils/gssd/krb5_util.c
+index c5f1152e..6d059f33 100644
+--- a/utils/gssd/krb5_util.c
++++ b/utils/gssd/krb5_util.c
+@@ -1129,6 +1129,12 @@ query_krb5_ccache(const char* cred_cache, char **ret_princname,
+ 			    *str = '\0';
+ 			    *ret_princname = strdup(princstring);
+ 			    *ret_realm = strdup(str+1);
++			    if (!*ret_princname || !*ret_realm) {
++				    free(*ret_princname);
++				    free(*ret_realm);
++				    *ret_princname = NULL;
++				    *ret_realm = NULL;
++			    }
+ 		    }
+ 		    k5_free_unparsed_name(context, princstring);
+ 		}
+@@ -1350,15 +1356,19 @@ gssd_get_krb5_machine_cred_list(char ***list)
+ 		if (retval)
+ 			continue;
+ 		if (i + 1 > listsize) {
++			char **tmplist;
+ 			listsize += listinc;
+-			l = (char **)
++			tmplist = (char **)
+ 				realloc(l, listsize * sizeof(char *));
+-			if (l == NULL) {
++			if (tmplist == NULL) {
++				gssd_free_krb5_machine_cred_list(l);
+ 				retval = ENOMEM;
+ 				goto out_lock;
+ 			}
++			l = tmplist;
+ 		}
+ 		if ((l[i++] = strdup(ple->ccname)) == NULL) {
++			gssd_free_krb5_machine_cred_list(l);
+ 			retval = ENOMEM;
+ 			goto out_lock;
+ 		}
+diff --git a/utils/idmapd/idmapd.c b/utils/idmapd/idmapd.c
+index 51c71fbb..e2c160e8 100644
+--- a/utils/idmapd/idmapd.c
++++ b/utils/idmapd/idmapd.c
+@@ -73,7 +73,7 @@
+ #include "nfslib.h"
+ 
+ #ifndef PIPEFS_DIR
+-#define PIPEFS_DIR  "/var/lib/nfs/rpc_pipefs/"
++#define PIPEFS_DIR  NFS_STATEDIR "/rpc_pipefs/"
+ #endif
+ 
+ #ifndef NFSD_DIR
+diff --git a/utils/mount/nfs.man b/utils/mount/nfs.man
+index f98cb47d..f1b76936 100644
+--- a/utils/mount/nfs.man
++++ b/utils/mount/nfs.man
+@@ -555,6 +555,13 @@ using the FS-Cache facility. See cachefilesd(8)
+ and <kernel_source>/Documentation/filesystems/caching
+ for detail on how to configure the FS-Cache facility.
+ Default value is nofsc.
++.TP 1.5i
++.B sloppy
++The
++.B sloppy
++option is an alternative to specifying
++.BR mount.nfs " -s " option.
++
+ .SS "Options for NFS versions 2 and 3 only"
+ Use these options, along with the options in the above subsection,
+ for NFS versions 2 and 3 only.
+diff --git a/utils/mount/stropts.c b/utils/mount/stropts.c
+index 82b054a5..fa67a66f 100644
+--- a/utils/mount/stropts.c
++++ b/utils/mount/stropts.c
+@@ -339,11 +339,19 @@ static int nfs_verify_lock_option(struct mount_options *options)
+ 
+ static int nfs_insert_sloppy_option(struct mount_options *options)
+ {
+-	if (!sloppy || linux_version_code() < MAKE_VERSION(2, 6, 27))
++	if (linux_version_code() < MAKE_VERSION(2, 6, 27))
+ 		return 1;
+ 
+-	if (po_insert(options, "sloppy") == PO_FAILED)
+-		return 0;
++	if (po_contains(options, "sloppy")) {
++		po_remove_all(options, "sloppy");
++		sloppy++;
++	}
++
++	if (sloppy) {
++		if (po_insert(options, "sloppy") == PO_FAILED)
++			return 0;
++	}
++
+ 	return 1;
+ }
+ 
+diff --git a/utils/mountd/rmtab.c b/utils/mountd/rmtab.c
+index 2da97615..752fdb66 100644
+--- a/utils/mountd/rmtab.c
++++ b/utils/mountd/rmtab.c
+@@ -233,6 +233,9 @@ mountlist_list(void)
+ 			m->ml_directory = strdup(rep->r_path);
+ 
+ 			if (m->ml_hostname == NULL || m->ml_directory == NULL) {
++				free(m->ml_hostname);
++				free(m->ml_directory);
++				free(m);
+ 				mountlist_freeall(mlist);
+ 				mlist = NULL;
+ 				xlog(L_ERROR, "%s: memory allocation failed",
+diff --git a/utils/nfsdcltrack/nfsdcltrack.c b/utils/nfsdcltrack/nfsdcltrack.c
+index e926f1c0..7c1c4bcc 100644
+--- a/utils/nfsdcltrack/nfsdcltrack.c
++++ b/utils/nfsdcltrack/nfsdcltrack.c
+@@ -33,6 +33,7 @@
+ #include <sys/stat.h>
+ #include <sys/types.h>
+ #include <fcntl.h>
++#include <inttypes.h>
+ #include <unistd.h>
+ #include <libgen.h>
+ #include <sys/inotify.h>
+@@ -507,7 +508,7 @@ cltrack_gracedone(const char *timestr)
+ {
+ 	int ret;
+ 	char *tail;
+-	time_t gracetime;
++	uint64_t gracetime;
+ 
+ 
+ 	ret = sqlite_prepare_dbh(storagedir);
+@@ -525,7 +526,7 @@ cltrack_gracedone(const char *timestr)
+ 	if (*tail)
+ 		return -EINVAL;
+ 
+-	xlog(D_GENERAL, "%s: grace done. gracetime=%ld", __func__, gracetime);
++	xlog(D_GENERAL, "%s: grace done. gracetime=%"PRIu64, __func__, gracetime);
+ 
+ 	ret = sqlite_remove_unreclaimed(gracetime);
+ 
+diff --git a/utils/nfsdcltrack/sqlite.c b/utils/nfsdcltrack/sqlite.c
+index f79aebb3..cf0c6a45 100644
+--- a/utils/nfsdcltrack/sqlite.c
++++ b/utils/nfsdcltrack/sqlite.c
+@@ -46,6 +46,7 @@
+ #include <sys/stat.h>
+ #include <sys/types.h>
+ #include <fcntl.h>
++#include <inttypes.h>
+ #include <unistd.h>
+ #include <sqlite3.h>
+ #include <linux/limits.h>
+@@ -539,12 +540,12 @@ out_err:
+  * remove any client records that were not reclaimed since grace_start.
+  */
+ int
+-sqlite_remove_unreclaimed(time_t grace_start)
++sqlite_remove_unreclaimed(uint64_t grace_start)
+ {
+ 	int ret;
+ 	char *err = NULL;
+ 
+-	ret = snprintf(buf, sizeof(buf), "DELETE FROM clients WHERE time < %ld",
++	ret = snprintf(buf, sizeof(buf), "DELETE FROM clients WHERE time < %"PRIu64,
+ 			grace_start);
+ 	if (ret < 0) {
+ 		return ret;
+diff --git a/utils/nfsdcltrack/sqlite.h b/utils/nfsdcltrack/sqlite.h
+index 06e7c044..ba8cdfa8 100644
+--- a/utils/nfsdcltrack/sqlite.h
++++ b/utils/nfsdcltrack/sqlite.h
+@@ -26,7 +26,7 @@ int sqlite_insert_client(const unsigned char *clname, const size_t namelen,
+ int sqlite_remove_client(const unsigned char *clname, const size_t namelen);
+ int sqlite_check_client(const unsigned char *clname, const size_t namelen,
+ 				const bool has_session);
+-int sqlite_remove_unreclaimed(const time_t grace_start);
++int sqlite_remove_unreclaimed(const uint64_t grace_start);
+ int sqlite_query_reclaiming(const time_t grace_start);
+ 
+ #endif /* _SQLITE_H */
