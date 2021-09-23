@@ -33,7 +33,7 @@ index 93520a80..bc2d0f02 100644
  	support/export/Makefile
 diff --git a/install-dep b/install-dep
 new file mode 100755
-index 00000000..621618fe
+index 00000000..4698d44a
 --- /dev/null
 +++ b/install-dep
 @@ -0,0 +1,21 @@
@@ -41,23 +41,64 @@ index 00000000..621618fe
 +#install dependencies for compiling from source code
 +
 +#RHEL/Fedora/CentOS-Stream/Rocky
-+which dnf &>/dev/null || which yum &>/dev/null && {
++command -v dnf >/dev/null || command -v yum >/dev/null && {
 +	yum install -y automake libtool make gcc rpcgen libtirpc-devel libevent-devel sqlite-devel device-mapper-devel \
 +		libblkid-devel krb5-devel libuuid-devel
 +}
 +
 +#Debian/ubuntu
-+which apt &>/dev/null && {
++command -v apt >/dev/null && {
 +	apt install -o APT::Install-Suggests=0 -o APT::Install-Recommends=0 --ignore-missing -y \
 +		autotools-dev automake make libtool pkg-config libtirpc-dev libevent-dev libsqlite3-dev \
 +		libdevmapper-dev libblkid-dev libkrb5-dev libkeyutils-dev uuid-dev
 +}
 +
 +#openSUSE Leap
-+which zypper &>/dev/null && {
++command -v zypper >/dev/null && {
 +	zypper in --no-recommends -y automake libtool make gcc rpcgen libtirpc-devel libevent-devel sqlite-devel \
 +		device-mapper-devel libblkid-devel krb5-devel libuuid-devel
 +}
+diff --git a/support/export/v4clients.c b/support/export/v4clients.c
+index dd985463..5e4f1058 100644
+--- a/support/export/v4clients.c
++++ b/support/export/v4clients.c
+@@ -10,6 +10,7 @@
+ #include <sys/inotify.h>
+ #include <errno.h>
+ #include "export.h"
++#include "version.h"
+ 
+ /* search.h declares 'struct entry' and nfs_prot.h
+  * does too.  Easiest fix is to trick search.h into
+@@ -23,6 +24,8 @@ static int clients_fd = -1;
+ 
+ void v4clients_init(void)
+ {
++	if (linux_version_code() < MAKE_VERSION(5, 3, 0))
++		return;
+ 	if (clients_fd >= 0)
+ 		return;
+ 	clients_fd = inotify_init1(IN_NONBLOCK);
+diff --git a/support/include/version.h b/support/include/version.h
+new file mode 120000
+index 00000000..b7db0bbb
+--- /dev/null
++++ b/support/include/version.h
+@@ -0,0 +1 @@
++../../utils/mount/version.h
+\ No newline at end of file
+diff --git a/support/nfs/cacheio.c b/support/nfs/cacheio.c
+index 73f4be4a..bd4da0e5 100644
+--- a/support/nfs/cacheio.c
++++ b/support/nfs/cacheio.c
+@@ -213,7 +213,6 @@ int qword_get_uint(char **bpp, unsigned int *anint)
+ void
+ cache_flush(void)
+ {
+-	struct stat stb;
+ 	int c;
+ 	char stime[32];
+ 	char path[200];
 diff --git a/support/nfsidmap/nss.c b/support/nfsidmap/nss.c
 index 669760b7..0f43076e 100644
 --- a/support/nfsidmap/nss.c
@@ -88,7 +129,7 @@ index fdbb2e2f..958b4ac8 100644
  	return pw;
  
 diff --git a/systemd/Makefile.am b/systemd/Makefile.am
-index 650ad25c..8c7b676f 100644
+index 650ad25c..e7f5d818 100644
 --- a/systemd/Makefile.am
 +++ b/systemd/Makefile.am
 @@ -12,7 +12,9 @@ unit_files =  \
@@ -102,7 +143,17 @@ index 650ad25c..8c7b676f 100644
      var-lib-nfs-rpc_pipefs.mount
  
  if CONFIG_NFSV4
-@@ -75,4 +77,5 @@ genexec_PROGRAMS = nfs-server-generator rpc-pipefs-generator
+@@ -51,8 +53,7 @@ man5_MANS	= nfs.conf.man
+ man7_MANS	= nfs.systemd.man
+ EXTRA_DIST = $(unit_files) $(man5_MANS) $(man7_MANS)
+ 
+-unit_dir = /usr/lib/systemd/system
+-generator_dir = /usr/lib/systemd/system-generators
++generator_dir = $(unitdir)/../system-generators
+ 
+ EXTRA_PROGRAMS	= nfs-server-generator rpc-pipefs-generator
+ genexecdir = $(generator_dir)
+@@ -75,4 +76,5 @@ genexec_PROGRAMS = nfs-server-generator rpc-pipefs-generator
  install-data-hook: $(unit_files)
  	mkdir -p $(DESTDIR)/$(unitdir)
  	cp $(unit_files) $(DESTDIR)/$(unitdir)
@@ -146,6 +197,23 @@ index 00000000..4c5d6ce4
 +What=sunrpc
 +Where=@_statedir@/rpc_pipefs
 +Type=rpc_pipefs
+diff --git a/tools/mountstats/mountstats.py b/tools/mountstats/mountstats.py
+index 23876fc4..8e129c83 100755
+--- a/tools/mountstats/mountstats.py
++++ b/tools/mountstats/mountstats.py
+@@ -482,8 +482,11 @@ class DeviceData:
+             count = stats[1]
+             if count != 0:
+                 print('%s:' % stats[0])
++                ops_pcnt = 0
++                if sends != 0:
++                    ops_pcnt = (count * 100) / sends
+                 print('\t%d ops (%d%%)' % \
+-                    (count, ((count * 100) / sends)), end=' ')
++                    (count, ops_pcnt), end=' ')
+                 retrans = stats[2] - count
+                 if retrans != 0:
+                     print('\t%d retrans (%d%%)' % (retrans, ((retrans * 100) / count)), end=' ')
 diff --git a/utils/blkmapd/device-discovery.c b/utils/blkmapd/device-discovery.c
 index 77ebe736..2736ac89 100644
 --- a/utils/blkmapd/device-discovery.c
@@ -222,9 +290,20 @@ index c52c5b48..519dc431 100644
  #define DNOTIFY_SIGNAL		(SIGRTMIN + 3)
  
 diff --git a/utils/gssd/krb5_util.c b/utils/gssd/krb5_util.c
-index c5f1152e..6d059f33 100644
+index c5f1152e..e3f270e9 100644
 --- a/utils/gssd/krb5_util.c
 +++ b/utils/gssd/krb5_util.c
+@@ -673,8 +673,8 @@ get_full_hostname(const char *inhost, char *outhost, int outhostlen)
+ 	    *c = tolower(*c);
+ 
+ 	if (get_verbosity() && strcmp(inhost, outhost))
+-		printerr(1, "%s(0x%0lx): inhost '%s' different than outhost'%s'\n", 
+-			inhost, outhost);
++		printerr(1, "%s(0x%0lx): inhost '%s' different than outhost '%s'\n", 
++			 __func__, tid, inhost, outhost);
+ 
+ 	retval = 0;
+ out:
 @@ -1129,6 +1129,12 @@ query_krb5_ccache(const char* cred_cache, char **ret_princname,
  			    *str = '\0';
  			    *ret_princname = strdup(princstring);
@@ -260,6 +339,19 @@ index c5f1152e..6d059f33 100644
  			retval = ENOMEM;
  			goto out_lock;
  		}
+diff --git a/utils/gssd/svcgssd_krb5.c b/utils/gssd/svcgssd_krb5.c
+index 305d4751..2503c384 100644
+--- a/utils/gssd/svcgssd_krb5.c
++++ b/utils/gssd/svcgssd_krb5.c
+@@ -46,7 +46,7 @@
+ #include "gss_oids.h"
+ #include "err_util.h"
+ #include "svcgssd_krb5.h"
+-#include "../mount/version.h"
++#include "version.h"
+ 
+ #define MYBUFLEN 1024
+ 
 diff --git a/utils/idmapd/idmapd.c b/utils/idmapd/idmapd.c
 index 51c71fbb..e2c160e8 100644
 --- a/utils/idmapd/idmapd.c
@@ -274,10 +366,30 @@ index 51c71fbb..e2c160e8 100644
  
  #ifndef NFSD_DIR
 diff --git a/utils/mount/nfs.man b/utils/mount/nfs.man
-index f98cb47d..f1b76936 100644
+index f98cb47d..57a693fd 100644
 --- a/utils/mount/nfs.man
 +++ b/utils/mount/nfs.man
-@@ -555,6 +555,13 @@ using the FS-Cache facility. See cachefilesd(8)
+@@ -416,6 +416,19 @@ Note that the
+ option may also be used by some pNFS drivers to decide how many
+ connections to set up to the data servers.
+ .TP 1.5i
++.BR max_connect= n
++While
++.BR nconnect
++option sets a limit on the number of connections that can be established
++to a given server IP,
++.BR max_connect
++option allows the user to specify maximum number of connections to different
++server IPs that belong to the same NFSv4.1+ server (session trunkable
++connections) up to a limit of 16. When client discovers that it established
++a client ID to an already existing server, instead of dropping the newly
++created network transport, the client will add this new connection to the
++list of available transports for that RPC client.
++.TP 1.5i
+ .BR rdirplus " / " nordirplus
+ Selects whether to use NFS v3 or v4 READDIRPLUS requests.
+ If this option is not specified, the NFS client uses READDIRPLUS requests
+@@ -555,6 +568,13 @@ using the FS-Cache facility. See cachefilesd(8)
  and <kernel_source>/Documentation/filesystems/caching
  for detail on how to configure the FS-Cache facility.
  Default value is nofsc.
@@ -332,6 +444,32 @@ index 2da97615..752fdb66 100644
  				mountlist_freeall(mlist);
  				mlist = NULL;
  				xlog(L_ERROR, "%s: memory allocation failed",
+diff --git a/utils/nfsd/nfssvc.c b/utils/nfsd/nfssvc.c
+index 720bdd97..46452d97 100644
+--- a/utils/nfsd/nfssvc.c
++++ b/utils/nfsd/nfssvc.c
+@@ -25,7 +25,7 @@
+ #include "nfslib.h"
+ #include "xlog.h"
+ #include "nfssvc.h"
+-#include "../mount/version.h"
++#include "version.h"
+ 
+ #ifndef NFSD_FS_DIR
+ #define NFSD_FS_DIR	  "/proc/fs/nfsd"
+diff --git a/utils/nfsdcld/nfsdcld.c b/utils/nfsdcld/nfsdcld.c
+index 636c3983..dbc7a57f 100644
+--- a/utils/nfsdcld/nfsdcld.c
++++ b/utils/nfsdcld/nfsdcld.c
+@@ -45,7 +45,7 @@
+ #include "cld.h"
+ #include "cld-internal.h"
+ #include "sqlite.h"
+-#include "../mount/version.h"
++#include "version.h"
+ #include "conffile.h"
+ #include "legacy.h"
+ 
 diff --git a/utils/nfsdcltrack/nfsdcltrack.c b/utils/nfsdcltrack/nfsdcltrack.c
 index e926f1c0..7c1c4bcc 100644
 --- a/utils/nfsdcltrack/nfsdcltrack.c
