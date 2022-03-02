@@ -1,8 +1,8 @@
-diff -up nfs-utils-2.3.3/utils/mountd/mountd.man.orig nfs-utils-2.3.3/utils/mountd/mountd.man
---- nfs-utils-2.3.3/utils/mountd/mountd.man.orig	2018-09-06 14:09:08.000000000 -0400
-+++ nfs-utils-2.3.3/utils/mountd/mountd.man	2018-10-26 09:53:10.005127368 -0400
-@@ -232,36 +232,7 @@ section include
- which each have same same meaning as given by
+diff -up nfs-utils-2.6.1/utils/mountd/mountd.man.orig nfs-utils-2.6.1/utils/mountd/mountd.man
+--- nfs-utils-2.6.1/utils/mountd/mountd.man.orig	2022-03-02 15:53:18.898475385 -0500
++++ nfs-utils-2.6.1/utils/mountd/mountd.man	2022-03-02 15:54:02.362872285 -0500
+@@ -291,36 +291,7 @@ section include
+ which each have the same meaning as given by
  .BR rpc.nfsd (8).
  
 -.SH TCP_WRAPPERS SUPPORT
@@ -39,7 +39,7 @@ diff -up nfs-utils-2.3.3/utils/mountd/mountd.man.orig nfs-utils-2.3.3/utils/moun
  TI-RPC is a pre-requisite for supporting NFS on IPv6.
  If TI-RPC support is built into
  .BR rpc.mountd ,
-@@ -288,7 +259,6 @@ table of clients accessing server's expo
+@@ -347,7 +318,6 @@ table of clients accessing server's expo
  .BR nfs (5),
  .BR nfs.conf (5),
  .BR tcpd (8),
@@ -47,10 +47,10 @@ diff -up nfs-utils-2.3.3/utils/mountd/mountd.man.orig nfs-utils-2.3.3/utils/moun
  .BR iptables (8),
  .BR netconfig (5)
  .sp
-diff -up nfs-utils-2.3.3/utils/statd/statd.man.orig nfs-utils-2.3.3/utils/statd/statd.man
---- nfs-utils-2.3.3/utils/statd/statd.man.orig	2018-10-26 09:52:27.609358805 -0400
-+++ nfs-utils-2.3.3/utils/statd/statd.man	2018-10-26 09:53:37.345978117 -0400
-@@ -319,28 +319,6 @@ chooses, simply use
+diff -up nfs-utils-2.6.1/utils/statd/statd.man.orig nfs-utils-2.6.1/utils/statd/statd.man
+--- nfs-utils-2.6.1/utils/statd/statd.man.orig	2022-03-02 15:53:18.899475395 -0500
++++ nfs-utils-2.6.1/utils/statd/statd.man	2022-03-02 15:54:02.363872294 -0500
+@@ -325,28 +325,6 @@ chooses, simply use
  .BR chown (1)
  to set the owner of
  the state directory.
@@ -79,7 +79,7 @@ diff -up nfs-utils-2.3.3/utils/statd/statd.man.orig nfs-utils-2.3.3/utils/statd/
  .SH ADDITIONAL NOTES
  Lock recovery after a reboot is critical to maintaining data integrity
  and preventing unnecessary application hangs.
-@@ -445,7 +423,6 @@ network transport capability database
+@@ -451,7 +429,6 @@ network transport capability database
  .BR rpc.nfsd (8),
  .BR rpcbind (8),
  .BR tcpd (8),

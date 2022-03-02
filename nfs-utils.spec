@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.6.1
-Release: 0%{?dist}
+Release: 0.rc3%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -17,7 +17,7 @@ Source5: nfsconvert.sh
 Source6: nfs-convert.service
 Source7: 10-nfsv4.conf
 
-Patch001: nfs-utils-2.6.1-overflow.patch
+Patch001: nfs-utils-2.6.2-rc3.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -31,6 +31,7 @@ Provides: exportfs    = %{epoch}:%{version}-%{release}
 Provides: nfsstat     = %{epoch}:%{version}-%{release}
 Provides: showmount   = %{epoch}:%{version}-%{release}
 Provides: rpcdebug    = %{epoch}:%{version}-%{release}
+Provides: rpcctl      = %{epoch}:%{version}-%{release}
 Provides: rpc.idmapd  = %{epoch}:%{version}-%{release}
 Provides: rpc.mountd  = %{epoch}:%{version}-%{release}
 Provides: rpc.nfsd    = %{epoch}:%{version}-%{release}
@@ -328,6 +329,7 @@ fi
 %{_sbindir}/exportfs
 %{_sbindir}/nfsstat
 %{_sbindir}/rpcdebug
+%{_sbindir}/rpcctl
 %{_sbindir}/rpc.mountd
 %{_sbindir}/rpc.nfsd
 %{_sbindir}/showmount
@@ -453,6 +455,9 @@ fi
 %{_mandir}/*/nfsiostat.8.gz
 
 %changelog
+* Wed Mar  2 2022 Steve Dickson <steved@redhat.com> 2.6.1-0.rc3
+- Updated to the latest RC release: nfs-utils-2-6-2-rc3
+
 * Wed Feb 23 2022 Steve Dickson <steved@redhat.com> 2.6.1-0
 - Updated to the latest upstream release: nfs-utils-2-6-1 (bz 2022136)
 
