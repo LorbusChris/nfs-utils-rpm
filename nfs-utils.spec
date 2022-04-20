@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.6.1
-Release: 0.rc3%{?dist}
+Release: 1.rc4%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -17,7 +17,7 @@ Source5: nfsconvert.sh
 Source6: nfs-convert.service
 Source7: 10-nfsv4.conf
 
-Patch001: nfs-utils-2.6.2-rc3.patch
+Patch001: nfs-utils-2.6.2-rc4.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -211,6 +211,7 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/exports.d
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/nfsmount.conf.d
 install -m 644 %{SOURCE7} $RPM_BUILD_ROOT%{_sysconfdir}/nfsmount.conf.d
 
+mkdir -p $RPM_BUILD_ROOT%{_udevrulesdir}
 
 %pre
 # move files so the running service will have this applied as well
@@ -347,6 +348,8 @@ fi
 %{_sbindir}/nfsdcld
 %{_sbindir}/nfsdclddb
 %{_sbindir}/nfsdclnts
+%{_libexecdir}/nfsrahead
+%{_udevrulesdir}/99-nfs.rules
 %{_mandir}/*/*
 %{_pkgdir}/*/*
 
@@ -413,6 +416,7 @@ fi
 
 %files -n nfsv4-client-utils
 %config(noreplace) /etc/nfsmount.conf
+%config(noreplace) %{_sysconfdir}/nfs.conf
 %dir %{_sharedstatedir}/nfs/v4recovery
 %dir %attr(555, root, root) %{_sharedstatedir}/nfs/rpc_pipefs
 %dir %{_libexecdir}/nfs-utils
@@ -423,6 +427,8 @@ fi
 %{_sbindir}/nfsidmap
 %{_sbindir}/nfsconvert
 %{_sbindir}/nfsstat
+%{_libexecdir}/nfsrahead
+%{_udevrulesdir}/99-nfs.rules
 %attr(755,root,root) %{_libexecdir}/nfs-utils/nfsconvert.sh
 %attr(4755,root,root) /sbin/mount.nfs
 /sbin/mount.nfs4
@@ -431,6 +437,7 @@ fi
 %{_mandir}/*/nfs.5.gz
 %{_mandir}/*/nfs.conf.5.gz
 %{_mandir}/*/nfsmount.conf.5.gz
+%{_mandir}/*/nfsrahead.5.gz
 %{_mandir}/*/gssd.8.gz
 %{_mandir}/*/mount.nfs.8.gz
 %{_mandir}/*/nfsconf.8.gz
@@ -455,6 +462,9 @@ fi
 %{_mandir}/*/nfsiostat.8.gz
 
 %changelog
+* Wed Apr 20 2022 Steve Dickson <steved@redhat.com> 2.6.1-0.rc4
+- Updated to the latest RC release: nfs-utils-2-6-2-rc4 (bz 2022136)
+
 * Wed Mar  2 2022 Steve Dickson <steved@redhat.com> 2.6.1-0.rc3
 - Updated to the latest RC release: nfs-utils-2-6-2-rc3
 
