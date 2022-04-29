@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.6.1
-Release: 1.rc4%{?dist}
+Release: 2.rc4%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -18,6 +18,7 @@ Source6: nfs-convert.service
 Source7: 10-nfsv4.conf
 
 Patch001: nfs-utils-2.6.2-rc4.patch
+Patch002: nfs-utils-2.6.2-nfsrahead.patch
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -462,7 +463,10 @@ fi
 %{_mandir}/*/nfsiostat.8.gz
 
 %changelog
-* Wed Apr 20 2022 Steve Dickson <steved@redhat.com> 2.6.1-0.rc4
+* Thu Apr 28 2022 Steve Dickson <steved@redhat.com> 2.6.1-2.rc4
+- nfsrahead: Stop being killed by SIGSEGV (bz 2078147)
+
+* Wed Apr 20 2022 Steve Dickson <steved@redhat.com> 2.6.1-1.rc4
 - Updated to the latest RC release: nfs-utils-2-6-2-rc4 (bz 2022136)
 
 * Wed Mar  2 2022 Steve Dickson <steved@redhat.com> 2.6.1-0.rc3
