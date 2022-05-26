@@ -39,6 +39,33 @@ index 21d3e7b..323f072 100644
  [exports]
  # rootdir=/export
  #
+diff --git a/support/export/v4clients.c b/support/export/v4clients.c
+index 5e4f105..5f15b61 100644
+--- a/support/export/v4clients.c
++++ b/support/export/v4clients.c
+@@ -8,9 +8,9 @@
+ #include <unistd.h>
+ #include <stdlib.h>
+ #include <sys/inotify.h>
++#include <sys/stat.h>
+ #include <errno.h>
+ #include "export.h"
+-#include "version.h"
+ 
+ /* search.h declares 'struct entry' and nfs_prot.h
+  * does too.  Easiest fix is to trick search.h into
+@@ -24,7 +24,10 @@ static int clients_fd = -1;
+ 
+ void v4clients_init(void)
+ {
+-	if (linux_version_code() < MAKE_VERSION(5, 3, 0))
++	struct stat sb;
++
++	if (!stat("/proc/fs/nfsd/clients", &sb) == 0 ||
++	    !S_ISDIR(sb.st_mode))
+ 		return;
+ 	if (clients_fd >= 0)
+ 		return;
 diff --git a/support/nfs/rpcdispatch.c b/support/nfs/rpcdispatch.c
 index f7c27c9..7329f41 100644
 --- a/support/nfs/rpcdispatch.c
@@ -208,10 +235,10 @@ index 0000000..845ea0d
 +	$(RM) 99-nfs.rules
 diff --git a/tools/nfsrahead/main.c b/tools/nfsrahead/main.c
 new file mode 100644
-index 0000000..b3af3aa
+index 0000000..c83c6f7
 --- /dev/null
 +++ b/tools/nfsrahead/main.c
-@@ -0,0 +1,183 @@
+@@ -0,0 +1,192 @@
 +#include <stdio.h>
 +#include <string.h>
 +#include <stdlib.h>
@@ -240,27 +267,31 @@ index 0000000..b3af3aa
 +};
 +
 +/* Convert a string in the format n:m to a device number */
-+static dev_t dev_from_arg(const char *device_number)
++static int fill_device_number(struct device_info *info)
 +{
-+	char *s = strdup(device_number), *p;
++	char *s = strdup(info->device_number), *p;
 +	char *maj_s, *min_s;
 +	unsigned int maj, min;
-+	dev_t dev;
++	int err = -EINVAL;
 +
 +	maj_s = p = s;
-+	for ( ; *p != ':'; p++)
++	for ( ; *p != ':' && *p != '\0'; p++)
 +		;
 +
++	if (*p == '\0')
++		goto out_free;
++
++	err = 0;
 +	*p = '\0';
 +	min_s = p + 1;
 +
 +	maj = strtol(maj_s, NULL, 10);
 +	min = strtol(min_s, NULL, 10);
 +
-+	dev = makedev(maj, min);
-+
++	info->dev = makedev(maj, min);
++out_free:
 +	free(s);
-+	return dev;
++	return err;
 +}
 +
 +#define sfree(ptr) if (ptr) free(ptr)
@@ -269,7 +300,7 @@ index 0000000..b3af3aa
 +static void init_device_info(struct device_info *di, const char *device_number)
 +{
 +	di->device_number = strdup(device_number);
-+	di->dev = dev_from_arg(device_number);
++	di->dev = 0;
 +	di->mountpoint = NULL;
 +	di->fstype = NULL;
 +}
@@ -290,11 +321,15 @@ index 0000000..b3af3aa
 +	char *target;
 +
 +	init_device_info(device_info, device_number);
++	if ((ret = fill_device_number(device_info)) < 0)
++		goto out_free_device_info;
 +
 +	mnttbl = mnt_new_table();
 +
-+	if ((ret = mnt_table_parse_file(mnttbl, mountinfo_path)) < 0)
++	if ((ret = mnt_table_parse_file(mnttbl, mountinfo_path)) < 0) {
++		xlog(D_GENERAL, "Failed to parse %s\n", mountinfo_path);
 +		goto out_free_tbl;
++	}
 +
 +	if ((fs = mnt_table_find_devno(mnttbl, device_info->dev, MNT_ITER_FORWARD)) == NULL) {
 +		ret = ENOENT;
@@ -315,6 +350,7 @@ index 0000000..b3af3aa
 +	mnt_free_fs(fs);
 +out_free_tbl:
 +	mnt_free_table(mnttbl);
++out_free_device_info:
 +	free(device_info->device_number);
 +	device_info->device_number = NULL;
 +	return ret;
@@ -337,19 +373,19 @@ index 0000000..b3af3aa
 +	
 +	return readahead;
 +}
-+#define L_DEFAULT (L_WARNING | L_ERROR | L_FATAL)
 +
 +int main(int argc, char **argv)
 +{
-+	int ret = 0, retry;
++	int ret = 0, retry, opt;
 +	struct device_info device;
-+	unsigned int readahead = 128, verbose = 0, log_stderr = 0;
-+	char opt;
++	unsigned int readahead = 128, log_level, log_stderr = 0;
 +
++
++	log_level = D_ALL & ~D_GENERAL;
 +	while((opt = getopt(argc, argv, "dF")) != -1) {
 +		switch (opt) {
 +		case 'd':
-+			verbose = 1;
++			log_level = D_ALL;
 +			break;
 +		case 'F':
 +			log_stderr = 1;
@@ -361,7 +397,7 @@ index 0000000..b3af3aa
 +
 +	xlog_stderr(log_stderr);
 +	xlog_syslog(~log_stderr);
-+	xlog_config(L_DEFAULT | (L_NOTICE & verbose), 1);
++	xlog_config(log_level, 1);
 +	xlog_open(CONF_NAME);
 +
 +	// xlog_err causes the system to exit
@@ -373,12 +409,12 @@ index 0000000..b3af3aa
 +			break;
 +
 +	if (ret != 0) {
-+		xlog(L_ERROR, "unable to find device %s\n", argv[optind]);
++		xlog(D_GENERAL, "unable to find device %s\n", argv[optind]);
 +		goto out;
 +	}
 +
 +	if (strncmp("nfs", device.fstype, 3) != 0) {
-+		xlog(L_NOTICE,
++		xlog(D_GENERAL,
 +			"not setting readahead for non supported fstype %s on device %s\n",
 +			device.fstype, argv[optind]);
 +		ret = -EINVAL;
@@ -387,7 +423,7 @@ index 0000000..b3af3aa
 +
 +	readahead = conf_get_readahead(device.fstype);
 +
-+	xlog(L_WARNING, "setting %s readahead to %d\n", device.mountpoint, readahead);
++	xlog(D_FAC7, "setting %s readahead to %d\n", device.mountpoint, readahead);
 +
 +	printf("%d\n", readahead);
 +
@@ -567,10 +603,10 @@ index 0000000..b87ba0d
 +Anna Schumaker <Anna.Schumaker@Netapp.com>
 diff --git a/tools/rpcctl/rpcctl.py b/tools/rpcctl/rpcctl.py
 new file mode 100755
-index 0000000..b8df556
+index 0000000..d2110ad
 --- /dev/null
 +++ b/tools/rpcctl/rpcctl.py
-@@ -0,0 +1,255 @@
+@@ -0,0 +1,262 @@
 +#!/usr/bin/python3
 +import argparse
 +import collections
@@ -663,9 +699,17 @@ index 0000000..b8df556
 +        self.dstaddr = write_addr_file(self.path / "dstaddr", newaddr)
 +
 +    def set_state(self, state):
++        if self.info.get("main_xprt"):
++            raise Exception(f"Main xprts cannot be set {state}")
 +        with open(self.path / "xprt_state", 'w') as f:
 +            f.write(state)
 +        self.read_state()
++
++    def remove(self):
++        if self.info.get("main_xprt"):
++            raise Exception("Main xprts cannot be removed")
++        self.set_state("offline")
++        self.set_state("remove")
 +
 +    def add_command(subparser):
 +        parser = subparser.add_parser("xprt", help="Commands for individual xprts")
@@ -712,10 +756,9 @@ index 0000000..b8df556
 +            if args.property == "dstaddr":
 +                xprt.set_dstaddr(socket.gethostbyname(args.newaddr[0]))
 +            elif args.property == "remove":
-+                xprt.set_state("offline")
-+                xprt.set_state("remove")
++                xprt.remove()
 +            else:
-+                args.set_state(args.property)
++                xprt.set_state(args.property)
 +        print(xprt)
 +
 +
