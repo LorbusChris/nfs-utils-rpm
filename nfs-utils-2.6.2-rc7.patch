@@ -1,5 +1,5 @@
 diff --git a/.gitignore b/.gitignore
-index c89d1cd2..df791a83 100644
+index c89d1cd..df791a8 100644
 --- a/.gitignore
 +++ b/.gitignore
 @@ -61,6 +61,8 @@ utils/statd/statd
@@ -12,7 +12,7 @@ index c89d1cd2..df791a83 100644
  support/export/mount_clnt.c
  support/export/mount_xdr.c
 diff --git a/aclocal/bsdsignals.m4 b/aclocal/bsdsignals.m4
-index 24572aa7..362ddb5b 100644
+index 24572aa..362ddb5 100644
 --- a/aclocal/bsdsignals.m4
 +++ b/aclocal/bsdsignals.m4
 @@ -2,13 +2,13 @@ dnl *********** BSD vs. POSIX signal handling **************
@@ -42,7 +42,7 @@ index 24572aa7..362ddb5b 100644
          *linux*) knfsd_cv_bsd_signals=no;;
          *bsd*)   knfsd_cv_bsd_signals=yes;;
 diff --git a/aclocal/kerberos5.m4 b/aclocal/kerberos5.m4
-index bf0e88bc..f96f0fd4 100644
+index bf0e88b..f96f0fd 100644
 --- a/aclocal/kerberos5.m4
 +++ b/aclocal/kerberos5.m4
 @@ -6,7 +6,7 @@ dnl The Kerberos gssapi library will be dynamically loaded?
@@ -55,7 +55,7 @@ index bf0e88bc..f96f0fd4 100644
      yes|no)
         krb5_with=""
 diff --git a/aclocal/libblkid.m4 b/aclocal/libblkid.m4
-index 10824e9f..1b8884ce 100644
+index 10824e9..1b8884c 100644
 --- a/aclocal/libblkid.m4
 +++ b/aclocal/libblkid.m4
 @@ -5,15 +5,14 @@ AC_DEFUN([AC_BLKID_VERS], [
@@ -77,7 +77,7 @@ index 10824e9f..1b8884ce 100644
    AC_MSG_RESULT($libblkid_cv_is_recent)
  ])dnl
 diff --git a/aclocal/libsqlite3.m4 b/aclocal/libsqlite3.m4
-index 8c38993c..16b8c8a1 100644
+index 8c38993..16b8c8a 100644
 --- a/aclocal/libsqlite3.m4
 +++ b/aclocal/libsqlite3.m4
 @@ -14,7 +14,7 @@ AC_DEFUN([AC_SQLITE3_VERS], [
@@ -100,7 +100,7 @@ index 8c38993c..16b8c8a1 100644
  
    AC_MSG_RESULT($libsqlite3_cv_is_recent)
 diff --git a/aclocal/libtirpc.m4 b/aclocal/libtirpc.m4
-index 27368ff2..bddae022 100644
+index 27368ff..bddae02 100644
 --- a/aclocal/libtirpc.m4
 +++ b/aclocal/libtirpc.m4
 @@ -37,8 +37,7 @@ dnl
@@ -127,7 +127,7 @@ index 27368ff2..bddae022 100644
    dnl Now set $LIBTIRPC accordingly
    AS_IF([test "$has_libtirpc" = "yes"],
 diff --git a/aclocal/nfs-utils.m4 b/aclocal/nfs-utils.m4
-index fae8b95f..5f3ab0c2 100644
+index fae8b95..5f3ab0c 100644
 --- a/aclocal/nfs-utils.m4
 +++ b/aclocal/nfs-utils.m4
 @@ -2,13 +2,12 @@ dnl *********** GNU libc 2 ***************
@@ -147,7 +147,7 @@ index fae8b95f..5f3ab0c2 100644
    if test $knfsd_cv_glibc2 = yes; then
      CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
 diff --git a/aclocal/rpcsec_vers.m4 b/aclocal/rpcsec_vers.m4
-index 11d2f18c..43e5a966 100644
+index 11d2f18..43e5a96 100644
 --- a/aclocal/rpcsec_vers.m4
 +++ b/aclocal/rpcsec_vers.m4
 @@ -2,7 +2,7 @@ dnl Checks librpcsec version
@@ -160,7 +160,7 @@ index 11d2f18c..43e5a966 100644
      PKG_CHECK_MODULES([GSSGLUE], [libgssglue >= 0.3])
      AC_CHECK_LIB([gssglue], [gss_set_allowable_enctypes])
 diff --git a/configure.ac b/configure.ac
-index 50e9b321..a13f3691 100644
+index 50e9b32..a13f369 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -14,33 +14,29 @@ dnl *************************************************************
@@ -429,7 +429,7 @@ index 50e9b321..a13f3691 100644
  	tools/nfsconf/Makefile
  	tools/nfsdclddb/Makefile
 diff --git a/nfs.conf b/nfs.conf
-index 21d3e7b2..323f072b 100644
+index 21d3e7b..323f072 100644
 --- a/nfs.conf
 +++ b/nfs.conf
 @@ -5,6 +5,10 @@
@@ -444,7 +444,7 @@ index 21d3e7b2..323f072b 100644
  # rootdir=/export
  #
 diff --git a/support/export/v4clients.c b/support/export/v4clients.c
-index 5e4f1058..5f15b614 100644
+index 5e4f105..5f15b61 100644
 --- a/support/export/v4clients.c
 +++ b/support/export/v4clients.c
 @@ -8,9 +8,9 @@
@@ -471,7 +471,7 @@ index 5e4f1058..5f15b614 100644
  	if (clients_fd >= 0)
  		return;
 diff --git a/support/nfs/rpcdispatch.c b/support/nfs/rpcdispatch.c
-index f7c27c98..7329f419 100644
+index f7c27c9..7329f41 100644
 --- a/support/nfs/rpcdispatch.c
 +++ b/support/nfs/rpcdispatch.c
 @@ -26,12 +26,13 @@ rpc_dispatch(struct svc_req *rqstp, SVCXPRT *transp,
@@ -491,7 +491,7 @@ index f7c27c98..7329f419 100644
  		svcerr_noproc(transp);
  		return;
 diff --git a/support/nfsidmap/idmapd.conf.5 b/support/nfsidmap/idmapd.conf.5
-index f5b18167..87e39bb4 100644
+index f5b1816..87e39bb 100644
 --- a/support/nfsidmap/idmapd.conf.5
 +++ b/support/nfsidmap/idmapd.conf.5
 @@ -198,8 +198,8 @@ With this group names of a central directory can be shortened for an isolated or
@@ -507,7 +507,7 @@ index f5b18167..87e39bb4 100644
  .\" -------------------------------------------------------------------
 diff --git a/systemd/50-nfs.conf b/systemd/50-nfs.conf
 new file mode 100644
-index 00000000..b56b2d76
+index 0000000..b56b2d7
 --- /dev/null
 +++ b/systemd/50-nfs.conf
 @@ -0,0 +1,16 @@
@@ -528,7 +528,7 @@ index 00000000..b56b2d76
 +# nfs module supports "fs.nfs.*" sysctls
 +install nfs /sbin/modprobe --ignore-install nfs $CMDLINE_OPTS && /sbin/sysctl -q --pattern fs.nfs --system
 diff --git a/systemd/Makefile.am b/systemd/Makefile.am
-index e7f5d818..63a50bf2 100644
+index e7f5d81..63a50bf 100644
 --- a/systemd/Makefile.am
 +++ b/systemd/Makefile.am
 @@ -2,6 +2,8 @@
@@ -564,7 +564,7 @@ index e7f5d818..63a50bf2 100644
 +	mkdir -p $(DESTDIR)/usr/lib/modprobe.d
 +	cp $(modprobe_files) $(DESTDIR)/usr/lib/modprobe.d/
 diff --git a/systemd/nfs.conf.man b/systemd/nfs.conf.man
-index 4436a38a..e74083e9 100644
+index 4436a38..e74083e 100644
 --- a/systemd/nfs.conf.man
 +++ b/systemd/nfs.conf.man
 @@ -171,7 +171,6 @@ Recognized values:
@@ -594,7 +594,7 @@ index 4436a38a..e74083e9 100644
  .TP 10n
  .I /etc/nfs.conf
 diff --git a/systemd/rpc-pipefs-generator.c b/systemd/rpc-pipefs-generator.c
-index c24db567..7b2bb4f7 100644
+index c24db56..7b2bb4f 100644
 --- a/systemd/rpc-pipefs-generator.c
 +++ b/systemd/rpc-pipefs-generator.c
 @@ -28,11 +28,12 @@ static int generate_mount_unit(const char *pipefs_path, const char *pipefs_unit,
@@ -613,7 +613,7 @@ index c24db567..7b2bb4f7 100644
  	if (!f)
  	{
 diff --git a/tests/t0001-statd-basic-mon-unmon.sh b/tests/t0001-statd-basic-mon-unmon.sh
-index 92517a14..e1065e76 100755
+index 92517a1..e1065e7 100755
 --- a/tests/t0001-statd-basic-mon-unmon.sh
 +++ b/tests/t0001-statd-basic-mon-unmon.sh
 @@ -21,8 +21,9 @@
@@ -628,7 +628,7 @@ index 92517a14..e1065e76 100755
  start_statd
  if [ $? -ne 0 ]; then
 diff --git a/tests/test-lib.sh b/tests/test-lib.sh
-index e47ad135..b62ac2a6 100644
+index e47ad13..b62ac2a 100644
 --- a/tests/test-lib.sh
 +++ b/tests/test-lib.sh
 @@ -37,6 +37,15 @@ check_root() {
@@ -648,7 +648,7 @@ index e47ad135..b62ac2a6 100644
  lockd_registered() {
  	rpcinfo -p | grep -q nlockmgr
 diff --git a/tools/Makefile.am b/tools/Makefile.am
-index 9b4b0803..40c17c37 100644
+index 9b4b080..40c17c3 100644
 --- a/tools/Makefile.am
 +++ b/tools/Makefile.am
 @@ -12,6 +12,6 @@ if CONFIG_NFSDCLD
@@ -661,21 +661,21 @@ index 9b4b0803..40c17c37 100644
  MAINTAINERCLEANFILES = Makefile.in
 diff --git a/tools/nfsrahead/99-nfs.rules b/tools/nfsrahead/99-nfs.rules
 new file mode 100644
-index 00000000..c74914b2
+index 0000000..c74914b
 --- /dev/null
 +++ b/tools/nfsrahead/99-nfs.rules
 @@ -0,0 +1 @@
 +SUBSYSTEM=="bdi", ACTION=="add", PROGRAM="/usr/libexec/nfsrahead %k", ATTR{read_ahead_kb}="%c"
 diff --git a/tools/nfsrahead/99-nfs.rules.in b/tools/nfsrahead/99-nfs.rules.in
 new file mode 100644
-index 00000000..648813c5
+index 0000000..648813c
 --- /dev/null
 +++ b/tools/nfsrahead/99-nfs.rules.in
 @@ -0,0 +1 @@
 +SUBSYSTEM=="bdi", ACTION=="add", PROGRAM="_libexecdir_/nfsrahead %k", ATTR{read_ahead_kb}="%c"
 diff --git a/tools/nfsrahead/Makefile.am b/tools/nfsrahead/Makefile.am
 new file mode 100644
-index 00000000..845ea0d5
+index 0000000..845ea0d
 --- /dev/null
 +++ b/tools/nfsrahead/Makefile.am
 @@ -0,0 +1,16 @@
@@ -697,7 +697,7 @@ index 00000000..845ea0d5
 +	$(RM) 99-nfs.rules
 diff --git a/tools/nfsrahead/main.c b/tools/nfsrahead/main.c
 new file mode 100644
-index 00000000..c83c6f71
+index 0000000..c83c6f7
 --- /dev/null
 +++ b/tools/nfsrahead/main.c
 @@ -0,0 +1,192 @@
@@ -895,7 +895,7 @@ index 00000000..c83c6f71
 +}
 diff --git a/tools/nfsrahead/nfsrahead.man b/tools/nfsrahead/nfsrahead.man
 new file mode 100644
-index 00000000..5488f633
+index 0000000..5488f63
 --- /dev/null
 +++ b/tools/nfsrahead/nfsrahead.man
 @@ -0,0 +1,72 @@
@@ -973,7 +973,7 @@ index 00000000..5488f633
 +Thiago Rafael Becker <trbecker@gmail.com>
 diff --git a/tools/rpcctl/Makefile.am b/tools/rpcctl/Makefile.am
 new file mode 100644
-index 00000000..33fb431f
+index 0000000..33fb431
 --- /dev/null
 +++ b/tools/rpcctl/Makefile.am
 @@ -0,0 +1,13 @@
@@ -992,7 +992,7 @@ index 00000000..33fb431f
 +MAINTAINERCLEANFILES=Makefile.in
 diff --git a/tools/rpcctl/rpcctl.man b/tools/rpcctl/rpcctl.man
 new file mode 100644
-index 00000000..b87ba0df
+index 0000000..b87ba0d
 --- /dev/null
 +++ b/tools/rpcctl/rpcctl.man
 @@ -0,0 +1,67 @@
@@ -1065,7 +1065,7 @@ index 00000000..b87ba0df
 +Anna Schumaker <Anna.Schumaker@Netapp.com>
 diff --git a/tools/rpcctl/rpcctl.py b/tools/rpcctl/rpcctl.py
 new file mode 100755
-index 00000000..d2110ad6
+index 0000000..d2110ad
 --- /dev/null
 +++ b/tools/rpcctl/rpcctl.py
 @@ -0,0 +1,262 @@
@@ -1331,8 +1331,69 @@ index 00000000..d2110ad6
 +except Exception as e:
 +    print(str(e))
 +    sys.exit(1)
+diff --git a/utils/gssd/svcgssd.c b/utils/gssd/svcgssd.c
+index 881207b..ce78d8f 100644
+--- a/utils/gssd/svcgssd.c
++++ b/utils/gssd/svcgssd.c
+@@ -211,9 +211,6 @@ main(int argc, char *argv[])
+ 	rpc_verbosity = conf_get_num("svcgssd", "RPC-Verbosity", rpc_verbosity);
+ 	idmap_verbosity = conf_get_num("svcgssd", "IDMAP-Verbosity", idmap_verbosity);
+ 
+-	/* We don't need the config anymore */
+-	conf_cleanup();
+-
+ 	while ((opt = getopt(argc, argv, "fivrnp:")) != -1) {
+ 		switch (opt) {
+ 			case 'f':
+@@ -298,9 +295,9 @@ main(int argc, char *argv[])
+ 				(const gss_OID)GSS_C_NT_HOSTBASED_SERVICE);
+ 		if (status == FALSE) {
+ 			printerr(0, "unable to obtain root (machine) credentials\n");
+-			printerr(0, "do you have a keytab entry for "
+-				"nfs/<your.host>@<YOUR.REALM> in "
+-				"/etc/krb5.keytab?\n");
++			printerr(0, "do you have a keytab entry for %s in"
++				"/etc/krb5.keytab?\n",
++				principal ? principal : "nfs/<your.host>@<YOUR.REALM>");
+ 			exit(1);
+ 		}
+ 	} else {
+@@ -328,6 +325,9 @@ main(int argc, char *argv[])
+ 
+ 	daemon_ready();
+ 
++	/* We don't need the config anymore */
++	conf_cleanup();
++
+ 	nfs4_init_name_mapping(NULL); /* XXX: should only do this once */
+ 
+ 	rc = event_base_dispatch(evbase);
+diff --git a/utils/gssd/svcgssd.man b/utils/gssd/svcgssd.man
+index 15ef4c9..8771c03 100644
+--- a/utils/gssd/svcgssd.man
++++ b/utils/gssd/svcgssd.man
+@@ -61,6 +61,19 @@ this is equivalent to the
+ option.  If set to any other value, that is used like the
+ .B -p
+ option.
++.TP
++.B verbosity
++Value which is equivalent to the number of
++.BR -v .
++.TP
++.B rpc-verbosity
++Value which is equivalent to the number of
++.BR -r .
++.TP
++.B idmap-verbosity
++Value which is equivalent to the number of
++.BR -i .
++
+ 
+ .SH SEE ALSO
+ .BR rpc.gssd(8),
 diff --git a/utils/idmapd/idmapd.c b/utils/idmapd/idmapd.c
-index e2c160e8..e79c124d 100644
+index e2c160e..e79c124 100644
 --- a/utils/idmapd/idmapd.c
 +++ b/utils/idmapd/idmapd.c
 @@ -474,7 +474,7 @@ main(int argc, char **argv)
@@ -1345,7 +1406,7 @@ index e2c160e8..e79c124d 100644
  
  static void
 diff --git a/utils/idmapd/idmapd.man b/utils/idmapd/idmapd.man
-index 5f34d2bf..8215d259 100644
+index 5f34d2b..8215d25 100644
 --- a/utils/idmapd/idmapd.man
 +++ b/utils/idmapd/idmapd.man
 @@ -24,13 +24,13 @@ the NFSv4 kernel client and server, to which it communicates via
@@ -1365,7 +1426,7 @@ index 5f34d2bf..8215d259 100644
  It can also be specified in
  .Pa /etc/idmapd.conf
 diff --git a/utils/mount/nfsmount.conf.man b/utils/mount/nfsmount.conf.man
-index 73c3e118..34879c8d 100644
+index 73c3e11..34879c8 100644
 --- a/utils/mount/nfsmount.conf.man
 +++ b/utils/mount/nfsmount.conf.man
 @@ -1,4 +1,4 @@
@@ -1375,7 +1436,7 @@ index 73c3e118..34879c8d 100644
  .SH NAME
  nfsmount.conf - Configuration file for NFS mounts
 diff --git a/utils/mount/stropts.c b/utils/mount/stropts.c
-index 3c4e218a..dbdd11e7 100644
+index 3c4e218..dbdd11e 100644
 --- a/utils/mount/stropts.c
 +++ b/utils/mount/stropts.c
 @@ -973,7 +973,9 @@ fall_back:
@@ -1390,7 +1451,7 @@ index 3c4e218a..dbdd11e7 100644
  }
  
 diff --git a/utils/mountd/mountd.man b/utils/mountd/mountd.man
-index 77e6299a..a206a3e2 100644
+index 77e6299..a206a3e 100644
 --- a/utils/mountd/mountd.man
 +++ b/utils/mountd/mountd.man
 @@ -286,10 +286,9 @@ The values recognized in the
@@ -1406,7 +1467,7 @@ index 77e6299a..a206a3e2 100644
  
  .SH TCP_WRAPPERS SUPPORT
 diff --git a/utils/nfsd/nfsd.man b/utils/nfsd/nfsd.man
-index 716f538b..634b8a63 100644
+index 716f538..634b8a6 100644
 --- a/utils/nfsd/nfsd.man
 +++ b/utils/nfsd/nfsd.man
 @@ -156,8 +156,6 @@ Enable (with "on" or "yes" etc) or disable ("off", "no") UDP support.
@@ -1419,7 +1480,7 @@ index 716f538b..634b8a63 100644
  .TP
  .B vers4
 diff --git a/utils/nfsidmap/nfsidmap.man b/utils/nfsidmap/nfsidmap.man
-index 2af16f31..1911c41b 100644
+index 2af16f3..1911c41 100644
 --- a/utils/nfsidmap/nfsidmap.man
 +++ b/utils/nfsidmap/nfsidmap.man
 @@ -2,7 +2,7 @@
