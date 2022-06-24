@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.6.1
-Release: 2.rc7%{?dist}
+Release: 3.rc7%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -26,6 +26,9 @@ Patch103: nfs-utils-2.3.1-systemd-gssproxy-restart.patch
 Patch104: nfs-utils-2.3.3-man-tcpwrappers.patch
 Patch105: nfs-utils-2.3.3-nfsconf-usegssproxy.patch
 Patch106: nfs-utils-2.4.2-systemd-svcgssd.patch
+# Don't fail to load nfs module if sysctl isn't available
+# https://bugzilla.redhat.com/show_bug.cgi?id=2100668
+Patch107: nfs-utils-2.6.2-nosysctl-module-fail.patch
 
 Provides: exportfs    = %{epoch}:%{version}-%{release}
 Provides: nfsstat     = %{epoch}:%{version}-%{release}
@@ -465,6 +468,9 @@ fi
 %{_mandir}/*/nfsiostat.8.gz
 
 %changelog
+* Thu Jun 23 2022 Adam Williamson <awilliam@redhat.com> - 2.6.1-3.rc7
+- Don't fail to load nfs module if sysctl is not available (bz 2100668)
+
 * Thu Jun 23 2022 Steve Dickson <steved@redhat.com> 2.6.1-2.rc7
 - Updated to the latest RC release: nfs-utils-2-6-2-rc6 (bz 2099697)
 
