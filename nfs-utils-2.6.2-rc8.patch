@@ -1,0 +1,1509 @@
+diff --git a/.gitignore b/.gitignore
+index c89d1cd2..df791a83 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -61,6 +61,8 @@ utils/statd/statd
+ tools/locktest/testlk
+ tools/getiversion/getiversion
+ tools/nfsconf/nfsconf
++tools/nfsrahead/nfsrahead
++tools/nfsrahead/99-nfs_bdi.rules
+ support/export/mount.h
+ support/export/mount_clnt.c
+ support/export/mount_xdr.c
+diff --git a/aclocal/bsdsignals.m4 b/aclocal/bsdsignals.m4
+index 24572aa7..362ddb5b 100644
+--- a/aclocal/bsdsignals.m4
++++ b/aclocal/bsdsignals.m4
+@@ -2,13 +2,13 @@ dnl *********** BSD vs. POSIX signal handling **************
+ AC_DEFUN([AC_BSD_SIGNALS], [
+   AC_MSG_CHECKING(for BSD signal semantics)
+   AC_CACHE_VAL(knfsd_cv_bsd_signals,
+-    [AC_TRY_RUN([
++    [AC_RUN_IFELSE([AC_LANG_SOURCE([[
+ 	#include <signal.h>
+ 	#include <unistd.h>
+ 	#include <sys/wait.h>
+ 
+ 	static int counter = 0;
+-	static RETSIGTYPE handler(int num) { counter++; }
++	static void handler(int num) { counter++; }
+ 
+ 	int main()
+ 	{
+@@ -23,8 +23,7 @@ AC_DEFUN([AC_BSD_SIGNALS], [
+ 		kill(getpid(), SIGHUP); kill(getpid(), SIGHUP);
+ 		return (counter == 2)? 0 : 1;
+ 	}
+-    ], knfsd_cv_bsd_signals=yes, knfsd_cv_bsd_signals=no,
+-    [
++    ]])],[knfsd_cv_bsd_signals=yes],[knfsd_cv_bsd_signals=no],[
+       case "$host_os" in
+         *linux*) knfsd_cv_bsd_signals=no;;
+         *bsd*)   knfsd_cv_bsd_signals=yes;;
+diff --git a/aclocal/kerberos5.m4 b/aclocal/kerberos5.m4
+index bf0e88bc..f96f0fd4 100644
+--- a/aclocal/kerberos5.m4
++++ b/aclocal/kerberos5.m4
+@@ -6,7 +6,7 @@ dnl The Kerberos gssapi library will be dynamically loaded?
+ AC_DEFUN([AC_KERBEROS_V5],[
+   AC_MSG_CHECKING(for Kerberos v5)
+   AC_ARG_WITH(krb5,
+-  [AC_HELP_STRING([--with-krb5=DIR], [use Kerberos v5 installation in DIR])],
++  [AS_HELP_STRING([--with-krb5=DIR],[use Kerberos v5 installation in DIR])],
+   [ case "$withval" in
+     yes|no)
+        krb5_with=""
+diff --git a/aclocal/libblkid.m4 b/aclocal/libblkid.m4
+index 10824e9f..1b8884ce 100644
+--- a/aclocal/libblkid.m4
++++ b/aclocal/libblkid.m4
+@@ -5,15 +5,14 @@ AC_DEFUN([AC_BLKID_VERS], [
+    [
+     saved_LIBS="$LIBS"
+     LIBS=-lblkid
+-    AC_TRY_RUN([
++    AC_RUN_IFELSE([AC_LANG_SOURCE([[
+ 	#include <blkid/blkid.h>
+ 	int main()
+ 	{
+ 		int vers = blkid_get_library_version(0, 0);
+ 		return vers >= 140 ? 0 : 1;
+ 	}
+-       ], [libblkid_cv_is_recent=yes], [libblkid_cv_is_recent=no],
+-       [libblkid_cv_is_recent=unknown])
++       ]])],[libblkid_cv_is_recent=yes],[libblkid_cv_is_recent=no],[libblkid_cv_is_recent=unknown])
+     LIBS="$saved_LIBS"])
+   AC_MSG_RESULT($libblkid_cv_is_recent)
+ ])dnl
+diff --git a/aclocal/libsqlite3.m4 b/aclocal/libsqlite3.m4
+index 8c38993c..16b8c8a1 100644
+--- a/aclocal/libsqlite3.m4
++++ b/aclocal/libsqlite3.m4
+@@ -14,7 +14,7 @@ AC_DEFUN([AC_SQLITE3_VERS], [
+    [
+     saved_LIBS="$LIBS"
+     LIBS=-lsqlite3
+-    AC_TRY_RUN([
++    AC_RUN_IFELSE([AC_LANG_SOURCE([[
+ 	#include <stdio.h>
+ 	#include <sqlite3.h>
+ 	int main()
+@@ -24,8 +24,7 @@ AC_DEFUN([AC_SQLITE3_VERS], [
+ 		return vers != SQLITE_VERSION_NUMBER ||
+ 			vers < 3003000;
+ 	}
+-       ], [libsqlite3_cv_is_recent=yes], [libsqlite3_cv_is_recent=no],
+-       [libsqlite3_cv_is_recent=unknown])
++       ]])],[libsqlite3_cv_is_recent=yes],[libsqlite3_cv_is_recent=no],[libsqlite3_cv_is_recent=unknown])
+     LIBS="$saved_LIBS"])
+ 
+   AC_MSG_RESULT($libsqlite3_cv_is_recent)
+diff --git a/aclocal/libtirpc.m4 b/aclocal/libtirpc.m4
+index 27368ff2..bddae022 100644
+--- a/aclocal/libtirpc.m4
++++ b/aclocal/libtirpc.m4
+@@ -37,8 +37,7 @@ dnl
+ AC_DEFUN([AC_LIBTIRPC_OLD], [
+ 
+   AC_ARG_WITH([tirpcinclude],
+-              [AC_HELP_STRING([--with-tirpcinclude=DIR],
+-                              [use TI-RPC headers in DIR])],
++              [AS_HELP_STRING([--with-tirpcinclude=DIR],[use TI-RPC headers in DIR])],
+               [tirpc_header_dir=$withval],
+               [tirpc_header_dir=/usr/include/tirpc])
+ 
+@@ -50,9 +49,9 @@ AC_DEFUN([AC_LIBTIRPC_OLD], [
+   dnl Also must have the headers installed where we expect
+   dnl to look for headers; add -I compiler option if found
+   AS_IF([test "$has_libtirpc" = "yes"],
+-        [AC_CHECK_HEADERS([${tirpc_header_dir}/netconfig.h],
+-                          [AC_SUBST([AM_CPPFLAGS], ["-I${tirpc_header_dir}"])],
+-                          [has_libtirpc="no"])])
++        [AC_CHECK_FILE([${tirpc_header_dir}/netconfig.h],
++                       [AC_SUBST([AM_CPPFLAGS], ["-I${tirpc_header_dir}"])],
++                       [has_libtirpc="no"])])
+ 
+   dnl Now set $LIBTIRPC accordingly
+   AS_IF([test "$has_libtirpc" = "yes"],
+diff --git a/aclocal/nfs-utils.m4 b/aclocal/nfs-utils.m4
+index fae8b95f..5f3ab0c2 100644
+--- a/aclocal/nfs-utils.m4
++++ b/aclocal/nfs-utils.m4
+@@ -2,13 +2,12 @@ dnl *********** GNU libc 2 ***************
+ AC_DEFUN([AC_GNULIBC],[
+   AC_MSG_CHECKING(for GNU libc2)
+   AC_CACHE_VAL(knfsd_cv_glibc2,
+-  [AC_TRY_CPP([
++  [AC_PREPROC_IFELSE([AC_LANG_SOURCE([[
+       #include <features.h>
+       #if !defined(__GLIBC__)
+       # error Nope
+       #endif
+-      ],
+-  knfsd_cv_glibc2=yes, knfsd_cv_glibc2=no)])
++      ]])],[knfsd_cv_glibc2=yes],[knfsd_cv_glibc2=no])])
+   AC_MSG_RESULT($knfsd_cv_glibc2)
+   if test $knfsd_cv_glibc2 = yes; then
+     CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
+diff --git a/aclocal/rpcsec_vers.m4 b/aclocal/rpcsec_vers.m4
+index 11d2f18c..43e5a966 100644
+--- a/aclocal/rpcsec_vers.m4
++++ b/aclocal/rpcsec_vers.m4
+@@ -2,7 +2,7 @@ dnl Checks librpcsec version
+ AC_DEFUN([AC_RPCSEC_VERSION], [
+ 
+   AC_ARG_WITH([gssglue],
+-	[AC_HELP_STRING([--with-gssglue], [Use libgssglue for GSS support])])
++	[AS_HELP_STRING([--with-gssglue],[Use libgssglue for GSS support])])
+   if test x"$with_gssglue" = x"yes"; then
+     PKG_CHECK_MODULES([GSSGLUE], [libgssglue >= 0.3])
+     AC_CHECK_LIB([gssglue], [gss_set_allowable_enctypes])
+diff --git a/configure.ac b/configure.ac
+index 50e9b321..4403335b 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -14,33 +14,29 @@ dnl *************************************************************
+ dnl * Define the set of applicable options
+ dnl *************************************************************
+ AC_ARG_WITH(release,
+-	[AC_HELP_STRING([--with-release=XXX], [set release to XXX [1]])],
++	[AS_HELP_STRING([--with-release=XXX],[set release to XXX [1]])],
+ 	RELEASE=$withval,
+ 	RELEASE=1)
+ 	AC_SUBST(RELEASE)
+ AC_ARG_WITH(statedir,
+-	[AC_HELP_STRING([--with-statedir=/foo],
+-			[use state dir /foo @<:@default=/var/lib/nfs@:>@])],
++	[AS_HELP_STRING([--with-statedir=/foo],[use state dir /foo @<:@default=/var/lib/nfs@:>@])],
+ 	statedir=$withval,
+ 	statedir=/var/lib/nfs)
+ 	AC_SUBST(statedir)
+ AC_ARG_WITH(nfsconfig,
+-	[AC_HELP_STRING([--with-nfsconfig=/config/file],
+-			[use general config file /config/file @<:@default=/etc/nfs.conf@:>@])],
++	[AS_HELP_STRING([--with-nfsconfig=/config/file],[use general config file /config/file @<:@default=/etc/nfs.conf@:>@])],
+ 	nfsconfig=$withval,
+ 	nfsconfig=/etc/nfs.conf)
+ 	AC_SUBST(nfsconfig)
+ AC_ARG_WITH(statdpath,
+-	[AC_HELP_STRING([--with-statdpath=/foo],
+-			[define the statd state dir as /foo instead of the NFS statedir @<:@default=/var/lib/nfs@:>@])],
++	[AS_HELP_STRING([--with-statdpath=/foo],[define the statd state dir as /foo instead of the NFS statedir @<:@default=/var/lib/nfs@:>@])],
+ 	statdpath=$withval,
+ 	statdpath=$statedir
+ 	)
+ 	AC_SUBST(statdpath)
+ AC_ARG_WITH(statduser,
+-	[AC_HELP_STRING([--with-statduser=rpcuser],
+-                        [statd to run under @<:@rpcuser or nobody@:>@]
+-	)],
++	[AS_HELP_STRING([--with-statduser=rpcuser],[statd to run under @<:@rpcuser or nobody@:>@
++	])],
+ 	statduser=$withval,
+ 	if test "x$cross_compiling" = "xno"; then
+ 		if grep -s '^rpcuser:' /etc/passwd > /dev/null; then
+@@ -53,9 +49,8 @@ AC_ARG_WITH(statduser,
+ 	fi)
+ 	AC_SUBST(statduser)
+ AC_ARG_WITH(start-statd,
+-	[AC_HELP_STRING([--with-start-statd=scriptname],
+-			[When an nfs filesystems is mounted with locking, run this script]
+-	)],
++	[AS_HELP_STRING([--with-start-statd=scriptname],[When an nfs filesystems is mounted with locking, run this script
++	])],
+ 	startstatd=$withval,
+ 	startstatd=/usr/sbin/start-statd
+ 	)
+@@ -63,8 +58,7 @@ AC_ARG_WITH(start-statd,
+ 	AC_DEFINE_UNQUOTED(START_STATD, "$startstatd", [Define this to a script which can start statd on mount])
+ unitdir=/usr/lib/systemd/system
+ AC_ARG_WITH(systemd,
+-	[AC_HELP_STRING([--with-systemd@<:@=unit-dir-path@:>@],
+-			[install systemd unit files @<:@Default: no, and path defaults to /usr/lib/systemd/system if not given@:>@])],
++	[AS_HELP_STRING([--with-systemd@<:@=unit-dir-path@:>@],[install systemd unit files @<:@Default: no, and path defaults to /usr/lib/systemd/system if not given@:>@])],
+ 	if test "$withval" != "no" ; then 
+ 		use_systemd=1
+ 		if test "$withval" != "yes" ; then 
+@@ -77,9 +71,20 @@ AC_ARG_WITH(systemd,
+ 	AM_CONDITIONAL(INSTALL_SYSTEMD, [test "$use_systemd" = 1])
+ 	AC_SUBST(unitdir)
+ 
++modprobedir=/usr/lib/modprobe.d
++AC_ARG_WITH(modprobedir,
++	[AS_HELP_STRING([--with-modprobedir@<:@=modprobe-dir-path@:>@],[install modprobe config files @<:@Default: /usr/lib/modprobe.d@:>@])],
++	if test "$withval" != "no" ; then
++		modprobedir=$withval
++	else
++		modprobedir=
++	fi
++	)
++	AM_CONDITIONAL(INSTALL_MODPROBEDIR, [test -n "$modprobedir"])
++	AC_SUBST(modprobedir)
++
+ AC_ARG_ENABLE(nfsv4,
+-	[AC_HELP_STRING([--disable-nfsv4],
+-                        [disable support for NFSv4 @<:@default=no@:>@])],
++	[AS_HELP_STRING([--disable-nfsv4],[disable support for NFSv4 @<:@default=no@:>@])],
+ 	enable_nfsv4=$enableval,
+ 	enable_nfsv4=yes)
+ 	if test "$enable_nfsv4" = yes; then
+@@ -93,8 +98,7 @@ AC_ARG_ENABLE(nfsv4,
+ 	AM_CONDITIONAL(CONFIG_NFSV4, [test "$enable_nfsv4" = "yes"])
+ 
+ AC_ARG_ENABLE(nfsv41,
+-	[AC_HELP_STRING([--disable-nfsv41],
+-                        [disable support for NFSv41 @<:@default=no@:>@])],
++	[AS_HELP_STRING([--disable-nfsv41],[disable support for NFSv41 @<:@default=no@:>@])],
+ 	enable_nfsv41=$enableval,
+ 	enable_nfsv41=yes)
+ 	if test "$enable_nfsv41" = yes; then
+@@ -111,8 +115,7 @@ AC_ARG_ENABLE(nfsv41,
+ 	AM_CONDITIONAL(CONFIG_NFSV41, [test "$enable_nfsv41" = "yes"])
+ 
+ AC_ARG_ENABLE(gss,
+-	[AC_HELP_STRING([--disable-gss],
+-              [disable client support for rpcsec_gss @<:@default=no@:>@])],
++	[AS_HELP_STRING([--disable-gss],[disable client support for rpcsec_gss @<:@default=no@:>@])],
+ 	enable_gss=$enableval,
+ 	enable_gss=yes)
+ 	if test "$enable_gss" = yes; then
+@@ -126,8 +129,7 @@ AC_ARG_ENABLE(gss,
+ 	AM_CONDITIONAL(CONFIG_GSS, [test "$enable_gss" = "yes"])
+ 
+ AC_ARG_ENABLE(svcgss,
+-	[AC_HELP_STRING([--enable-svcgss],
+-    [enable building svcgssd for rpcsec_gss server support @<:@default=no@:>@])],
++	[AS_HELP_STRING([--enable-svcgss],[enable building svcgssd for rpcsec_gss server support @<:@default=no@:>@])],
+ 	enable_svcgss=$enableval,
+ 	enable_svcgss=no)
+ 	if test "$enable_gss" = yes -a "$enable_svcgss" = yes; then
+@@ -141,12 +143,12 @@ AC_ARG_ENABLE(svcgss,
+ 	AM_CONDITIONAL(CONFIG_SVCGSS, [test "$enable_svcgss" = "yes"])
+ 
+ AC_ARG_ENABLE(kprefix,
+-	[AC_HELP_STRING([--enable-kprefix], [install progs as rpc.knfsd etc])],
++	[AS_HELP_STRING([--enable-kprefix],[install progs as rpc.knfsd etc])],
+ 	test "$enableval" = "yes" && kprefix=k,
+ 	kprefix=)
+ 	AC_SUBST(kprefix)
+ AC_ARG_WITH(rpcgen,
+-	[AC_HELP_STRING([--with-rpcgen=internal], [use internal rpcgen instead of system one])],
++	[AS_HELP_STRING([--with-rpcgen=internal],[use internal rpcgen instead of system one])],
+ 	rpcgen_path=$withval,
+ 	rpcgen_path=yes )
+ 	rpcgen_cflags=-Werror=strict-prototypes
+@@ -166,21 +168,18 @@ AC_ARG_WITH(rpcgen,
+ 	AC_SUBST(RPCGEN_PATH)
+ 	AM_CONDITIONAL(CONFIG_RPCGEN, [test "$RPCGEN_PATH" = "internal"])
+ AC_ARG_ENABLE(uuid,
+-	[AC_HELP_STRING([--disable-uuid], 
+-		[Exclude uuid support to avoid buggy libblkid. @<:@default=no@:>@])],
++	[AS_HELP_STRING([--disable-uuid],[Exclude uuid support to avoid buggy libblkid. @<:@default=no@:>@])],
+ 	if test "$enableval" = "yes" ; then choose_blkid=yes; else choose_blkid=no; fi,
+ 	choose_blkid=default)
+ AC_ARG_ENABLE(mount,
+-	[AC_HELP_STRING([--disable-mount],
+-		[Do not build mount.nfs and do use the util-linux mount(8) functionality. @<:@default=no@:>@])],
++	[AS_HELP_STRING([--disable-mount],[Do not build mount.nfs and do use the util-linux mount(8) functionality. @<:@default=no@:>@])],
+ 	enable_mount=$enableval,
+ 	enable_mount=yes)
+ 	AM_CONDITIONAL(CONFIG_MOUNT, [test "$enable_mount" = "yes"])
+ 
+ if test "$enable_mount" = yes; then
+ 	AC_ARG_ENABLE(libmount-mount,
+-		[AC_HELP_STRING([--enable-libmount-mount],
+-				[Link mount.nfs with libmount @<:@default=no@:>@])],
++		[AS_HELP_STRING([--enable-libmount-mount],[Link mount.nfs with libmount @<:@default=no@:>@])],
+ 		enable_libmount=$enableval,
+ 		enable_libmount=no)
+ else
+@@ -188,14 +187,12 @@ else
+ fi
+ 
+ AC_ARG_ENABLE(sbin-override,
+-	[AC_HELP_STRING([--disable-sbin-override],
+-		[Don't force nfsdcltrack and mount helpers into /sbin: always honour --sbindir])],
++	[AS_HELP_STRING([--disable-sbin-override],[Don't force nfsdcltrack and mount helpers into /sbin: always honour --sbindir])],
+ 	enable_sbin_override=$enableval,
+ 	enable_sbin_override=yes)
+ 	AM_CONDITIONAL(CONFIG_SBIN_OVERRIDE, [test "$enable_sbin_override" = "yes"])
+ AC_ARG_ENABLE(junction,
+-	[AC_HELP_STRING([--enable-junction],
+-			[enable support for NFS junctions @<:@default=no@:>@])],
++	[AS_HELP_STRING([--enable-junction],[enable support for NFS junctions @<:@default=no@:>@])],
+ 	enable_junction=$enableval,
+ 	enable_junction=no)
+ 	if test "$enable_junction" = yes; then
+@@ -207,13 +204,11 @@ AC_ARG_ENABLE(junction,
+ 	AM_CONDITIONAL(CONFIG_JUNCTION, [test "$enable_junction" = "yes" ])
+ 
+ AC_ARG_ENABLE(tirpc,
+-	[AC_HELP_STRING([--disable-tirpc],
+-			[disable use of TI-RPC library @<:@default=no@:>@])],
++	[AS_HELP_STRING([--disable-tirpc],[disable use of TI-RPC library @<:@default=no@:>@])],
+ 	enable_tirpc=$enableval,
+ 	enable_tirpc=yes)
+ AC_ARG_ENABLE(ipv6,
+-	[AC_HELP_STRING([--disable-ipv6],
+-                        [disable support for IPv6 @<:@default=no@:>@])],
++	[AS_HELP_STRING([--disable-ipv6],[disable support for IPv6 @<:@default=no@:>@])],
+ 	enable_ipv6=$enableval,
+ 	enable_ipv6=yes)
+ 	if test "$enable_ipv6" = yes; then
+@@ -226,8 +221,7 @@ AC_ARG_ENABLE(ipv6,
+ 
+ if test "$enable_mount" = yes; then
+ 	AC_ARG_ENABLE(mountconfig,
+-	[AC_HELP_STRING([--disable-mountconfig],
+-        [disable mount to use a configuration file @<:@default=no@:>@])],
++	[AS_HELP_STRING([--disable-mountconfig],[disable mount to use a configuration file @<:@default=no@:>@])],
+ 	enable_mountconfig=$enableval,
+ 	enable_mountconfig=yes)
+ 	if test "$enable_mountconfig" = no; then
+@@ -236,9 +230,8 @@ if test "$enable_mount" = yes; then
+ 		AC_DEFINE(MOUNT_CONFIG, 1, 
+ 			[Define this if you want mount to read a configuration file])
+ 		AC_ARG_WITH(mountfile,
+-			[AC_HELP_STRING([--with-mountfile=filename],
+-			[Using filename as the NFS mount options file [/etc/nfsmounts.conf]]
+-			)],
++			[AS_HELP_STRING([--with-mountfile=filename],[Using filename as the NFS mount options file [/etc/nfsmounts.conf]
++			])],
+ 		mountfile=$withval,
+ 		mountfile=/etc/nfsmount.conf)
+ 		AC_SUBST(mountfile)
+@@ -252,20 +245,17 @@ else
+ fi
+ 
+ AC_ARG_ENABLE(nfsdcld,
+-	[AC_HELP_STRING([--disable-nfsdcld],
+-			[disable NFSv4 clientid tracking daemon @<:@default=no@:>@])],
++	[AS_HELP_STRING([--disable-nfsdcld],[disable NFSv4 clientid tracking daemon @<:@default=no@:>@])],
+ 	enable_nfsdcld=$enableval,
+ 	enable_nfsdcld="yes")
+ 
+ AC_ARG_ENABLE(nfsdcltrack,
+-	[AC_HELP_STRING([--disable-nfsdcltrack],
+-			[disable NFSv4 clientid tracking programs @<:@default=no@:>@])],
++	[AS_HELP_STRING([--disable-nfsdcltrack],[disable NFSv4 clientid tracking programs @<:@default=no@:>@])],
+ 	enable_nfsdcltrack=$enableval,
+ 	enable_nfsdcltrack="yes")
+ 
+ AC_ARG_ENABLE(nfsv4server,
+-	[AC_HELP_STRING([--enable-nfsv4server],
+-			[enable support for NFSv4 only server  @<:@default=no@:>@])],
++	[AS_HELP_STRING([--enable-nfsv4server],[enable support for NFSv4 only server  @<:@default=no@:>@])],
+ 	enable_nfsv4server=$enableval,
+ 	enable_nfsv4server="no")
+ 	if test "$enable_nfsv4server" = yes; then
+@@ -299,7 +289,7 @@ AC_PROG_CPP
+ AC_PROG_INSTALL
+ AC_PROG_LN_S
+ AC_PROG_MAKE_SET
+-AC_PROG_LIBTOOL
++LT_INIT
+ AM_PROG_CC_C_O
+ 
+ if test "x$cross_compiling" = "xno"; then
+@@ -313,7 +303,6 @@ AC_SUBST(CC_FOR_BUILD)
+ AC_CHECK_TOOL(AR, ar)
+ AC_CHECK_TOOL(LD, ld)
+ 
+-AC_HEADER_STDC([])
+ AC_GNULIBC
+ AC_BSD_SIGNALS
+ 
+@@ -553,7 +542,7 @@ AC_C_INLINE
+ AC_TYPE_OFF_T
+ AC_TYPE_PID_T
+ AC_TYPE_SIZE_T
+-AC_HEADER_TIME
++
+ AC_STRUCT_TM
+ AC_CHECK_TYPES([struct file_handle], [], [], [[
+ 		#define _GNU_SOURCE
+@@ -579,7 +568,7 @@ AC_HEADER_MAJOR
+ AC_FUNC_MEMCMP
+ #AC_FUNC_REALLOC
+ AC_FUNC_SELECT_ARGTYPES
+-AC_TYPE_SIGNAL
++
+ AC_FUNC_STAT
+ AC_FUNC_VPRINTF
+ AC_CHECK_FUNCS([alarm atexit dup2 fdatasync ftruncate getcwd \
+@@ -737,6 +726,8 @@ AC_CONFIG_FILES([
+ 	tools/rpcgen/Makefile
+ 	tools/mountstats/Makefile
+ 	tools/nfs-iostat/Makefile
++	tools/nfsrahead/Makefile
++	tools/rpcctl/Makefile
+ 	tools/nfsdclnts/Makefile
+ 	tools/nfsconf/Makefile
+ 	tools/nfsdclddb/Makefile
+diff --git a/nfs.conf b/nfs.conf
+index 21d3e7b2..323f072b 100644
+--- a/nfs.conf
++++ b/nfs.conf
+@@ -5,6 +5,10 @@
+ [general]
+ # pipefs-directory=/var/lib/nfs/rpc_pipefs
+ #
++[nfsrahead]
++# nfs=15000
++# nfs4=16000
++#
+ [exports]
+ # rootdir=/export
+ #
+diff --git a/support/export/v4clients.c b/support/export/v4clients.c
+index 5e4f1058..5f15b614 100644
+--- a/support/export/v4clients.c
++++ b/support/export/v4clients.c
+@@ -8,9 +8,9 @@
+ #include <unistd.h>
+ #include <stdlib.h>
+ #include <sys/inotify.h>
++#include <sys/stat.h>
+ #include <errno.h>
+ #include "export.h"
+-#include "version.h"
+ 
+ /* search.h declares 'struct entry' and nfs_prot.h
+  * does too.  Easiest fix is to trick search.h into
+@@ -24,7 +24,10 @@ static int clients_fd = -1;
+ 
+ void v4clients_init(void)
+ {
+-	if (linux_version_code() < MAKE_VERSION(5, 3, 0))
++	struct stat sb;
++
++	if (!stat("/proc/fs/nfsd/clients", &sb) == 0 ||
++	    !S_ISDIR(sb.st_mode))
+ 		return;
+ 	if (clients_fd >= 0)
+ 		return;
+diff --git a/support/nfs/rpcdispatch.c b/support/nfs/rpcdispatch.c
+index f7c27c98..7329f419 100644
+--- a/support/nfs/rpcdispatch.c
++++ b/support/nfs/rpcdispatch.c
+@@ -26,12 +26,13 @@ rpc_dispatch(struct svc_req *rqstp, SVCXPRT *transp,
+ 			void *argp, void *resp)
+ {
+ 	struct rpc_dentry	*dent;
++	int rq_vers = (int)rqstp->rq_vers;
+ 
+-	if (((int)rqstp->rq_vers) > nvers) {
++	if (rq_vers < 1 || rq_vers > nvers) {
+ 		svcerr_progvers(transp, 1, nvers);
+ 		return;
+ 	}
+-	dtable += (rqstp->rq_vers - 1);
++	dtable += (rq_vers - 1);
+ 	if (rqstp->rq_proc > dtable->nproc) {
+ 		svcerr_noproc(transp);
+ 		return;
+diff --git a/support/nfsidmap/idmapd.conf.5 b/support/nfsidmap/idmapd.conf.5
+index f5b18167..87e39bb4 100644
+--- a/support/nfsidmap/idmapd.conf.5
++++ b/support/nfsidmap/idmapd.conf.5
+@@ -198,8 +198,8 @@ With this group names of a central directory can be shortened for an isolated or
+ .TP
+ .B Group-Name-No-Prefix-Regex
+ Case-insensitive regular expression to exclude groups from adding and removing the prefix set by
+-.B Group-Name-Prefix
+-. The regular expression must match both the remote and local group names. Multiple expressions may be concatenated with '|'.
++.BR Group-Name-Prefix .
++The regular expression must match both the remote and local group names. Multiple expressions may be concatenated with '|'.
+ (Default: none)
+ .\"
+ .\" -------------------------------------------------------------------
+diff --git a/systemd/50-nfs.conf b/systemd/50-nfs.conf
+new file mode 100644
+index 00000000..19e8ee73
+--- /dev/null
++++ b/systemd/50-nfs.conf
+@@ -0,0 +1,16 @@
++# Ensure all NFS systctl settings get applied when modules load
++
++# sunrpc module supports "sunrpc.*" sysctls
++install sunrpc /sbin/modprobe --ignore-install sunrpc $CMDLINE_OPTS && { /sbin/sysctl -q --pattern sunrpc --system; exit 0; }
++
++# rpcrdma module supports sunrpc.svc_rdma.*
++install rpcrdma /sbin/modprobe --ignore-install rpcrdma $CMDLINE_OPTS && { /sbin/sysctl -q --pattern sunrpc.svc_rdma --system; exit 0; }
++
++# lockd module supports "fs.nfs.nlm*" and "fs.nfs.nsm*" sysctls
++install lockd /sbin/modprobe --ignore-install lockd $CMDLINE_OPTS && { /sbin/sysctl -q --pattern fs.nfs.n[sl]m --system; exit 0; }
++
++# nfsv4 module supports "fs.nfs.*" sysctls (nfs_callback_tcpport and idmap_cache_timeout)
++install nfsv4 /sbin/modprobe --ignore-install nfsv4 $CMDLINE_OPTS && { /sbin/sysctl -q --pattern 'fs.nfs.(nfs_callback_tcpport|idmap_cache_timeout)' --system; exit 0; }
++
++# nfs module supports "fs.nfs.*" sysctls
++install nfs /sbin/modprobe --ignore-install nfs $CMDLINE_OPTS && { /sbin/sysctl -q --pattern fs.nfs --system; exit 0; }
+diff --git a/systemd/Makefile.am b/systemd/Makefile.am
+index e7f5d818..7b5ab84b 100644
+--- a/systemd/Makefile.am
++++ b/systemd/Makefile.am
+@@ -2,6 +2,8 @@
+ 
+ MAINTAINERCLEANFILES = Makefile.in
+ 
++modprobe_files = 50-nfs.conf
++
+ unit_files =  \
+     nfs-client.target \
+     rpc_pipefs.target \
+@@ -51,7 +53,7 @@ endif
+ 
+ man5_MANS	= nfs.conf.man
+ man7_MANS	= nfs.systemd.man
+-EXTRA_DIST = $(unit_files) $(man5_MANS) $(man7_MANS)
++EXTRA_DIST = $(unit_files) $(modprobe_files) $(man5_MANS) $(man7_MANS)
+ 
+ generator_dir = $(unitdir)/../system-generators
+ 
+@@ -73,8 +75,14 @@ rpc_pipefs_generator_LDADD = ../support/nfs/libnfs.la
+ 
+ if INSTALL_SYSTEMD
+ genexec_PROGRAMS = nfs-server-generator rpc-pipefs-generator
+-install-data-hook: $(unit_files)
++install-data-hook: $(unit_files) $(modprobe_files)
+ 	mkdir -p $(DESTDIR)/$(unitdir)
+ 	cp $(unit_files) $(DESTDIR)/$(unitdir)
+ 	cp $(rpc_pipefs_mount_file) $(DESTDIR)/$(unitdir)/$(rpc_pipefsmount)
++else
++install-data-hook: $(modprobe_files)
++endif
++if INSTALL_MODPROBEDIR
++	mkdir -p $(DESTDIR)$(modprobedir)
++	cp $(modprobe_files) $(DESTDIR)$(modprobedir)
+ endif
+diff --git a/systemd/nfs.conf.man b/systemd/nfs.conf.man
+index 4436a38a..e74083e9 100644
+--- a/systemd/nfs.conf.man
++++ b/systemd/nfs.conf.man
+@@ -171,7 +171,6 @@ Recognized values:
+ .BR lease-time ,
+ .BR udp ,
+ .BR tcp ,
+-.BR vers2 ,
+ .BR vers3 ,
+ .BR vers4 ,
+ .BR vers4.0 ,
+@@ -295,6 +294,17 @@ Only
+ .B debug=
+ is recognized.
+ 
++.TP
++.B nfsrahead
++Recognized values:
++.BR nfs ,
++.BR nfsv4 ,
++.BR default .
++
++See
++.BR nfsrahead (5)
++for deatils.
++
+ .SH FILES
+ .TP 10n
+ .I /etc/nfs.conf
+diff --git a/systemd/rpc-pipefs-generator.c b/systemd/rpc-pipefs-generator.c
+index c24db567..7b2bb4f7 100644
+--- a/systemd/rpc-pipefs-generator.c
++++ b/systemd/rpc-pipefs-generator.c
+@@ -28,11 +28,12 @@ static int generate_mount_unit(const char *pipefs_path, const char *pipefs_unit,
+ {
+ 	char	*path;
+ 	FILE	*f;
++	size_t size = (strlen(dirname) + 1 + strlen(pipefs_unit));
+ 
+-	path = malloc(strlen(dirname) + 1 + strlen(pipefs_unit));
++	path = malloc(size);
+ 	if (!path)
+ 		return 1;
+-	sprintf(path, "%s/%s", dirname, pipefs_unit);
++	snprintf(path, size, "%s/%s", dirname, pipefs_unit);
+ 	f = fopen(path, "w");
+ 	if (!f)
+ 	{
+diff --git a/tests/t0001-statd-basic-mon-unmon.sh b/tests/t0001-statd-basic-mon-unmon.sh
+index 92517a14..e1065e76 100755
+--- a/tests/t0001-statd-basic-mon-unmon.sh
++++ b/tests/t0001-statd-basic-mon-unmon.sh
+@@ -21,8 +21,9 @@
+ 
+ . ./test-lib.sh
+ 
+-# This test needs root privileges
++# This test needs root privileges and /dev/log
+ check_root
++check_dev_log
+ 
+ start_statd
+ if [ $? -ne 0 ]; then
+diff --git a/tests/test-lib.sh b/tests/test-lib.sh
+index e47ad135..b62ac2a6 100644
+--- a/tests/test-lib.sh
++++ b/tests/test-lib.sh
+@@ -37,6 +37,15 @@ check_root() {
+ 	fi
+ }
+ 
++# Most tests require /dev/log. Skip the test if it doesn't exist in this
++# environment.
++check_dev_log() {
++	if ! [ -e /dev/log ]; then
++		echo "*** Skipping this tests as it requires /dev/log ***"
++		exit 77
++	fi
++}
++
+ # is lockd registered as a service?
+ lockd_registered() {
+ 	rpcinfo -p | grep -q nlockmgr
+diff --git a/tools/Makefile.am b/tools/Makefile.am
+index 9b4b0803..40c17c37 100644
+--- a/tools/Makefile.am
++++ b/tools/Makefile.am
+@@ -12,6 +12,6 @@ if CONFIG_NFSDCLD
+ OPTDIRS += nfsdclddb
+ endif
+ 
+-SUBDIRS = locktest rpcdebug nlmtest mountstats nfs-iostat nfsdclnts $(OPTDIRS)
++SUBDIRS = locktest rpcdebug nlmtest mountstats nfs-iostat rpcctl nfsdclnts nfsrahead $(OPTDIRS)
+ 
+ MAINTAINERCLEANFILES = Makefile.in
+diff --git a/tools/nfsrahead/99-nfs.rules b/tools/nfsrahead/99-nfs.rules
+new file mode 100644
+index 00000000..c74914b2
+--- /dev/null
++++ b/tools/nfsrahead/99-nfs.rules
+@@ -0,0 +1 @@
++SUBSYSTEM=="bdi", ACTION=="add", PROGRAM="/usr/libexec/nfsrahead %k", ATTR{read_ahead_kb}="%c"
+diff --git a/tools/nfsrahead/99-nfs.rules.in b/tools/nfsrahead/99-nfs.rules.in
+new file mode 100644
+index 00000000..648813c5
+--- /dev/null
++++ b/tools/nfsrahead/99-nfs.rules.in
+@@ -0,0 +1 @@
++SUBSYSTEM=="bdi", ACTION=="add", PROGRAM="_libexecdir_/nfsrahead %k", ATTR{read_ahead_kb}="%c"
+diff --git a/tools/nfsrahead/Makefile.am b/tools/nfsrahead/Makefile.am
+new file mode 100644
+index 00000000..845ea0d5
+--- /dev/null
++++ b/tools/nfsrahead/Makefile.am
+@@ -0,0 +1,16 @@
++libexec_PROGRAMS = nfsrahead
++nfsrahead_SOURCES = main.c
++nfsrahead_LDFLAGS= -lmount
++nfsrahead_LDADD = ../../support/nfs/libnfsconf.la
++
++man5_MANS = nfsrahead.man
++EXTRA_DIST = $(man5_MANS)
++
++udev_rulesdir = /usr/lib/udev/rules.d/
++udev_rules_DATA = 99-nfs.rules
++
++99-nfs.rules: 99-nfs.rules.in $(builddefs)
++	$(SED) "s|_libexecdir_|@libexecdir@|g" 99-nfs.rules.in > $@
++
++clean-local:
++	$(RM) 99-nfs.rules
+diff --git a/tools/nfsrahead/main.c b/tools/nfsrahead/main.c
+new file mode 100644
+index 00000000..c83c6f71
+--- /dev/null
++++ b/tools/nfsrahead/main.c
+@@ -0,0 +1,192 @@
++#include <stdio.h>
++#include <string.h>
++#include <stdlib.h>
++#include <errno.h>
++#include <unistd.h>
++
++#include <libmount/libmount.h>
++#include <sys/sysmacros.h>
++
++#include "xlog.h"
++#include "conffile.h"
++
++#ifndef MOUNTINFO_PATH
++#define MOUNTINFO_PATH "/proc/self/mountinfo"
++#endif
++
++#define CONF_NAME "nfsrahead"
++#define NFS_DEFAULT_READAHEAD 128
++
++/* Device information from the system */
++struct device_info {
++	char *device_number;
++	dev_t dev;
++	char *mountpoint;
++	char *fstype;
++};
++
++/* Convert a string in the format n:m to a device number */
++static int fill_device_number(struct device_info *info)
++{
++	char *s = strdup(info->device_number), *p;
++	char *maj_s, *min_s;
++	unsigned int maj, min;
++	int err = -EINVAL;
++
++	maj_s = p = s;
++	for ( ; *p != ':' && *p != '\0'; p++)
++		;
++
++	if (*p == '\0')
++		goto out_free;
++
++	err = 0;
++	*p = '\0';
++	min_s = p + 1;
++
++	maj = strtol(maj_s, NULL, 10);
++	min = strtol(min_s, NULL, 10);
++
++	info->dev = makedev(maj, min);
++out_free:
++	free(s);
++	return err;
++}
++
++#define sfree(ptr) if (ptr) free(ptr)
++
++/* device_info maintenance */
++static void init_device_info(struct device_info *di, const char *device_number)
++{
++	di->device_number = strdup(device_number);
++	di->dev = 0;
++	di->mountpoint = NULL;
++	di->fstype = NULL;
++}
++
++
++static void free_device_info(struct device_info *di)
++{
++	sfree(di->mountpoint);
++	sfree(di->fstype);
++	sfree(di->device_number);
++}
++
++static int get_mountinfo(const char *device_number, struct device_info *device_info, const char *mountinfo_path)
++{
++	int ret = 0;
++	struct libmnt_table *mnttbl;
++	struct libmnt_fs *fs;
++	char *target;
++
++	init_device_info(device_info, device_number);
++	if ((ret = fill_device_number(device_info)) < 0)
++		goto out_free_device_info;
++
++	mnttbl = mnt_new_table();
++
++	if ((ret = mnt_table_parse_file(mnttbl, mountinfo_path)) < 0) {
++		xlog(D_GENERAL, "Failed to parse %s\n", mountinfo_path);
++		goto out_free_tbl;
++	}
++
++	if ((fs = mnt_table_find_devno(mnttbl, device_info->dev, MNT_ITER_FORWARD)) == NULL) {
++		ret = ENOENT;
++		goto out_free_tbl;
++	}
++
++	if ((target = (char *)mnt_fs_get_target(fs)) == NULL) {
++		ret = ENOENT;
++		goto out_free_fs;
++	}
++
++	device_info->mountpoint = strdup(target);
++	target = (char *)mnt_fs_get_fstype(fs);
++	if (target)
++		device_info->fstype = strdup(target);
++
++out_free_fs:
++	mnt_free_fs(fs);
++out_free_tbl:
++	mnt_free_table(mnttbl);
++out_free_device_info:
++	free(device_info->device_number);
++	device_info->device_number = NULL;
++	return ret;
++}
++
++static int get_device_info(const char *device_number, struct device_info *device_info)
++{
++	int ret = ENOENT;
++	for (int retry_count = 0; retry_count < 10 && ret != 0; retry_count++)
++		ret = get_mountinfo(device_number, device_info, MOUNTINFO_PATH);
++
++	return ret;
++}
++
++static int conf_get_readahead(const char *kind) {
++	int readahead = 0;
++
++	if((readahead = conf_get_num(CONF_NAME, kind, -1)) == -1)
++		readahead = conf_get_num(CONF_NAME, "default", NFS_DEFAULT_READAHEAD);
++	
++	return readahead;
++}
++
++int main(int argc, char **argv)
++{
++	int ret = 0, retry, opt;
++	struct device_info device;
++	unsigned int readahead = 128, log_level, log_stderr = 0;
++
++
++	log_level = D_ALL & ~D_GENERAL;
++	while((opt = getopt(argc, argv, "dF")) != -1) {
++		switch (opt) {
++		case 'd':
++			log_level = D_ALL;
++			break;
++		case 'F':
++			log_stderr = 1;
++			break;
++		}
++	}
++
++	conf_init_file(NFS_CONFFILE);
++
++	xlog_stderr(log_stderr);
++	xlog_syslog(~log_stderr);
++	xlog_config(log_level, 1);
++	xlog_open(CONF_NAME);
++
++	// xlog_err causes the system to exit
++	if ((argc - optind) != 1)
++		xlog_err("expected the device number of a BDI; is udev ok?");
++
++	for (retry = 0; retry <= 10; retry++ )
++		if ((ret = get_device_info(argv[optind], &device)) == 0)
++			break;
++
++	if (ret != 0) {
++		xlog(D_GENERAL, "unable to find device %s\n", argv[optind]);
++		goto out;
++	}
++
++	if (strncmp("nfs", device.fstype, 3) != 0) {
++		xlog(D_GENERAL,
++			"not setting readahead for non supported fstype %s on device %s\n",
++			device.fstype, argv[optind]);
++		ret = -EINVAL;
++		goto out;
++	}
++
++	readahead = conf_get_readahead(device.fstype);
++
++	xlog(D_FAC7, "setting %s readahead to %d\n", device.mountpoint, readahead);
++
++	printf("%d\n", readahead);
++
++out:
++	free_device_info(&device);
++	return ret;
++}
+diff --git a/tools/nfsrahead/nfsrahead.man b/tools/nfsrahead/nfsrahead.man
+new file mode 100644
+index 00000000..5488f633
+--- /dev/null
++++ b/tools/nfsrahead/nfsrahead.man
+@@ -0,0 +1,72 @@
++.\" Manpage for nfsrahead.
++.nh
++.ad l
++.TH man 5 "08 Mar 2022" "1.0" "nfsrahead man page"
++.SH NAME
++
++nfsrahead \- Configure the readahead for NFS mounts
++
++.SH SYNOPSIS
++
++nfsrahead [-F] [-d] <device>
++
++.SH DESCRIPTION
++
++\fInfsrahead\fR is a tool intended to be used with udev to set the \fIread_ahead_kb\fR parameter of NFS mounts, according to the configuration file (see \fICONFIGURATION\fR). \fIdevice\fR is the device number for the NFS backing device as provided by the kernel.
++
++.SH OPTIONS
++.TP
++.B -F
++Send messages to 
++.I stderr 
++instead of
++.I syslog
++
++.TP
++.B -d
++Increase the debugging level.
++
++.SH CONFIGURATION
++.I nfsrahead
++is configured in
++.IR /etc/nfs.conf ,
++in the section titled
++.IR nfsrahead .
++It accepts the following configurations.
++
++.TP
++.B nfs=<value>
++The readahead value applied to NFSv3 mounts.
++
++.TP
++.B nfs4=<value>
++The readahead value applied to NFSv4 mounts.
++
++.TP
++.B default=<value>
++The default configuration when none of the configurations above is set.
++
++.SH EXAMPLE CONFIGURATION
++[nfsrahead]
++.br
++nfs=15000              # readahead of 15000 for NFSv3 mounts
++.br
++nfs4=16000             # readahead of 16000 for NFSv4 mounts
++.br
++default=128            # default is 128
++
++.SH SEE ALSO
++
++.BR mount.nfs (8),
++.BR nfs (5),
++.BR nfs.conf (5),
++.BR udev (7),
++.BR bcc-readahead (8)
++
++.SH BUGS
++
++No known bugs.
++
++.SH AUTHOR
++
++Thiago Rafael Becker <trbecker@gmail.com>
+diff --git a/tools/rpcctl/Makefile.am b/tools/rpcctl/Makefile.am
+new file mode 100644
+index 00000000..33fb431f
+--- /dev/null
++++ b/tools/rpcctl/Makefile.am
+@@ -0,0 +1,13 @@
++## Process this file with automake to produce Makefile.in
++PYTHON_FILES =  rpcctl.py
++
++man8_MANS = rpcctl.man
++
++EXTRA_DIST = $(man8_MANS) $(PYTHON_FILES)
++
++all-local: $(PYTHON_FILES)
++
++install-data-hook:
++	$(INSTALL) -m 755 rpcctl.py $(DESTDIR)$(sbindir)/rpcctl
++
++MAINTAINERCLEANFILES=Makefile.in
+diff --git a/tools/rpcctl/rpcctl.man b/tools/rpcctl/rpcctl.man
+new file mode 100644
+index 00000000..b87ba0df
+--- /dev/null
++++ b/tools/rpcctl/rpcctl.man
+@@ -0,0 +1,67 @@
++.\"
++.\" rpcctl(8)
++.\"
++.TH rpcctl 8 "15 Feb 2022"
++.SH NAME
++rpcctl \- Displays SunRPC connection information
++.SH SYNOPSIS
++.nf
++.BR rpcctl " [ \fB\-h \fR| \fB\-\-help \fR] { \fBclient \fR| \fBswitch \fR| \fBxprt \fR}"
++.P
++.BR "rpcctl client" " \fR[ \fB\-h \fR| \fB\-\-help \fR] { \fBshow \fR}"
++.BR "rpcctl client show " "\fR[ \fB\-h \f| \fB\-\-help \fR] [ \fIXPRT \fR]"
++.P
++.BR "rpcctl switch" " \fR[ \fB\-h \fR| \fB\-\-help \fR] { \fBset \fR| \fBshow \fR}"
++.BR "rpcctl switch set" " \fR[ \fB\-h \fR| \fB\-\-help \fR] \fISWITCH \fBdstaddr \fINEWADDR"
++.BR "rpcctl switch show" " \fR[ \fB\-h \fR| \fB\-\-help \fR] [ \fISWITCH \fR]"
++.P
++.BR "rpcctl xprt" " \fR[ \fB\-h \fR| \fB\-\-help \fR] { \fBremove \fR| \fBset \fR| \fBshow \fR}"
++.BR "rpcctl xprt remove" " \fR[ \fB\-h \fR| \fB\-\-help \fR] \fIXPRT"
++.BR "rpcctl xprt set" " \fR[ \fB\-h \fR| \fB\-\-help \fR] \fIXPRT \fR{ \fBdstaddr \fINEWADDR \fR| \fBoffline \fR| \fBonline \fR}"
++.BR "rpcctl xprt show" " \fR[ \fB\-h \fR| \fB\-\-help \fR] [ \fIXPRT \fR]"
++.fi
++.SH DESCRIPTION
++.RB "The " rpcctl " command displays information collected in the SunRPC sysfs files about the system's SunRPC objects.
++.P
++.SS rpcctl client \fR- \fBCommands operating on RPC clients
++.IP "\fBshow \fR[ \fICLIENT \fR] \fB(default)"
++Show detailed information about the RPC clients on this system.
++If \fICLIENT \fRwas provided, then only show information about a single RPC client.
++.P
++.SS rpcctl switch \fR- \fBCommands operating on groups of transports
++.IP "\fBset \fISWITCH \fBdstaddr \fINEWADDR"
++Change the destination address of all transports in the \fISWITCH \fRto \fINEWADDR\fR.
++\fINEWADDR \fRcan be an IP address, DNS name, or anything else resolvable by \fBgethostbyname\fR(3).
++.IP "\fBshow \fR[ \fISWITCH \fR] \fB(default)"
++Show detailed information about groups of transports on this system.
++If \fISWITCH \fRwas provided, then only show information about a single transport group.
++.P
++.SS rpcctl xprt \fR- \fBCommands operating on individual transports
++.IP "\fBremove \fIXPRT"
++Removes the specified \fIXPRT \fRfrom the system.
++Note that "main" transports cannot be removed.
++.P
++.IP "\fBset \fIXPRT \fBdstaddr \fINEWADDR"
++Change the destination address of the specified \fIXPRT \fR to \fINEWADDR\fR.
++\fINEWADDR \fRcan be an IP address, DNS name, or anything else resolvable by \fBgethostbyname\fR(3).
++.P
++.IP "\fBset \fIXPRT \fBoffline"
++Sets the specified \fIXPRT\fR's state to offline.
++.P
++.IP "\fBset \fIXPRT \fBonline"
++Sets the specified \fIXPRT\fR's state to online.
++.IP "\fBshow \fR[ \fIXPRT \fR] \fB(default)"
++Show detailed information about this system's transports.
++If \fIXPRT \fRwas provided, then only show information about a single transport.
++.SH EXAMPLES
++.IP "\fBrpcctl switch show switch-2"
++Show details about the RPC switch named "switch-2".
++.IP "\fBrpcctl xprt remove xprt-4"
++Remove the xprt named "xprt-4" from the system.
++.IP "\fBrpcctl xprt set xprt-3 dstaddr https://linux-nfs.org
++Change the dstaddr of the xprt named "xprt-3" to point to linux-nfs.org
++.SH DIRECTORY
++.TP
++.B /sys/kernel/sunrpc/
++.SH AUTHOR
++Anna Schumaker <Anna.Schumaker@Netapp.com>
+diff --git a/tools/rpcctl/rpcctl.py b/tools/rpcctl/rpcctl.py
+new file mode 100755
+index 00000000..d2110ad6
+--- /dev/null
++++ b/tools/rpcctl/rpcctl.py
+@@ -0,0 +1,262 @@
++#!/usr/bin/python3
++import argparse
++import collections
++import errno
++import os
++import pathlib
++import socket
++import sys
++
++with open("/proc/mounts", 'r') as f:
++    mount = [ line.split()[1] for line in f if "sysfs" in line ]
++    if len(mount) == 0:
++        print("ERROR: sysfs is not mounted")
++        sys.exit(1)
++
++sunrpc = pathlib.Path(mount[0]) / "kernel" / "sunrpc"
++if not sunrpc.is_dir():
++    print("ERROR: sysfs does not have sunrpc directory")
++    sys.exit(1)
++
++def read_addr_file(path):
++    try:
++        with open(path, 'r') as f:
++            return f.readline().strip()
++    except:
++        return "(enoent)"
++
++def write_addr_file(path, newaddr):
++    with open(path, 'w') as f:
++        f.write(newaddr)
++    return read_addr_file(path)
++
++def read_info_file(path):
++    res = collections.defaultdict(int)
++    try:
++        with open(path) as info:
++            lines = [ l.split("=", 1) for l in info if "=" in l ]
++            res.update({ key:int(val.strip()) for (key, val) in lines })
++    finally:
++        return res
++
++
++class Xprt:
++    def __init__(self, path):
++        self.path = path
++        self.name = path.stem.rsplit("-", 1)[0]
++        self.type = path.stem.split("-")[2]
++        self.info = read_info_file(path / "xprt_info")
++        self.dstaddr = read_addr_file(path / "dstaddr")
++        self.srcaddr = read_addr_file(path / "srcaddr")
++        self.read_state()
++
++    def __lt__(self, rhs):
++        return self.name < rhs.name
++
++    def _xprt(self):
++        main = ", main" if self.info.get("main_xprt") else ""
++        return f"{self.name}: {self.type}, {self.dstaddr}, " \
++               f"port {self.info['dst_port']}, state <{self.state}>{main}"
++
++    def _src_reqs(self):
++        return f"	Source: {self.srcaddr}, port {self.info['src_port']}, " \
++               f"Requests: {self.info['num_reqs']}"
++
++    def _cong_slots(self):
++        return f"	Congestion: cur {self.info['cur_cong']}, win {self.info['cong_win']}, " \
++               f"Slots: min {self.info['min_num_slots']}, max {self.info['max_num_slots']}"
++
++    def _queues(self):
++        return f"	Queues: binding {self.info['binding_q_len']}, " \
++               f"sending {self.info['sending_q_len']}, pending {self.info['pending_q_len']}, " \
++               f"backlog {self.info['backlog_q_len']}, tasks {self.info['tasks_queuelen']}"
++
++    def __str__(self):
++        if not self.path.exists():
++            return f"{self.name}: has been removed"
++        return "\n".join([self._xprt(), self._src_reqs(),
++                          self._cong_slots(), self._queues() ])
++
++    def read_state(self):
++        if self.path.exists():
++            with open(self.path / "xprt_state") as f:
++                self.state = ','.join(f.readline().split()[1:])
++
++    def small_str(self):
++        main = " [main]" if self.info.get("main_xprt") else ""
++        return f"{self.name}: {self.type}, {self.dstaddr}{main}"
++
++    def set_dstaddr(self, newaddr):
++        self.dstaddr = write_addr_file(self.path / "dstaddr", newaddr)
++
++    def set_state(self, state):
++        if self.info.get("main_xprt"):
++            raise Exception(f"Main xprts cannot be set {state}")
++        with open(self.path / "xprt_state", 'w') as f:
++            f.write(state)
++        self.read_state()
++
++    def remove(self):
++        if self.info.get("main_xprt"):
++            raise Exception("Main xprts cannot be removed")
++        self.set_state("offline")
++        self.set_state("remove")
++
++    def add_command(subparser):
++        parser = subparser.add_parser("xprt", help="Commands for individual xprts")
++        parser.set_defaults(func=Xprt.show, xprt=None)
++        subparser = parser.add_subparsers()
++
++        remove = subparser.add_parser("remove", help="Remove an xprt")
++        remove.add_argument("xprt", metavar="XPRT", nargs=1,
++                            help="Name of the xprt to remove")
++        remove.set_defaults(func=Xprt.set_property, property="remove")
++
++        show = subparser.add_parser("show", help="Show xprts")
++        show.add_argument("xprt", metavar="XPRT", nargs='?',
++                          help="Name of a specific xprt to show")
++        show.set_defaults(func=Xprt.show)
++
++        set = subparser.add_parser("set", help="Change an xprt property")
++        set.add_argument("xprt", metavar="XPRT", nargs=1,
++                         help="Name of a specific xprt to modify")
++        subparser = set.add_subparsers(required=True)
++        online = subparser.add_parser("online", help="Set an xprt online")
++        online.set_defaults(func=Xprt.set_property, property="online")
++        offline = subparser.add_parser("offline", help="Set an xprt offline")
++        offline.set_defaults(func=Xprt.set_property, property="offline")
++        dstaddr = subparser.add_parser("dstaddr", help="Change an xprt's dstaddr")
++        dstaddr.add_argument("newaddr", metavar="NEWADDR", nargs=1,
++                             help="The new address for the xprt")
++        dstaddr.set_defaults(func=Xprt.set_property, property="dstaddr")
++
++    def get_by_name(name):
++        glob = f"**/{name}-*" if name else "**/xprt-*"
++        res = [ Xprt(x) for x in (sunrpc / "xprt-switches").glob(glob) ]
++        if name and len(res) == 0:
++            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT),
++                                    f"{sunrpc / 'xprt-switches' / glob}")
++        return sorted(res)
++
++    def show(args):
++        for xprt in Xprt.get_by_name(args.xprt):
++            print(xprt)
++
++    def set_property(args):
++        for xprt in Xprt.get_by_name(args.xprt[0]):
++            if args.property == "dstaddr":
++                xprt.set_dstaddr(socket.gethostbyname(args.newaddr[0]))
++            elif args.property == "remove":
++                xprt.remove()
++            else:
++                xprt.set_state(args.property)
++        print(xprt)
++
++
++class XprtSwitch:
++    def __init__(self, path, sep=":"):
++        self.path = path
++        self.name = path.stem
++        self.info = read_info_file(path / "xprt_switch_info")
++        self.xprts = sorted([ Xprt(p) for p in self.path.iterdir() if p.is_dir() ])
++        self.sep = sep
++
++    def __lt__(self, rhs):
++        return self.name < rhs.name
++
++    def __str__(self):
++        switch =  f"{self.name}{self.sep} " \
++                  f"xprts {self.info['num_xprts']}, " \
++                  f"active {self.info['num_active']}, " \
++                  f"queue {self.info['queue_len']}"
++        xprts = [ f"	{x.small_str()}" for x in self.xprts ]
++        return "\n".join([ switch ] + xprts)
++
++    def add_command(subparser):
++        parser = subparser.add_parser("switch", help="Commands for xprt switches")
++        parser.set_defaults(func=XprtSwitch.show, switch=None)
++        subparser = parser.add_subparsers()
++
++        show = subparser.add_parser("show", help="Show xprt switches")
++        show.add_argument("switch", metavar="SWITCH", nargs='?',
++                          help="Name of a specific switch to show")
++        show.set_defaults(func=XprtSwitch.show)
++
++        set = subparser.add_parser("set", help="Change an xprt switch property")
++        set.add_argument("switch", metavar="SWITCH", nargs=1,
++                         help="Name of a specific xprt switch to modify")
++        subparser = set.add_subparsers(required=True)
++        dstaddr = subparser.add_parser("dstaddr", help="Change an xprt switch's dstaddr")
++        dstaddr.add_argument("newaddr", metavar="NEWADDR", nargs=1,
++                             help="The new address for the xprt switch")
++        dstaddr.set_defaults(func=XprtSwitch.set_property, property="dstaddr")
++
++    def get_by_name(name):
++        xprt_switches = sunrpc / "xprt-switches"
++        if name:
++            return [ XprtSwitch(xprt_switches / name) ]
++        return [ XprtSwitch(f) for f in sorted(xprt_switches.iterdir()) ]
++
++    def show(args):
++        for switch in XprtSwitch.get_by_name(args.switch):
++            print(switch)
++
++    def set_property(args):
++        for switch in XprtSwitch.get_by_name(args.switch[0]):
++            resolved = socket.gethostbyname(args.newaddr[0])
++            for xprt in switch.xprts:
++                xprt.set_dstaddr(resolved)
++        print(switch)
++
++
++class RpcClient:
++    def __init__(self, path):
++        self.path = path
++        self.name = path.stem
++        self.switch = XprtSwitch(path / (path / "switch").readlink(), sep=",")
++
++    def __lt__(self, rhs):
++        return self.name < rhs.name
++
++    def __str__(self):
++        return f"{self.name}: {self.switch}"
++
++    def add_command(subparser):
++        parser = subparser.add_parser("client", help="Commands for rpc clients")
++        parser.set_defaults(func=RpcClient.show, client=None)
++        subparser = parser.add_subparsers()
++
++        show = subparser.add_parser("show", help="Show rpc clients")
++        show.add_argument("client", metavar="CLIENT", nargs='?',
++                          help="Name of a specific rpc client to show")
++        parser.set_defaults(func=RpcClient.show)
++
++    def get_by_name(name):
++        rpc_clients = sunrpc / "rpc-clients"
++        if name:
++            return [ RpcClient(rpc_clients / name) ]
++        return [ RpcClient(f) for f in sorted(rpc_clients.iterdir()) ]
++
++    def show(args):
++        for client in RpcClient.get_by_name(args.client):
++            print(client)
++
++
++parser = argparse.ArgumentParser()
++
++def show_small_help(args):
++    parser.print_usage()
++    print("sunrpc dir:", sunrpc)
++parser.set_defaults(func=show_small_help)
++
++subparser = parser.add_subparsers(title="commands")
++RpcClient.add_command(subparser)
++XprtSwitch.add_command(subparser)
++Xprt.add_command(subparser)
++
++args = parser.parse_args()
++try:
++    args.func(args)
++except Exception as e:
++    print(str(e))
++    sys.exit(1)
+diff --git a/utils/gssd/svcgssd.c b/utils/gssd/svcgssd.c
+index 881207b3..ce78d8f7 100644
+--- a/utils/gssd/svcgssd.c
++++ b/utils/gssd/svcgssd.c
+@@ -211,9 +211,6 @@ main(int argc, char *argv[])
+ 	rpc_verbosity = conf_get_num("svcgssd", "RPC-Verbosity", rpc_verbosity);
+ 	idmap_verbosity = conf_get_num("svcgssd", "IDMAP-Verbosity", idmap_verbosity);
+ 
+-	/* We don't need the config anymore */
+-	conf_cleanup();
+-
+ 	while ((opt = getopt(argc, argv, "fivrnp:")) != -1) {
+ 		switch (opt) {
+ 			case 'f':
+@@ -298,9 +295,9 @@ main(int argc, char *argv[])
+ 				(const gss_OID)GSS_C_NT_HOSTBASED_SERVICE);
+ 		if (status == FALSE) {
+ 			printerr(0, "unable to obtain root (machine) credentials\n");
+-			printerr(0, "do you have a keytab entry for "
+-				"nfs/<your.host>@<YOUR.REALM> in "
+-				"/etc/krb5.keytab?\n");
++			printerr(0, "do you have a keytab entry for %s in"
++				"/etc/krb5.keytab?\n",
++				principal ? principal : "nfs/<your.host>@<YOUR.REALM>");
+ 			exit(1);
+ 		}
+ 	} else {
+@@ -328,6 +325,9 @@ main(int argc, char *argv[])
+ 
+ 	daemon_ready();
+ 
++	/* We don't need the config anymore */
++	conf_cleanup();
++
+ 	nfs4_init_name_mapping(NULL); /* XXX: should only do this once */
+ 
+ 	rc = event_base_dispatch(evbase);
+diff --git a/utils/gssd/svcgssd.man b/utils/gssd/svcgssd.man
+index 15ef4c94..8771c035 100644
+--- a/utils/gssd/svcgssd.man
++++ b/utils/gssd/svcgssd.man
+@@ -61,6 +61,19 @@ this is equivalent to the
+ option.  If set to any other value, that is used like the
+ .B -p
+ option.
++.TP
++.B verbosity
++Value which is equivalent to the number of
++.BR -v .
++.TP
++.B rpc-verbosity
++Value which is equivalent to the number of
++.BR -r .
++.TP
++.B idmap-verbosity
++Value which is equivalent to the number of
++.BR -i .
++
+ 
+ .SH SEE ALSO
+ .BR rpc.gssd(8),
+diff --git a/utils/idmapd/idmapd.c b/utils/idmapd/idmapd.c
+index e2c160e8..e79c124d 100644
+--- a/utils/idmapd/idmapd.c
++++ b/utils/idmapd/idmapd.c
+@@ -474,7 +474,7 @@ main(int argc, char **argv)
+ 		event_free(svrdirev);
+ 	event_base_free(evbase);
+ 
+-	return 1;
++	return 0;
+ }
+ 
+ static void
+diff --git a/utils/idmapd/idmapd.man b/utils/idmapd/idmapd.man
+index 5f34d2bf..8215d259 100644
+--- a/utils/idmapd/idmapd.man
++++ b/utils/idmapd/idmapd.man
+@@ -24,13 +24,13 @@ the NFSv4 kernel client and server, to which it communicates via
+ upcalls, by translating user and group IDs to names, and vice versa.
+ .Pp
+ The system derives the
+-.I user
++.Em user
+ part of the string by performing a password or group lookup.
+ The lookup mechanism is configured in
+ .Pa /etc/idmapd.conf
+ .Pp
+ By default, the
+-.I domain
++.Em domain
+ part of the string is the system's DNS domain name.
+ It can also be specified in
+ .Pa /etc/idmapd.conf
+diff --git a/utils/mount/nfsmount.conf.man b/utils/mount/nfsmount.conf.man
+index 73c3e118..34879c8d 100644
+--- a/utils/mount/nfsmount.conf.man
++++ b/utils/mount/nfsmount.conf.man
+@@ -1,4 +1,4 @@
+-."@(#)nfsmount.conf.5"
++.\" @(#)nfsmount.conf.5"
+ .TH NFSMOUNT.CONF 5 "16 December 2020"
+ .SH NAME
+ nfsmount.conf - Configuration file for NFS mounts
+diff --git a/utils/mount/stropts.c b/utils/mount/stropts.c
+index 3c4e218a..dbdd11e7 100644
+--- a/utils/mount/stropts.c
++++ b/utils/mount/stropts.c
+@@ -973,7 +973,9 @@ fall_back:
+ 	if ((result = nfs_try_mount_v3v2(mi, FALSE)))
+ 		return result;
+ 
+-	errno = olderrno;
++	if (errno != EBUSY && errno != EACCES)
++		errno = olderrno;
++
+ 	return result;
+ }
+ 
+diff --git a/utils/mountd/mountd.man b/utils/mountd/mountd.man
+index 77e6299a..a206a3e2 100644
+--- a/utils/mountd/mountd.man
++++ b/utils/mountd/mountd.man
+@@ -286,10 +286,9 @@ The values recognized in the
+ section include
+ .BR TCP ,
+ .BR UDP ,
+-.BR vers2 ,
+ .BR vers3 ", and"
+ .B vers4
+-which each have same same meaning as given by
++which each have the same meaning as given by
+ .BR rpc.nfsd (8).
+ 
+ .SH TCP_WRAPPERS SUPPORT
+diff --git a/utils/nfsd/nfsd.man b/utils/nfsd/nfsd.man
+index 716f538b..634b8a63 100644
+--- a/utils/nfsd/nfsd.man
++++ b/utils/nfsd/nfsd.man
+@@ -156,8 +156,6 @@ Enable (with "on" or "yes" etc) or disable ("off", "no") UDP support.
+ .B TCP
+ Enable or disable TCP support.
+ .TP
+-.B vers2
+-.TP
+ .B vers3
+ .TP
+ .B vers4
+diff --git a/utils/nfsidmap/nfsidmap.man b/utils/nfsidmap/nfsidmap.man
+index 2af16f31..1911c41b 100644
+--- a/utils/nfsidmap/nfsidmap.man
++++ b/utils/nfsidmap/nfsidmap.man
+@@ -2,7 +2,7 @@
+ .\"@(#)nfsidmap(8) - The NFS idmapper upcall program
+ .\"
+ .\" Copyright (C) 2010 Bryan Schumaker <bjschuma@netapp.com>
+-.TH nfsidmap 5 "1 October 2010"
++.TH nfsidmap 8 "1 October 2010"
+ .SH NAME
+ nfsidmap \- The NFS idmapper upcall program
+ .SH SYNOPSIS
