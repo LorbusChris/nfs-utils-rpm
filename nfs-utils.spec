@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.6.2
-Release: 0%{?dist}
+Release: 1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -12,10 +12,7 @@ Source0: https://www.kernel.org/pub/linux/utils/nfs-utils/%{version}/%{name}-%{v
 Source1: id_resolver.conf
 Source2: lockd.conf
 Source3: 24-nfs-server.conf
-Source4: nfsconvert.py
-Source5: nfsconvert.sh
-Source6: nfs-convert.service
-Source7: 10-nfsv4.conf
+Source4: 10-nfsv4.conf
 
 Patch100: nfs-utils-1.2.1-statdpath-man.patch
 Patch101: nfs-utils-1.2.1-exp-subtree-warn-off.patch
@@ -189,9 +186,6 @@ install -m 644 %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/request-key.d
 mkdir -p $RPM_BUILD_ROOT/run/sysconfig
 install -m 644 %{SOURCE2} $RPM_BUILD_ROOT%{_sysconfdir}/modprobe.d/lockd.conf
 install -m 644 %{SOURCE3} $RPM_BUILD_ROOT%{_sysconfdir}/gssproxy
-install -m 755 %{SOURCE4} $RPM_BUILD_ROOT%{_sbindir}/nfsconvert
-install -m 755 %{SOURCE5} $RPM_BUILD_ROOT/%{_libexecdir}/nfs-utils/nfsconvert.sh
-install -m 644 %{SOURCE6} $RPM_BUILD_ROOT%{_pkgdir}/system
 
 rm -rf $RPM_BUILD_ROOT%{_libdir}/*.{a,la}
 rm -rf $RPM_BUILD_ROOT%{_libdir}/libnfsidmap/*.{a,la}
@@ -207,7 +201,7 @@ mkdir -p $RPM_BUILD_ROOT%{_sharedstatedir}/nfs/v4recovery
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/exports.d
 
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/nfsmount.conf.d
-install -m 644 %{SOURCE7} $RPM_BUILD_ROOT%{_sysconfdir}/nfsmount.conf.d
+install -m 644 %{SOURCE4} $RPM_BUILD_ROOT%{_sysconfdir}/nfsmount.conf.d
 
 mkdir -p $RPM_BUILD_ROOT%{_udevrulesdir}
 
@@ -262,10 +256,6 @@ if [ $1 -eq 1 ] ; then
 	/bin/systemctl start nfs-client.target  >/dev/null 2>&1 || :
 fi
 
-# Enable nfs-convert so if an old configuration
-# exists a conversion will occur
-/bin/systemctl enable nfs-convert  >/dev/null 2>&1 || :
-
 %systemd_post nfs-server
 
 %post -n nfsv4-client-utils
@@ -303,6 +293,9 @@ fi
 
 %triggerin -- nfs-utils > 1:2.1.1-3
 /bin/systemctl try-restart gssproxy || :
+
+%triggerun -- nfs-utils > 1:2.6.2-0
+/bin/systemctl disable nfs-convert > /dev/null 2>&1 || :
 
 %files
 %config(noreplace) /etc/nfsmount.conf
@@ -344,7 +337,6 @@ fi
 %{_sbindir}/blkmapd
 %{_sbindir}/nfsconf
 %{_sbindir}/nfsref
-%{_sbindir}/nfsconvert
 %{_sbindir}/nfsdcld
 %{_sbindir}/nfsdclddb
 %{_sbindir}/nfsdclnts
@@ -354,7 +346,6 @@ fi
 %{_pkgdir}/*/*
 
 %attr(4755,root,root)	/sbin/mount.nfs
-%attr(755,root,root) %{_libexecdir}/nfs-utils/nfsconvert.sh
 
 /sbin/mount.nfs4
 /sbin/umount.nfs
@@ -426,11 +417,9 @@ fi
 %attr(0600,root,root) %config(noreplace) /usr/lib/modprobe.d/50-nfs.conf
 %{_sbindir}/rpc.gssd
 %{_sbindir}/nfsidmap
-%{_sbindir}/nfsconvert
 %{_sbindir}/nfsstat
 %{_libexecdir}/nfsrahead
 %{_udevrulesdir}/99-nfs.rules
-%attr(755,root,root) %{_libexecdir}/nfs-utils/nfsconvert.sh
 %attr(4755,root,root) /sbin/mount.nfs
 /sbin/mount.nfs4
 /sbin/umount.nfs
@@ -451,7 +440,6 @@ fi
 %{_pkgdir}/*/rpc-pipefs-generator
 %{_pkgdir}/*/auth-rpcgss-module.service
 %{_pkgdir}/*/nfs-client.target
-%{_pkgdir}/*/nfs-convert.service
 %{_pkgdir}/*/rpc-gssd.service
 %{_pkgdir}/*/rpc_pipefs.target
 %{_pkgdir}/*/var-lib-nfs-rpc_pipefs.mount
@@ -463,6 +451,9 @@ fi
 %{_mandir}/*/nfsiostat.8.gz
 
 %changelog
+* Tue Aug 23 2022 Steve Dickson <steved@redhat.com> 2.6.2-1
+- Removed the nfsconvert scripts, no longer needed.
+
 * Tue Aug  9 2022 Steve Dickson <steved@redhat.com> 2.6.2-0
 - Updated to the latest upstream release: nfs-utils-2-6-2 (bz 2116944)
 
