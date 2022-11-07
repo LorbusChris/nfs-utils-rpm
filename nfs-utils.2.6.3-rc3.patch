@@ -1,0 +1,371 @@
+diff --git a/configure.ac b/configure.ac
+index f1c46c5..5d9cbf3 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -249,6 +249,16 @@ AC_ARG_ENABLE(nfsdcld,
+ 	enable_nfsdcld=$enableval,
+ 	enable_nfsdcld="yes")
+ 
++AC_ARG_ENABLE(nfsrahead,
++	[AS_HELP_STRING([--disable-nfsrahead],[disable nfsrahead command @<:@default=no@:>@])],
++	enable_nfsrahead=$enableval,
++	enable_nfsrahead="yes")
++	AM_CONDITIONAL(CONFIG_NFSRAHEAD, [test "$enable_nfsrahead" = "yes" ])
++	if test "$enable_nfsrahead" = yes; then
++		dnl Check for -lmount
++		PKG_CHECK_MODULES([LIBMOUNT], [mount])
++	fi
++
+ AC_ARG_ENABLE(nfsdcltrack,
+ 	[AS_HELP_STRING([--disable-nfsdcltrack],[disable NFSv4 clientid tracking programs @<:@default=no@:>@])],
+ 	enable_nfsdcltrack=$enableval,
+diff --git a/support/export/auth.c b/support/export/auth.c
+index 03ce4b8..2d7960f 100644
+--- a/support/export/auth.c
++++ b/support/export/auth.c
+@@ -82,7 +82,7 @@ check_useipaddr(void)
+ }
+ 
+ unsigned int
+-auth_reload()
++auth_reload(void)
+ {
+ 	struct stat		stb;
+ 	static ino_t		last_inode;
+diff --git a/support/export/v4clients.c b/support/export/v4clients.c
+index 5f15b61..3230251 100644
+--- a/support/export/v4clients.c
++++ b/support/export/v4clients.c
+@@ -26,7 +26,7 @@ void v4clients_init(void)
+ {
+ 	struct stat sb;
+ 
+-	if (!stat("/proc/fs/nfsd/clients", &sb) == 0 ||
++	if (stat("/proc/fs/nfsd/clients", &sb) != 0 ||
+ 	    !S_ISDIR(sb.st_mode))
+ 		return;
+ 	if (clients_fd >= 0)
+diff --git a/support/export/v4root.c b/support/export/v4root.c
+index c12a7d8..fbb0ad5 100644
+--- a/support/export/v4root.c
++++ b/support/export/v4root.c
+@@ -198,7 +198,7 @@ static int v4root_add_parents(nfs_export *exp)
+  * looking for components of the v4 mount.
+  */
+ void
+-v4root_set()
++v4root_set(void)
+ {
+ 	nfs_export	*exp;
+ 	int	i;
+diff --git a/support/export/xtab.c b/support/export/xtab.c
+index c888a80..e210ca9 100644
+--- a/support/export/xtab.c
++++ b/support/export/xtab.c
+@@ -135,7 +135,7 @@ xtab_write(char *xtab, char *xtabtmp, char *lockfn, int is_export)
+ }
+ 
+ int
+-xtab_export_write()
++xtab_export_write(void)
+ {
+ 	return xtab_write(etab.statefn, etab.tmpfn, etab.lockfn, 1);
+ }
+diff --git a/support/nfs/xlog.c b/support/nfs/xlog.c
+index e5861b9..fa125ce 100644
+--- a/support/nfs/xlog.c
++++ b/support/nfs/xlog.c
+@@ -46,11 +46,13 @@ int export_errno = 0;
+ 
+ static void	xlog_toggle(int sig);
+ static struct xlog_debugfac	debugnames[] = {
++	{ "0",		0, },
+ 	{ "general",	D_GENERAL, },
+ 	{ "call",	D_CALL, },
+ 	{ "auth",	D_AUTH, },
+ 	{ "parse",	D_PARSE, },
+ 	{ "all",	D_ALL, },
++	{ "1",		D_ALL, },
+ 	{ NULL,		0, },
+ };
+ 
+@@ -119,13 +121,14 @@ xlog_sconfig(char *kind, int on)
+ {
+ 	struct xlog_debugfac	*tbl = debugnames;
+ 
+-	while (tbl->df_name != NULL && strcasecmp(tbl->df_name, kind)) 
++	while (tbl->df_name != NULL && strcasecmp(tbl->df_name, kind))
+ 		tbl++;
+ 	if (!tbl->df_name) {
+ 		xlog (L_WARNING, "Invalid debug facility: %s\n", kind);
+ 		return;
+ 	}
+-	xlog_config(tbl->df_fac, on);
++	if (tbl->df_fac)
++		xlog_config(tbl->df_fac, on);
+ }
+ 
+ void
+diff --git a/support/nfsidmap/regex.c b/support/nfsidmap/regex.c
+index 958b4ac..8424179 100644
+--- a/support/nfsidmap/regex.c
++++ b/support/nfsidmap/regex.c
+@@ -542,7 +542,7 @@ struct trans_func regex_trans = {
+ 	.gss_princ_to_grouplist	= regex_gss_princ_to_grouplist,
+ };
+ 
+-struct trans_func *libnfsidmap_plugin_init()
++struct trans_func *libnfsidmap_plugin_init(void)
+ {
+ 	return (&regex_trans);
+ }
+diff --git a/systemd/nfs.conf.man b/systemd/nfs.conf.man
+index e74083e..b95c05a 100644
+--- a/systemd/nfs.conf.man
++++ b/systemd/nfs.conf.man
+@@ -98,6 +98,12 @@ value, which can be one or more from the list
+ .BR parse ,
+ .BR all .
+ When a list is given, the members should be comma-separated.
++The values
++.BR 0
++and
++.BR 1
++are also accepted, with '0' making no changes to the debug level, and '1' equivalent to specifying 'all'.
++
+ .TP
+ .B general
+ Recognized values:
+diff --git a/tools/Makefile.am b/tools/Makefile.am
+index 40c17c3..48fd0cd 100644
+--- a/tools/Makefile.am
++++ b/tools/Makefile.am
+@@ -12,6 +12,10 @@ if CONFIG_NFSDCLD
+ OPTDIRS += nfsdclddb
+ endif
+ 
+-SUBDIRS = locktest rpcdebug nlmtest mountstats nfs-iostat rpcctl nfsdclnts nfsrahead $(OPTDIRS)
++if CONFIG_NFSRAHEAD
++OPTDIRS += nfsrahead
++endif
++
++SUBDIRS = locktest rpcdebug nlmtest mountstats nfs-iostat rpcctl nfsdclnts $(OPTDIRS)
+ 
+ MAINTAINERCLEANFILES = Makefile.in
+diff --git a/tools/nfs-iostat/nfs-iostat.py b/tools/nfs-iostat/nfs-iostat.py
+index 1df74ba..85294fb 100755
+--- a/tools/nfs-iostat/nfs-iostat.py
++++ b/tools/nfs-iostat/nfs-iostat.py
+@@ -43,7 +43,7 @@ NfsEventCounters = [
+     'vfspermission',
+     'vfsupdatepage',
+     'vfsreadpage',
+-    'vfsreadpages',
++    'vfsreadpages', # or vfsreadahead in statvers=1.2 or above
+     'vfswritepage',
+     'vfswritepages',
+     'vfsreaddir',
+@@ -86,14 +86,14 @@ class DeviceData:
+             self.__nfs_data['export'] = words[1]
+             self.__nfs_data['mountpoint'] = words[4]
+             self.__nfs_data['fstype'] = words[7]
+-            if words[7] == 'nfs':
+-                self.__nfs_data['statvers'] = words[8]
++            if words[7] == 'nfs' or words[7] == 'nfs4':
++                self.__nfs_data['statvers'] = float(words[8].split('=',1)[1])
+         elif 'nfs' in words or 'nfs4' in words:
+             self.__nfs_data['export'] = words[0]
+             self.__nfs_data['mountpoint'] = words[3]
+             self.__nfs_data['fstype'] = words[6]
+             if words[6] == 'nfs':
+-                self.__nfs_data['statvers'] = words[7]
++                self.__nfs_data['statvers'] = float(words[7].split('=',1)[1])
+         elif words[0] == 'age:':
+             self.__nfs_data['age'] = int(words[1])
+         elif words[0] == 'opts:':
+@@ -294,8 +294,11 @@ class DeviceData:
+         print()
+         print('%d nfs_readpage() calls read %d pages' % \
+             (vfsreadpage, vfsreadpage))
+-        print('%d nfs_readpages() calls read %d pages' % \
+-            (vfsreadpages, pages_read - vfsreadpage))
++        multipageread = "readpages"
++        if self.__nfs_data['statvers'] >= 1.2:
++            multipageread = "readahead"
++        print('%d nfs_%s() calls read %d pages' % \
++            (vfsreadpages, multipageread, pages_read - vfsreadpage))
+         if vfsreadpages != 0:
+             print('(%.1f pages per call)' % \
+                 (float(pages_read - vfsreadpage) / vfsreadpages))
+diff --git a/tools/nfsrahead/Makefile.am b/tools/nfsrahead/Makefile.am
+index 845ea0d..7e08233 100644
+--- a/tools/nfsrahead/Makefile.am
++++ b/tools/nfsrahead/Makefile.am
+@@ -1,6 +1,6 @@
+ libexec_PROGRAMS = nfsrahead
+ nfsrahead_SOURCES = main.c
+-nfsrahead_LDFLAGS= -lmount
++nfsrahead_LDFLAGS= $(LIBMOUNT_LIBS)
+ nfsrahead_LDADD = ../../support/nfs/libnfsconf.la
+ 
+ man5_MANS = nfsrahead.man
+diff --git a/utils/blkmapd/device-discovery.c b/utils/blkmapd/device-discovery.c
+index 2736ac8..bd89059 100644
+--- a/utils/blkmapd/device-discovery.c
++++ b/utils/blkmapd/device-discovery.c
+@@ -187,10 +187,7 @@ static void bl_add_disk(char *filepath)
+ 	}
+ 
+ 	if (disk && diskpath) {
+-		if (serial) {
+-			free(serial->data);
+-			free(serial);
+-		}
++		bl_free_scsi_string(serial);
+ 		return;
+ 	}
+ 
+@@ -228,10 +225,7 @@ static void bl_add_disk(char *filepath)
+ 			disk->size = size;
+ 			disk->valid_path = path;
+ 		}
+-		if (serial) {
+-			free(serial->data);
+-			free(serial);
+-		}
++		bl_free_scsi_string(serial);
+ 	}
+ 	return;
+ 
+@@ -241,10 +235,7 @@ static void bl_add_disk(char *filepath)
+ 			free(path->full_path);
+ 		free(path);
+ 	}
+-	if (serial) {
+-		free(serial->data);
+-		free(serial);
+-	}
++	bl_free_scsi_string(serial);
+ 	return;
+ }
+ 
+@@ -462,7 +453,7 @@ static void sig_die(int signal)
+ 		unlink(PID_FILE);
+ 	}
+ 	BL_LOG_ERR("exit on signal(%d)\n", signal);
+-	exit(1);
++	exit(0);
+ }
+ static void usage(void)
+ {
+diff --git a/utils/blkmapd/device-discovery.h b/utils/blkmapd/device-discovery.h
+index a86eed9..462aa94 100644
+--- a/utils/blkmapd/device-discovery.h
++++ b/utils/blkmapd/device-discovery.h
+@@ -151,6 +151,8 @@ uint64_t process_deviceinfo(const char *dev_addr_buf,
+ 
+ extern ssize_t atomicio(ssize_t(*f) (int, void *, size_t),
+ 			int fd, void *_s, size_t n);
++extern struct bl_serial *bl_create_scsi_string(int len, const char *bytes);
++extern void bl_free_scsi_string(struct bl_serial *str);
+ extern struct bl_serial *bldev_read_serial(int fd, const char *filename);
+ extern enum bl_path_state_e bldev_read_ap_state(int fd);
+ extern int bl_discover_devices(void);
+diff --git a/utils/blkmapd/device-inq.c b/utils/blkmapd/device-inq.c
+index c7952c3..9e5749e 100644
+--- a/utils/blkmapd/device-inq.c
++++ b/utils/blkmapd/device-inq.c
+@@ -53,7 +53,7 @@
+ #define DEF_ALLOC_LEN	255
+ #define MX_ALLOC_LEN	(0xc000 + 0x80)
+ 
+-static struct bl_serial *bl_create_scsi_string(int len, const char *bytes)
++struct bl_serial *bl_create_scsi_string(int len, const char *bytes)
+ {
+ 	struct bl_serial *s;
+ 
+@@ -66,7 +66,7 @@ static struct bl_serial *bl_create_scsi_string(int len, const char *bytes)
+ 	return s;
+ }
+ 
+-static void bl_free_scsi_string(struct bl_serial *str)
++void bl_free_scsi_string(struct bl_serial *str)
+ {
+ 	if (str)
+ 		free(str);
+diff --git a/utils/exportfs/exportfs.c b/utils/exportfs/exportfs.c
+index 6ba615d..0897b22 100644
+--- a/utils/exportfs/exportfs.c
++++ b/utils/exportfs/exportfs.c
+@@ -69,14 +69,14 @@ static int _lockfd = -1;
+  * need these additional lockfile() routines.
+  */
+ static void
+-grab_lockfile()
++grab_lockfile(void)
+ {
+ 	_lockfd = open(lockfile, O_CREAT|O_RDWR, 0666);
+ 	if (_lockfd != -1)
+ 		lockf(_lockfd, F_LOCK, 0);
+ }
+ static void
+-release_lockfile()
++release_lockfile(void)
+ {
+ 	if (_lockfd != -1) {
+ 		lockf(_lockfd, F_ULOCK, 0);
+diff --git a/utils/idmapd/idmapd.c b/utils/idmapd/idmapd.c
+index e79c124..cd9a965 100644
+--- a/utils/idmapd/idmapd.c
++++ b/utils/idmapd/idmapd.c
+@@ -867,7 +867,7 @@ nfsdreopen_one(struct idmap_client *ic)
+ }
+ 
+ static void
+-nfsdreopen()
++nfsdreopen(void)
+ {
+ 	nfsdreopen_one(&nfsd_ic[IC_NAMEID]);
+ 	nfsdreopen_one(&nfsd_ic[IC_IDNAME]);
+diff --git a/utils/mount/network.c b/utils/mount/network.c
+index ed2f825..01ead49 100644
+--- a/utils/mount/network.c
++++ b/utils/mount/network.c
+@@ -179,7 +179,7 @@ static const unsigned long probe_mnt3_only[] = {
+ 
+ static const unsigned int *nfs_default_proto(void);
+ #ifdef MOUNT_CONFIG
+-static const unsigned int *nfs_default_proto()
++static const unsigned int *nfs_default_proto(void)
+ {
+ 	extern unsigned long config_default_proto;
+ 	/*
+diff --git a/utils/mount/parse_dev.c b/utils/mount/parse_dev.c
+index 0d3bcb9..2ade5d5 100644
+--- a/utils/mount/parse_dev.c
++++ b/utils/mount/parse_dev.c
+@@ -170,7 +170,8 @@ static int nfs_parse_square_bracket(const char *dev,
+ 	if (pathname) {
+ 		*pathname = strndup(cbrace, path_len);
+ 		if (*pathname == NULL) {
+-			free(*hostname);
++			if (hostname)
++				free(*hostname);
+ 			return nfs_pdn_nomem_err();
+ 		}
+ 	}
+diff --git a/utils/nfsd/nfsd.man b/utils/nfsd/nfsd.man
+index 634b8a6..bb99fe2 100644
+--- a/utils/nfsd/nfsd.man
++++ b/utils/nfsd/nfsd.man
+@@ -159,7 +159,9 @@ Enable or disable TCP support.
+ .B vers3
+ .TP
+ .B vers4
+-Enable or disable a major NFS version.  3 and 4 are normally enabled
++Enable or disable 
++.B all 
++NFSv4 versions.  All versions are normally enabled
+ by default.
+ .TP
+ .B vers4.1
