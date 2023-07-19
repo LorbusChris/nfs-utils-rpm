@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.6.3
-Release: 0%{?dist}
+Release: 1%{?dist}
 Epoch: 1
 
 # group all 32bit related archs
@@ -250,20 +250,7 @@ if [ $? -eq 1 ]; then
 fi
 
 %post
-if [ $1 -eq 1 ] ; then
-	# Initial installation
-	/bin/systemctl enable nfs-client.target >/dev/null 2>&1 || :
-	/bin/systemctl start nfs-client.target  >/dev/null 2>&1 || :
-fi
-
-%systemd_post nfs-server
-
-%post -n nfsv4-client-utils
-if [ $1 -eq 1 ] ; then
-	# Initial installation
-	/bin/systemctl enable nfs-client.target >/dev/null 2>&1 || :
-	/bin/systemctl start nfs-client.target  >/dev/null 2>&1 || :
-fi
+%systemd_post nfs-server.service
 
 %preun
 if [ $1 -eq 0 ]; then
@@ -454,6 +441,9 @@ rm -rf /etc/systemd/system/rpc-*.requires
 %{_mandir}/*/nfsiostat.8.gz
 
 %changelog
+* Wed Jul 19 2023 Christian Glombek <cglombek@redhat.com> 2.6.3-1
+- Don't enable and start nfs-client.target in %%post (bz 2218006)
+
 * Wed Apr 19 2023 Steve Dickson <steved@redhat.com> 2.6.3-0
 - Updated to the latest release: nfs-utils-2-6-3 (bz 2188038)
 
