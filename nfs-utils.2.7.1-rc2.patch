@@ -1,0 +1,696 @@
+diff --git a/configure.ac b/configure.ac
+index 93a1202..58d1728 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -175,14 +175,14 @@ else
+ fi
+ 
+ AC_ARG_ENABLE(sbin-override,
+-	[AS_HELP_STRING([--disable-sbin-override],[Don't force nfsdcltrack and mount helpers into /sbin: always honour --sbindir])],
++	[AS_HELP_STRING([--disable-sbin-override],[Do not force nfsdcltrack and mount helpers into /sbin: always honour --sbindir])],
+ 	enable_sbin_override=$enableval,
+ 	enable_sbin_override=yes)
+ 	AM_CONDITIONAL(CONFIG_SBIN_OVERRIDE, [test "$enable_sbin_override" = "yes"])
+ AC_ARG_ENABLE(junction,
+-	[AS_HELP_STRING([--enable-junction],[enable support for NFS junctions @<:@default=no@:>@])],
++	[AS_HELP_STRING([--enable-junction],[enable support for NFS junctions @<:@default=yes@:>@])],
+ 	enable_junction=$enableval,
+-	enable_junction=no)
++	enable_junction=yes)
+ 	if test "$enable_junction" = yes; then
+ 		AC_DEFINE(HAVE_JUNCTION_SUPPORT, 1,
+                           [Define this if you want junction support compiled in])
+diff --git a/support/export/export.c b/support/export/export.c
+index 3e48c42..100912c 100644
+--- a/support/export/export.c
++++ b/support/export/export.c
+@@ -119,7 +119,7 @@ export_read(char *fname, int ignore_hosts)
+ 	int reexport_found = 0;
+ 
+ 	setexportent(fname, "r");
+-	while ((eep = getexportent(0,1)) != NULL) {
++	while ((eep = getexportent(0)) != NULL) {
+ 		exp = export_lookup(eep->e_hostname, eep->e_path, ignore_hosts);
+ 		if (!exp) {
+ 			if (export_create(eep, 0))
+diff --git a/support/export/xtab.c b/support/export/xtab.c
+index e210ca9..282f15b 100644
+--- a/support/export/xtab.c
++++ b/support/export/xtab.c
+@@ -47,7 +47,7 @@ xtab_read(char *xtab, char *lockfn, int is_export)
+ 	setexportent(xtab, "r");
+ 	if (is_export == 1)
+ 		v4root_needed = 1;
+-	while ((xp = getexportent(is_export==0, 0)) != NULL) {
++	while ((xp = getexportent(is_export==0)) != NULL) {
+ 		if (!(exp = export_lookup(xp->e_hostname, xp->e_path, is_export != 1)) &&
+ 		    !(exp = export_create(xp, is_export!=1))) {
+                         if(xp->e_hostname) {
+diff --git a/support/include/conffile.h b/support/include/conffile.h
+index c4a3ca6..c04cd1e 100644
+--- a/support/include/conffile.h
++++ b/support/include/conffile.h
+@@ -62,7 +62,7 @@ extern char    *conf_get_str(const char *, const char *);
+ extern char    *conf_get_str_with_def(const char *, const char *, char *);
+ extern char    *conf_get_section(const char *, const char *, const char *);
+ extern char    *conf_get_entry(const char *, const char *, const char *);
+-extern int      conf_init_file(const char *);
++extern void     conf_init_file(const char *);
+ extern void     conf_cleanup(void);
+ extern int      conf_match_num(const char *, const char *, int);
+ extern int      conf_remove(int, const char *, const char *);
+diff --git a/support/include/nfslib.h b/support/include/nfslib.h
+index bdbde78..eff2a48 100644
+--- a/support/include/nfslib.h
++++ b/support/include/nfslib.h
+@@ -111,7 +111,7 @@ struct rmtabent {
+  * configuration file parsing
+  */
+ void			setexportent(char *fname, char *type);
+-struct exportent *	getexportent(int,int);
++struct exportent *	getexportent(int);
+ void 			secinfo_show(FILE *fp, struct exportent *ep);
+ void			xprtsecinfo_show(FILE *fp, struct exportent *ep);
+ void			putexportent(struct exportent *xep);
+diff --git a/support/junction/junction-internal.h b/support/junction/junction-internal.h
+index 3dff4cc..7abd45c 100644
+--- a/support/junction/junction-internal.h
++++ b/support/junction/junction-internal.h
+@@ -28,6 +28,7 @@
+ 
+ #include <libxml/tree.h>
+ #include <libxml/xpath.h>
++#include <libxml/parser.h>
+ 
+ /**
+  ** Names of extended attributes that store junction data
+diff --git a/support/junction/xml.c b/support/junction/xml.c
+index 813110b..aef1cbb 100644
+--- a/support/junction/xml.c
++++ b/support/junction/xml.c
+@@ -290,7 +290,7 @@ junction_parse_xml_buf(const char *pathname, const char *name,
+ {
+ 	xmlDocPtr tmp;
+ 
+-	tmp = xmlParseMemory(buf, (int)len);
++	tmp = xmlReadMemory(buf, (int)len, NULL, NULL, 0);
+ 	if (tmp == NULL) {
+ 		xlog(D_GENERAL, "Failed to parse XML in %s(%s)\n",
+ 			pathname, name);
+@@ -387,7 +387,6 @@ junction_xml_write(const char *pathname, const char *name, xmlDocPtr doc)
+ 		return retval;
+ 
+ 	retval = FEDFS_ERR_SVRFAULT;
+-	xmlIndentTreeOutput = 1;
+ 	xmlDocDumpFormatMemoryEnc(doc, &buf, &len, "UTF-8", 1);
+ 	if (len < 0)
+ 		goto out;
+diff --git a/support/nfs/conffile.c b/support/nfs/conffile.c
+index fd4a17a..1e9c22b 100644
+--- a/support/nfs/conffile.c
++++ b/support/nfs/conffile.c
+@@ -658,7 +658,7 @@ conf_load_file(const char *conf_file)
+ 	return 0;
+ }
+ 
+-static void 
++static void
+ conf_init_dir(const char *conf_file)
+ {
+ 	struct dirent **namelist = NULL;
+@@ -669,14 +669,14 @@ conf_init_dir(const char *conf_file)
+ 	dname = malloc(strlen(conf_file) + 3);
+ 	if (dname == NULL) {
+ 		xlog(L_WARNING, "conf_init_dir: malloc: %s", strerror(errno));
+-		return;	
++		return;
+ 	}
+ 	sprintf(dname, "%s.d", conf_file);
+ 
+ 	n = scandir(dname, &namelist, NULL, versionsort);
+ 	if (n < 0) {
+ 		if (errno != ENOENT) {
+-			xlog(L_WARNING, "conf_init_dir: scandir %s: %s", 
++			xlog(L_WARNING, "conf_init_dir: scandir %s: %s",
+ 				dname, strerror(errno));
+ 		}
+ 		free(dname);
+@@ -691,7 +691,7 @@ conf_init_dir(const char *conf_file)
+ 	for (i = 0; i < n; i++ ) {
+ 		struct dirent *d = namelist[i];
+ 
+-	 	switch (d->d_type) {
++		switch (d->d_type) {
+ 			case DT_UNKNOWN:
+ 			case DT_REG:
+ 			case DT_LNK:
+@@ -701,13 +701,13 @@ conf_init_dir(const char *conf_file)
+ 		}
+ 		if (*d->d_name == '.')
+ 			continue;
+-		
++
+ 		fname_len = strlen(d->d_name);
+ 		path_len = (fname_len + dname_len);
+ 		if (!fname_len || path_len > PATH_MAX) {
+ 			xlog(L_WARNING, "conf_init_dir: Too long file name: %s in %s", 
+ 				d->d_name, dname);
+-			continue; 
++			continue;
+ 		}
+ 
+ 		/*
+@@ -715,7 +715,7 @@ conf_init_dir(const char *conf_file)
+ 		 * that end with CONF_FILE_EXT
+ 		 */
+ 		if (fname_len <= CONF_FILE_EXT_LEN) {
+-			xlog(D_GENERAL, "conf_init_dir: %s: name too short", 
++			xlog(D_GENERAL, "conf_init_dir: %s: name too short",
+ 				d->d_name);
+ 			continue;
+ 		}
+@@ -746,41 +746,43 @@ conf_init_dir(const char *conf_file)
+ 		free(namelist[i]);
+ 	free(namelist);
+ 	free(dname);
+-	
++
+ 	return;
+ }
+ 
+-int
++void
+ conf_init_file(const char *conf_file)
+ {
+ 	unsigned int i;
+-	int ret;
++	int j;
+ 
+ 	for (i = 0; i < sizeof conf_bindings / sizeof conf_bindings[0]; i++)
+ 		LIST_INIT (&conf_bindings[i]);
+ 
+ 	TAILQ_INIT (&conf_trans_queue);
+ 
+-	if (conf_file == NULL) 
+-		conf_file=NFS_CONFFILE;
++	if (conf_file == NULL)
++		conf_file = NFS_CONFFILE;
+ 
+-	/*
+-	 * First parse the give config file 
+-	 * then parse the config.conf.d directory 
+-	 * (if it exists)
++	/* If the config file is in /etc (normal) then check
++	 * /usr/etc first.  Also check config.conf.d for files
++	 * names *.conf.
+ 	 *
++	 * Content or later files always over-rides earlier
++	 * files.
+ 	 */
+-	ret = conf_load_file(conf_file);
+-
+-	/*
+-	 * When the same variable is set in both files
+-	 * the conf.d file will override the config file.
+-	 * This allows automated admin systems to
+-	 * have the final say.
+-	 */
++	if (strncmp(conf_file, "/etc/", 5) == 0) {
++		char *usrconf = NULL;
++
++		j = asprintf(&usrconf, "/usr%s", conf_file);
++		if (usrconf && j > 0) {
++			conf_load_file(usrconf);
++			conf_init_dir(usrconf);
++			free(usrconf);
++		}
++	}
++	conf_load_file(conf_file);
+ 	conf_init_dir(conf_file);
+-
+-	return ret;
+ }
+ 
+ /*
+diff --git a/support/nfs/exports.c b/support/nfs/exports.c
+index 15dc574..a6816e6 100644
+--- a/support/nfs/exports.c
++++ b/support/nfs/exports.c
+@@ -59,7 +59,7 @@ static int	*squids = NULL, nsquids = 0,
+ 
+ static int	getexport(char *exp, int len);
+ static int	getpath(char *path, int len);
+-static int	parseopts(char *cp, struct exportent *ep, int warn, int *had_subtree_opt_ptr);
++static int	parseopts(char *cp, struct exportent *ep, int *had_subtree_opt_ptr);
+ static int	parsesquash(char *list, int **idp, int *lenp, char **ep);
+ static int	parsenum(char **cpp);
+ static void	freesquash(void);
+@@ -109,7 +109,7 @@ static void init_exportent (struct exportent *ee, int fromkernel)
+ }
+ 
+ struct exportent *
+-getexportent(int fromkernel, int fromexports)
++getexportent(int fromkernel)
+ {
+ 	static struct exportent	ee, def_ee;
+ 	char		exp[512], *hostname;
+@@ -147,7 +147,7 @@ getexportent(int fromkernel, int fromexports)
+ 	 * we're not reading from the kernel.
+ 	 */
+ 	if (exp[0] == '-' && !fromkernel) {
+-		if (parseopts(exp + 1, &def_ee, 0, &has_default_subtree_opts) < 0)
++		if (parseopts(exp + 1, &def_ee, &has_default_subtree_opts) < 0)
+ 			return NULL;
+ 
+ 		has_default_opts = 1;
+@@ -185,20 +185,20 @@ getexportent(int fromkernel, int fromexports)
+ 	}
+ 	ee.e_hostname = xstrdup(hostname);
+ 
+-	if (parseopts(opt, &ee, fromexports && !has_default_subtree_opts, NULL) < 0) {
+-                if(ee.e_hostname)
+-                {
+-                    xfree(ee.e_hostname);
+-                    ee.e_hostname=NULL;
+-                }
+-                if(ee.e_uuid)
+-                {
+-                    xfree(ee.e_uuid);
+-                    ee.e_uuid=NULL;
+-                }
++	if (parseopts(opt, &ee, NULL) < 0) {
++		if(ee.e_hostname)
++		{
++			xfree(ee.e_hostname);
++			ee.e_hostname=NULL;
++		}
++		if(ee.e_uuid)
++		{
++			xfree(ee.e_uuid);
++			ee.e_uuid=NULL;
++		}
+ 
+ 		return NULL;
+-        }
++	}
+ 	/* resolve symlinks */
+ 	if (realpath(ee.e_path, rpath) != NULL) {
+ 		rpath[sizeof (rpath) - 1] = '\0';
+@@ -433,7 +433,7 @@ mkexportent(char *hname, char *path, char *options)
+ 	}
+ 	strncpy(ee.e_path, path, sizeof (ee.e_path));
+ 	ee.e_path[sizeof (ee.e_path) - 1] = '\0';
+-	if (parseopts(options, &ee, 0, NULL) < 0)
++	if (parseopts(options, &ee, NULL) < 0)
+ 		return NULL;
+ 	return &ee;
+ }
+@@ -441,7 +441,7 @@ mkexportent(char *hname, char *path, char *options)
+ int
+ updateexportent(struct exportent *eep, char *options)
+ {
+-	if (parseopts(options, eep, 0, NULL) < 0)
++	if (parseopts(options, eep, NULL) < 0)
+ 		return 0;
+ 	return 1;
+ }
+@@ -632,7 +632,7 @@ void fix_pseudoflavor_flags(struct exportent *ep)
+  * Parse option string pointed to by cp and set mount options accordingly.
+  */
+ static int
+-parseopts(char *cp, struct exportent *ep, int warn, int *had_subtree_opt_ptr)
++parseopts(char *cp, struct exportent *ep, int *had_subtree_opt_ptr)
+ {
+ 	int	had_subtree_opt = 0;
+ 	char 	*flname = efname?efname:"command line";
+@@ -852,13 +852,6 @@ bad_option:
+ 	ep->e_nsqgids = nsqgids;
+ 
+ out:
+-	if (warn && !had_subtree_opt)
+-		xlog(L_WARNING, "%s [%d]: Neither 'subtree_check' or 'no_subtree_check' specified for export \"%s:%s\".\n"
+-				"  Assuming default behaviour ('no_subtree_check').\n"
+-				"  NOTE: this default has changed since nfs-utils version 1.0.x\n",
+-
+-				flname, flline,
+-				ep->e_hostname, ep->e_path);
+ 	if (had_subtree_opt_ptr)
+ 		*had_subtree_opt_ptr = had_subtree_opt;
+ 
+diff --git a/support/nfsidmap/idmapd.conf.5 b/support/nfsidmap/idmapd.conf.5
+index 87e39bb..58c2d97 100644
+--- a/support/nfsidmap/idmapd.conf.5
++++ b/support/nfsidmap/idmapd.conf.5
+@@ -37,7 +37,7 @@ Configuration file for libnfsidmap.  Used by idmapd and svcgssd to map NFSv4 nam
+ .SH DESCRIPTION
+ The
+ .B idmapd.conf
+-configuration file consists of several sections, initiated by strings of the
++configuration files consists of several sections, initiated by strings of the
+ form [General] and [Mapping].  Each section may contain lines of the form
+ .nf
+   variable = value
+@@ -398,6 +398,19 @@ LDAP_base = dc=org,dc=domain
+ .\" Additional sections
+ .\" -------------------------------------------------------------------
+ .\"
++.SH FILES
++.I /usr/etc/idmapd.conf
++.br
++.I /usr/etc/idmapd.conf.d/*.conf
++.br
++.I /etc/idmapd.conf
++.br
++.I /etc/idmapd.conf.d/*.conf
++.br
++.IP
++Files are read in the order listed.  Later settings override earlier
++settings.
++
+ .SH SEE ALSO
+ .BR idmapd (8)
+ .BR svcgssd (8)
+diff --git a/support/reexport/fsidd.c b/support/reexport/fsidd.c
+index 3e62b3f..8a70b78 100644
+--- a/support/reexport/fsidd.c
++++ b/support/reexport/fsidd.c
+@@ -147,6 +147,7 @@ int main(void)
+ {
+ 	struct event *srv_ev;
+ 	struct sockaddr_un addr;
++	socklen_t addr_len;
+ 	char *sock_file;
+ 	int srv;
+ 
+@@ -161,10 +162,12 @@ int main(void)
+ 	memset(&addr, 0, sizeof(struct sockaddr_un));
+ 	addr.sun_family = AF_UNIX;
+ 	strncpy(addr.sun_path, sock_file, sizeof(addr.sun_path) - 1);
+-	if (addr.sun_path[0] == '@')
++	addr_len = sizeof(struct sockaddr_un);
++	if (addr.sun_path[0] == '@') {
+ 		/* "abstract" socket namespace */
++		addr_len = offsetof(struct sockaddr_un, sun_path) + strlen(addr.sun_path);
+ 		addr.sun_path[0] = 0;
+-	else
++	} else
+ 		unlink(sock_file);
+ 
+ 	srv = socket(AF_UNIX, SOCK_SEQPACKET | SOCK_NONBLOCK, 0);
+@@ -173,7 +176,7 @@ int main(void)
+ 		return 1;
+ 	}
+ 
+-	if (bind(srv, (const struct sockaddr *)&addr, sizeof(struct sockaddr_un)) == -1) {
++	if (bind(srv, (const struct sockaddr *)&addr, addr_len) == -1) {
+ 		xlog(L_WARNING, "Unable to bind %s: %m\n", sock_file);
+ 		return 1;
+ 	}
+diff --git a/support/reexport/reexport.c b/support/reexport/reexport.c
+index 7851658..0fb49a4 100644
+--- a/support/reexport/reexport.c
++++ b/support/reexport/reexport.c
+@@ -21,6 +21,7 @@ static int fsidd_srv = -1;
+ static bool connect_fsid_service(void)
+ {
+ 	struct sockaddr_un addr;
++	socklen_t addr_len;
+ 	char *sock_file;
+ 	int ret;
+ 	int s;
+@@ -33,9 +34,12 @@ static bool connect_fsid_service(void)
+ 	memset(&addr, 0, sizeof(struct sockaddr_un));
+ 	addr.sun_family = AF_UNIX;
+ 	strncpy(addr.sun_path, sock_file, sizeof(addr.sun_path) - 1);
+-	if (addr.sun_path[0] == '@')
++	addr_len = sizeof(struct sockaddr_un);
++	if (addr.sun_path[0] == '@') {
+ 		/* "abstract" socket namespace */
++		addr_len = offsetof(struct sockaddr_un, sun_path) + strlen(addr.sun_path);
+ 		addr.sun_path[0] = 0;
++	}
+ 
+ 	s = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+ 	if (s == -1) {
+@@ -43,7 +47,7 @@ static bool connect_fsid_service(void)
+ 		return false;
+ 	}
+ 
+-	ret = connect(s, (const struct sockaddr *)&addr, sizeof(struct sockaddr_un));
++	ret = connect(s, (const struct sockaddr *)&addr, addr_len);
+ 	if (ret == -1) {
+ 		xlog(L_WARNING, "Unable to connect %s: %m, is fsidd running?\n", sock_file);
+ 		return false;
+diff --git a/systemd/nfs.conf.man b/systemd/nfs.conf.man
+index 866939a..d03fc88 100644
+--- a/systemd/nfs.conf.man
++++ b/systemd/nfs.conf.man
+@@ -2,10 +2,13 @@
+ .SH NAME
+ nfs.conf \- general configuration for NFS daemons and tools
+ .SH SYNOPSIS
++.I /usr/etc/nfs.conf
++.I /usr/etc/nfs.conf.d/
+ .I /etc/nfs.conf
++.I /etc/nfs.conf.d/
+ .SH DESCRIPTION
+ .PP
+-This file contains site-specific configuration for various NFS daemons
++These files contain site-specific configuration for various NFS daemons
+ and other processes.  Most configuration can also be passed to
+ processes via command line arguments, but it can be more convenient to
+ have a central file.  In particular, this encourages consistent
+@@ -314,15 +317,17 @@ See
+ for deatils.
+ 
+ .SH FILES
+-.TP 10n
++.I /usr/etc/nfs.conf
++.br
++.I /usr/etc/nfs.conf.d/*.conf
++.br
+ .I /etc/nfs.conf
+-Default NFS client configuration file
+-.TP 10n
+-.I /etc/nfs.conf.d
+-When this directory exists and files ending 
+-with ".conf" exist, those files will be
+-used to set configuration variables. These
+-files will override variables set in /etc/nfs.conf
++.br
++.I /etc/nfs.conf.d/*.conf
++.br
++.IP
++Various configuration files read in order.  Later settings override
++earlier settings.
+ .SH SEE ALSO
+ .BR nfsdcltrack (8),
+ .BR rpc.nfsd (8),
+diff --git a/systemd/nfs.systemd.man b/systemd/nfs.systemd.man
+index 46b476a..df89ddd 100644
+--- a/systemd/nfs.systemd.man
++++ b/systemd/nfs.systemd.man
+@@ -27,7 +27,9 @@ any command line arguments to daemons so as to configure their
+ behavior.  In many case such configuration can be performed by making
+ changes to
+ .I /etc/nfs.conf
+-or other configuration files.  When that is not convenient, a
++or other configuration files (see
++.BR nfs.conf (5)).
++When that is not convenient, a
+ distribution might provide systemd "drop-in" files which replace the
+ .B ExecStart=
+ setting to start the program with different arguments.  For example a
+@@ -171,6 +173,12 @@ running, it can be masked with
+ /etc/nfsmount.conf
+ .br
+ /etc/idmapd.conf
++.P
++Also similar files in 
++.B /usr/etc
++and in related
++.I conf.d
++drop-in directories.
+ .SH SEE ALSO
+ .BR systemd.unit (5),
+ .BR nfs.conf (5),
+diff --git a/tools/locktest/testlk.c b/tools/locktest/testlk.c
+index ea51f78..c9bd6ba 100644
+--- a/tools/locktest/testlk.c
++++ b/tools/locktest/testlk.c
+@@ -81,8 +81,8 @@ main(int argc, char **argv)
+ 		if (fl.l_type == F_UNLCK) {
+ 			printf("%s: no conflicting lock\n", fname);
+ 		} else {
+-			printf("%s: conflicting lock by %d on (%zd;%zd)\n",
+-				fname, fl.l_pid, fl.l_start, fl.l_len);
++			printf("%s: conflicting lock by %d on (%lld;%lld)\n",
++				fname, fl.l_pid, (long long)fl.l_start, (long long)fl.l_len);
+ 		}
+ 		return 0;
+ 	}
+diff --git a/tools/nfsconf/nfsconfcli.c b/tools/nfsconf/nfsconfcli.c
+index b2ef96d..bd9d527 100644
+--- a/tools/nfsconf/nfsconfcli.c
++++ b/tools/nfsconf/nfsconfcli.c
+@@ -135,19 +135,8 @@ int main(int argc, char **argv)
+ 		return 1;
+ 	}
+ 
+-	if (mode != MODE_SET && mode != MODE_UNSET) {
+-		if (conf_init_file(confpath)) {
+-			/* config file was missing or had an error, warn about it */
+-			if (verbose || mode != MODE_ISSET) {
+-				fprintf(stderr, "Error loading config file %s\n",
+-					confpath);
+-			}
+-
+-			/* this isnt fatal for --isset */
+-			if (mode != MODE_ISSET)
+-				return 1;
+-		}
+-	}
++	if (mode != MODE_SET && mode != MODE_UNSET)
++		conf_init_file(confpath);
+ 
+ 	/* --dump mode, output the current configuration */
+ 	if (mode == MODE_DUMP) {
+diff --git a/utils/mount/nfsmount.conf.man b/utils/mount/nfsmount.conf.man
+index 34879c8..10287cd 100644
+--- a/utils/mount/nfsmount.conf.man
++++ b/utils/mount/nfsmount.conf.man
+@@ -115,16 +115,17 @@ All mounts to the '/export/home' export will be performed in
+ the background (i.e. done asynchronously).
+ .RE
+ .SH FILES
+-.TP 10n
++.I /usr/etc/nfsmount.conf
++.br
++.I /usr/etc/nfsmount.conf.d/*.conf
++.br
+ .I /etc/nfsmount.conf
+-Default NFS mount configuration file
+-.TP 10n
+-.I /etc/nfsmount.conf.d
+-When this directory exists and files ending
+-with ".conf" exist, those files will be
+-used to set configuration variables. These
+-files will override variables set
+-in /etc/nfsmount.conf
++.br
++.I /etc/nfsmount.conf.d/*.conf
++.br
++.IP
++Default NFS mount configuration files, variables set in the later file
++over-ride those in the earlier file.
+ .PD
+ .SH SEE ALSO
+ .BR nfs (5),
+diff --git a/utils/nfsref/nfsref.c b/utils/nfsref/nfsref.c
+index 7f97d01..aa8414b 100644
+--- a/utils/nfsref/nfsref.c
++++ b/utils/nfsref/nfsref.c
+@@ -24,8 +24,6 @@
+  */
+ 
+ #include <sys/types.h>
+-#include <sys/capability.h>
+-#include <sys/prctl.h>
+ #include <sys/stat.h>
+ 
+ #include <stdbool.h>
+diff --git a/utils/nfsref/nfsref.man b/utils/nfsref/nfsref.man
+index 1261549..1970f9d 100644
+--- a/utils/nfsref/nfsref.man
++++ b/utils/nfsref/nfsref.man
+@@ -53,33 +53,37 @@ nfsref \- manage NFS referrals
+ NFS version 4 introduces the concept of
+ .I file system referrals
+ to NFS.
+-A file system referral is like a symbolic link on a file server
+-to another file system share, possibly on another file server.
+-On an NFS client, a referral behaves like an automounted directory.
+-The client, under the server's direction, mounts a new NFS export
+-automatically when an application first accesses that directory.
+ .P
+-Referrals are typically used to construct a single file name space
+-across multiple file servers.
+-Because file servers control the shape of the name space,
+-no client configuration is required,
+-and all clients see the same referral information.
++A file system referral is like a symbolic link
++(or,
++.IR symlink )
++to another file system share, typically on another file server.
++An NFS client, under the server's direction,
++mounts the referred-to NFS export
++automatically when an application first accesses it.
+ .P
+-The Linux NFS server supports NFS version 4 referrals.
+-Administrators can specify the
+-.B refer=
+-export option in
+-.I /etc/exports
+-to configure a list of exports from which the client can choose.
+-See
+-.BR exports (5)
+-for details.
++NFSv4 referrals can be used to transparently redirect clients
++to file systems that have been moved elsewhere, or
++to construct a single file name space across multiple file servers.
++Because file servers control the shape of the whole file name space,
++no client configuration is required.
+ .P
+ .SH DESCRIPTION
++A
++.I junction
++is a file system object on an NFS server that,
++when an NFS client encounters it, triggers a referral.
++Similar to a symlink, a junction contains one or more target locations
++that the server sends to clients in the form of an NFSv4 referral.
++.P
++On Linux, an existing directory can be converted to a junction
++and back atomically and without the loss of the directory contents.
++When a directory acts as a junction, it's local content is hidden
++from NFSv4 clients.
++.P
+ The
+ .BR nfsref (8)
+-command is a simple way to get started managing junction metadata.
+-Other administrative commands provide richer access to junction information.
++command is a simple way to get started managing junctions and their content.
+ .SS Subcommands
+ Valid
+ .BR nfsref (8)
+@@ -135,6 +139,10 @@ For the
+ .B add
+ subcommand, the default value if this option is not specified is
+ .BR nfs-basic .
++The
++.B nfs-fedfs
++type is not used in this implementation.
++.IP
+ For the
+ .B remove
+ and
+@@ -163,18 +171,12 @@ you might issue this command as root:
+ .sp
+ # mkdir /home
+ .br
+-# nfsref --type=nfs-basic add /home home.example.net /
++# nfsref add /home home.example.net /
+ .br
+ Created junction /home.
+ .sp
+ .RE
+-.SH FILES
+-.TP
+-.I /etc/exports
+-NFS server export table
+ .SH "SEE ALSO"
+-.BR exports (5)
+-.sp
+-RFC 5661 for a description of NFS version 4 referrals
++RFC 8881 for a description of the NFS version 4 referral mechanism
+ .SH "AUTHOR"
+ Chuck Lever <chuck.lever@oracle.com>
