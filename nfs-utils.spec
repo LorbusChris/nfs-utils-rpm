@@ -2,7 +2,7 @@ Summary: NFS utilities and supporting clients and daemons for the kernel NFS ser
 Name: nfs-utils
 URL: http://linux-nfs.org/
 Version: 2.6.4
-Release: 0.rc3%{?dist}.1
+Release: 3.rc3%{?dist}.1
 Epoch: 1
 
 # group all 32bit related archs
@@ -24,21 +24,12 @@ Patch105: nfs-utils-2.3.3-nfsconf-usegssproxy.patch
 Patch106: nfs-utils-2.4.2-systemd-svcgssd.patch
 
 Provides: exportfs    = %{epoch}:%{version}-%{release}
-Provides: nfsstat     = %{epoch}:%{version}-%{release}
-Provides: showmount   = %{epoch}:%{version}-%{release}
 Provides: rpcdebug    = %{epoch}:%{version}-%{release}
 Provides: rpcctl      = %{epoch}:%{version}-%{release}
 Provides: rpc.idmapd  = %{epoch}:%{version}-%{release}
 Provides: rpc.mountd  = %{epoch}:%{version}-%{release}
 Provides: rpc.nfsd    = %{epoch}:%{version}-%{release}
-Provides: rpc.statd   = %{epoch}:%{version}-%{release}
-Provides: rpc.gssd    = %{epoch}:%{version}-%{release}
-Provides: mount.nfs   = %{epoch}:%{version}-%{release}
-Provides: mount.nfs4  = %{epoch}:%{version}-%{release}
-Provides: umount.nfs  = %{epoch}:%{version}-%{release}
-Provides: umount.nfs4 = %{epoch}:%{version}-%{release}
 Provides: sm-notify   = %{epoch}:%{version}-%{release}
-Provides: start-statd = %{epoch}:%{version}-%{release}
 
 License: MIT and GPLv2 and GPLv2+ and BSD
 BuildRequires: make
@@ -55,6 +46,8 @@ Requires(pre): shadow-utils >= 4.0.3-25
 Requires(pre): util-linux
 Requires(pre): coreutils
 Requires(preun): coreutils
+Requires: nfs-common-utils = %{epoch}:%{version}-%{release}
+Requires: nfs-client-utils = %{epoch}:%{version}-%{release}
 Requires: libnfsidmap libevent
 Requires: libtirpc >= 0.2.3-1 libblkid libcap libmount
 Requires: gssproxy => 0.7.0-3
@@ -62,23 +55,32 @@ Requires: rpcbind, sed, gawk, grep
 Requires: kmod, keyutils, quota
 %{?systemd_requires}
 
-%package -n nfs-utils-coreos
-Summary: Minimal NFS utilities for supporting clients
-Provides: nfsstat     = %{epoch}:%{version}-%{release}
-Provides: rpc.statd   = %{epoch}:%{version}-%{release}
-Provides: rpc.gssd    = %{epoch}:%{version}-%{release}
+%package -n nfs-common-utils
+Summary: Common NFS utilities
+Provides: showmount   = %{epoch}:%{version}-%{release}
 Provides: mount.nfs   = %{epoch}:%{version}-%{release}
 Provides: mount.nfs4  = %{epoch}:%{version}-%{release}
 Provides: umount.nfs  = %{epoch}:%{version}-%{release}
 Provides: umount.nfs4 = %{epoch}:%{version}-%{release}
-Provides: start-statd = %{epoch}:%{version}-%{release}
-Provides: nfsidmap    = %{epoch}:%{version}-%{release}
-Provides: showmount   = %{epoch}:%{version}-%{release}
-Requires: rpcbind
-%{?systemd_requires}
 
-%description -n nfs-utils-coreos
-Minimal NFS utilities for supporting clients
+%description -n nfs-common-utils
+This package contains the showmount program.  Showmount queries the
+mount daemon on a remote host for information about the NFS (Network File
+System) server on the remote host.  For example, showmount can display the
+clients which are mounted on that host.
+
+This package also contains the mount.nfs and umount.nfs program.
+
+%package -n nfs-client-utils
+Summary: NFS client utilities
+Provides: nfs-client         = %{epoch}:%{version}-%{release}
+Provides: nfs-utils-coreos   = %{epoch}:%{version}-%{release}
+Obsoletes: nfs-utils-coreos  < %{epoch}:%{version}-%{release}
+Requires: nfsv3-client-utils = %{epoch}:%{version}-%{release}
+Requires: nfsv4-client-utils = %{epoch}:%{version}-%{release}
+
+%description -n nfs-client-utils
+Utilities for supporting NFS clients
 
 %package -n nfs-stats-utils
 Summary: NFS utilities for supporting clients
@@ -89,18 +91,28 @@ Provides: nfsiostat   = %{epoch}:%{version}-%{release}
 %description -n nfs-stats-utils
 Show NFS client Statistics
 
+%package -n nfsv3-client-utils
+Summary: NFSv3 client utilities
+Provides: nfsstat          = %{epoch}:%{version}-%{release}
+Provides: rpc.statd        = %{epoch}:%{version}-%{release}
+Provides: start-statd      = %{epoch}:%{version}-%{release}
+Requires: nfs-common-utils = %{epoch}:%{version}-%{release}
+Requires: rpcbind
+%{?systemd_requires}
+
+%description -n nfsv3-client-utils
+The nfsv3-client-utils package provides NFSv3 client support 
+
 %package -n nfsv4-client-utils
-Summary: NFSv4 utilities for supporting client
+Summary: NFSv4 client utilities
 Provides: rpc.gssd    = %{epoch}:%{version}-%{release}
-Provides: mount.nfs   = %{epoch}:%{version}-%{release}
-Provides: mount.nfs4  = %{epoch}:%{version}-%{release}
-Provides: umount.nfs  = %{epoch}:%{version}-%{release}
-Provides: umount.nfs4 = %{epoch}:%{version}-%{release}
 Provides: nfsidmap    = %{epoch}:%{version}-%{release}
+Requires: nfs-common-utils = %{epoch}:%{version}-%{release}
 Requires: gssproxy => 0.7.0-3
+%{?systemd_requires}
 
 %description -n nfsv4-client-utils
-The nfsv4-client-utils packages provided NFSv4 client support 
+The nfsv4-client-utils package provides NFSv4 client support 
 
 %package -n libnfsidmap
 Summary: NFSv4 User and Group ID Mapping Library
@@ -127,13 +139,6 @@ developing programs which use the libnfsidmap library.
 The nfs-utils package provides a daemon for the kernel NFS server and
 related tools, which provides a much higher level of performance than the
 traditional Linux NFS server used by most users.
-
-This package also contains the showmount program.  Showmount queries the
-mount daemon on a remote host for information about the NFS (Network File
-System) server on the remote host.  For example, showmount can display the
-clients which are mounted on that host.
-
-This package also contains the mount.nfs and umount.nfs program.
 
 %prep
 %autosetup -p1
@@ -278,42 +283,27 @@ rm -rf /etc/systemd/system/rpc-*.requires
 /bin/systemctl disable nfs-convert > /dev/null 2>&1 || :
 
 %files
-%config(noreplace) /etc/nfsmount.conf
 %dir %{_sysconfdir}/exports.d
 %dir %{_sharedstatedir}/nfs/v4recovery
-%dir %attr(555, root, root) %{_sharedstatedir}/nfs/rpc_pipefs
 %dir %{_sharedstatedir}/nfs
 %dir %{_libexecdir}/nfs-utils
-%dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd
-%dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd/sm
-%dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd/sm.bak
-%ghost %attr(644,rpcuser,rpcuser) %{_statdpath}/state
 %config(noreplace) %{_sharedstatedir}/nfs/etab
 %config(noreplace) %{_sharedstatedir}/nfs/rmtab
-%config(noreplace) %{_sysconfdir}/request-key.d/id_resolver.conf
 %config(noreplace) %{_sysconfdir}/modprobe.d/lockd.conf
-%config(noreplace) %{_sysconfdir}/nfs.conf
 %attr(0600,root,root) %config(noreplace) %{_sysconfdir}/gssproxy/24-nfs-server.conf
 %attr(0600,root,root) %config(noreplace) /usr/lib/udev/rules.d/60-nfs.rules
-
 %doc linux-nfs/ChangeLog linux-nfs/KNOWNBUGS linux-nfs/NEW linux-nfs/README
 %doc linux-nfs/THANKS linux-nfs/TODO
-/sbin/rpc.statd
 /sbin/nfsdcltrack
 %{_sbindir}/exportfs
-%{_sbindir}/nfsstat
 %{_sbindir}/rpcdebug
 %{_sbindir}/rpcctl
 %{_sbindir}/rpc.mountd
 %{_sbindir}/rpc.nfsd
-%{_sbindir}/showmount
 %{_sbindir}/rpc.idmapd
-%{_sbindir}/rpc.gssd
 %{_sbindir}/sm-notify
-%{_sbindir}/start-statd
 %{_sbindir}/mountstats
 %{_sbindir}/nfsiostat
-%{_sbindir}/nfsidmap
 %{_sbindir}/blkmapd
 %{_sbindir}/nfsconf
 %{_sbindir}/nfsref
@@ -323,14 +313,41 @@ rm -rf /etc/systemd/system/rpc-*.requires
 %{_sbindir}/fsidd
 %{_libexecdir}/nfsrahead
 %{_udevrulesdir}/99-nfs.rules
-%{_mandir}/*/*
-%{_pkgdir}/*/*
-
-%attr(4755,root,root)	/sbin/mount.nfs
-
-/sbin/mount.nfs4
-/sbin/umount.nfs
-/sbin/umount.nfs4
+%{_mandir}/*/blkmapd.8.gz
+%{_mandir}/*/exportfs.8.gz
+%{_mandir}/*/exports.5.gz
+%{_mandir}/*/idmapd.8.gz
+%{_mandir}/*/idmapd.conf.5.gz
+%{_mandir}/*/mountd.8.gz
+%{_mandir}/*/mountstats.8.gz
+%{_mandir}/*/nfs.systemd.7.gz
+%{_mandir}/*/nfs4_uid_to_name.3.gz
+%{_mandir}/*/nfsd.7.gz
+%{_mandir}/*/nfsd.8.gz
+%{_mandir}/*/nfsdcld.8.gz
+%{_mandir}/*/nfsdclddb.8.gz
+%{_mandir}/*/nfsdclnts.8.gz
+%{_mandir}/*/nfsdcltrack.8.gz
+%{_mandir}/*/nfsiostat.8.gz
+%{_mandir}/*/nfsrahead.5.gz
+%{_mandir}/*/nfsref.8.gz
+%{_mandir}/*/rpc.idmapd.8.gz
+%{_mandir}/*/rpc.mountd.8.gz
+%{_mandir}/*/rpc.nfsd.8.gz
+%{_mandir}/*/rpc.sm-notify.8.gz
+%{_mandir}/*/rpcctl.8.gz
+%{_mandir}/*/rpcdebug.8.gz
+%{_mandir}/*/sm-notify.8.gz
+%{_pkgdir}/*/nfs-server-generator
+%{_pkgdir}/*/fsidd.service
+%{_pkgdir}/*/nfs-blkmap.service
+%{_pkgdir}/*/nfs-idmapd.service
+%{_pkgdir}/*/nfs-mountd.service
+%{_pkgdir}/*/nfs-server.service
+%{_pkgdir}/*/nfs-utils.service
+%{_pkgdir}/*/nfsdcld.service
+%{_pkgdir}/*/proc-fs-nfsd.mount
+%{_pkgdir}/*/rpc-statd-notify.service
 
 %files -n libnfsidmap
 %doc support/nfsidmap/AUTHORS support/nfsidmap/README support/nfsidmap/COPYING
@@ -345,46 +362,30 @@ rm -rf /etc/systemd/system/rpc-*.requires
 %{_includedir}/nfsidmap_plugin.h
 %{_libdir}/libnfsidmap.so
 
-%files -n nfs-utils-coreos
-%dir %attr(555, root, root) %{_sharedstatedir}/nfs/rpc_pipefs
+%files -n nfs-common-utils
+%attr(4755,root,root) /sbin/mount.nfs
+/sbin/mount.nfs4
+/sbin/umount.nfs
+/sbin/umount.nfs4
+%{_sbindir}/showmount
+%{_mandir}/*/nfsmount.conf.5.gz
+%{_mandir}/*/showmount.8.gz
+%{_mandir}/*/mount.nfs.8.gz
+%{_mandir}/*/umount.nfs.8.gz
+
+%files -n nfs-client-utils
+
+%files -n nfsv3-client-utils
 %dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd
 %dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd/sm
 %dir %attr(700,rpcuser,rpcuser) %{_sharedstatedir}/nfs/statd/sm.bak
 %ghost %attr(644,rpcuser,rpcuser) %{_statdpath}/state
-%config(noreplace) %{_sysconfdir}/nfsmount.conf
-%config(noreplace) %{_sysconfdir}/nfs.conf
-%config(noreplace) %{_sysconfdir}/request-key.d/id_resolver.conf
-%{_sbindir}/nfsidmap
-%{_sbindir}/nfsstat
-%{_sbindir}/rpc.gssd
 %{_sbindir}/start-statd
-%{_sbindir}/showmount
-%attr(4755,root,root) /sbin/mount.nfs
-/sbin/mount.nfs4
 /sbin/rpc.statd
-/sbin/umount.nfs
-/sbin/umount.nfs4
-%{_mandir}/*/nfs.5.gz
-%{_mandir}/*/nfs.conf.5.gz
-%{_mandir}/*/nfsmount.conf.5.gz
-%{_mandir}/*/nfs.systemd.7.gz
-%{_mandir}/*/gssd.8.gz
-%{_mandir}/*/mount.nfs.8.gz
-%{_mandir}/*/nfsconf.8.gz
-%{_mandir}/*/nfsidmap.8.gz
-%{_mandir}/*/nfsstat.8.gz
-%{_mandir}/*/rpc.gssd.8.gz
+
 %{_mandir}/*/rpc.statd.8.gz
-%{_mandir}/*/showmount.8.gz
 %{_mandir}/*/statd.8.gz
-%{_mandir}/*/umount.nfs.8.gz
-%{_pkgdir}/*/rpc-pipefs-generator
-%{_pkgdir}/*/auth-rpcgss-module.service
-%{_pkgdir}/*/nfs-client.target
-%{_pkgdir}/*/rpc-gssd.service
 %{_pkgdir}/*/rpc-statd.service
-%{_pkgdir}/*/rpc_pipefs.target
-%{_pkgdir}/*/var-lib-nfs-rpc_pipefs.mount
 
 %files -n nfsv4-client-utils
 %config(noreplace) /etc/nfsmount.conf
@@ -401,22 +402,14 @@ rm -rf /etc/systemd/system/rpc-*.requires
 %{_sbindir}/nfsstat
 %{_libexecdir}/nfsrahead
 %{_udevrulesdir}/99-nfs.rules
-%attr(4755,root,root) /sbin/mount.nfs
-/sbin/mount.nfs4
-/sbin/umount.nfs
-/sbin/umount.nfs4
 %{_mandir}/*/nfs.5.gz
 %{_mandir}/*/nfs.conf.5.gz
-%{_mandir}/*/nfsmount.conf.5.gz
 %{_mandir}/*/nfsrahead.5.gz
 %{_mandir}/*/gssd.8.gz
 %{_mandir}/*/mount.nfs.8.gz
 %{_mandir}/*/nfsconf.8.gz
 %{_mandir}/*/nfsidmap.8.gz
 %{_mandir}/*/rpc.gssd.8.gz
-%{_mandir}/*/mount.nfs.8.gz
-%{_mandir}/*/umount.nfs.8.gz
-%{_mandir}/*/nfsidmap.8.gz
 %{_mandir}/*/nfsstat.8.gz
 %{_pkgdir}/*/rpc-pipefs-generator
 %{_pkgdir}/*/auth-rpcgss-module.service
@@ -432,7 +425,16 @@ rm -rf /etc/systemd/system/rpc-*.requires
 %{_mandir}/*/nfsiostat.8.gz
 
 %changelog
-* Sun Jan 21 2024 Fedora Release Engineering <releng@fedoraproject.org> - 1:2.6.4-0.rc3.1
+* Wed Jan 24 2024 Christian Glombek <cglombek@redhat.com> 2.6.4-2.rc3
+- Reorder package structure and deduplicate contents
+- content contained in nfs-coreos-utils that is not also contained in
+  nfsv4-client-utils is moved to new package nfsv3-client-utils
+- new meta package nfs-client-utils requires nfsv{3,4}-client-utils
+  and virtual-provides nfs-coreos-utils
+- nfs-utils now requires nfs-client-utils and sub-package content is
+  deduplicated
+
+* Sun Jan 21 2024 Fedora Release Engineering <releng@fedoraproject.org> - 2.6.4-0.rc4
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_40_Mass_Rebuild
 
 * Sat Dec  9 2023 Steve Dickson <steved@redhat.com> 2.6.4-0.rc3
